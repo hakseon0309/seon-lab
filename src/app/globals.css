@@ -1,102 +1,92 @@
 @import "tailwindcss";
 
 /*
- * Seon Lab — Bubblegum Theme
- * CSS 변수 기반 테마 시스템
- * 색상 변경 시 이 파일의 :root / .dark 변수만 수정하면 됩니다.
+ * Seon Lab theme tokens
+ * Update light and dark values here to recolor the app globally.
  */
 
 :root {
-  /* ── 배경 ── */
-  --bg-base: #fbe2a7;           /* 전체 배경 */
-  --bg-card: #fff5e0;           /* 카드/입력 배경 (이번 달 셀) */
-  --bg-surface: #fef0cc;        /* 섹션/테이블 헤더 배경 */
-  --bg-muted: #f5d89a;          /* 비활성/구분 배경 */
+  --bg-base: oklch(1 0 0);
+  --bg-card: oklch(1 0 0);
+  --bg-surface: oklch(0.985 0 0);
+  --bg-muted: oklch(0.97 0 0);
 
-  /* ── 달력 인접 월 (이번 달 외 날짜) ── */
-  --bg-out-of-month: #fdf6e8;   /* 이번 달 외 셀 배경 — bg-card보다 연하게 */
-  --text-out-of-month: #c8b89a; /* 이번 달 외 날짜 텍스트 — text-muted보다 연하게 */
+  --bg-out-of-month: oklch(0.985 0 0);
+  --text-out-of-month: oklch(0.708 0 0);
 
-  /* ── 텍스트 ── */
-  --text-primary: #12242e;   /* 주요 텍스트 */
-  --text-secondary: #4a3f2f; /* 보조 텍스트 */
-  --text-muted: #8a7a62;     /* 연한 텍스트 */
-  --text-on-primary: #ffffff;/* Primary 버튼 위 텍스트 */
+  --text-primary: oklch(0.145 0 0);
+  --text-secondary: oklch(0.205 0 0);
+  --text-muted: oklch(0.556 0 0);
+  --text-on-primary: oklch(0.985 0 0);
 
-  /* ── Primary (핑크 계열) ── */
-  --primary: #d04f99;
-  --primary-hover: #b8407f;
-  --primary-light: #f2d0e4;
+  --primary: oklch(0.205 0 0);
+  --primary-hover: oklch(0.145 0 0);
+  --primary-light: oklch(0.97 0 0);
 
-  /* ── Secondary (민트 계열) ── */
-  --secondary: #8acfd1;
-  --secondary-hover: #6bbcbe;
-  --secondary-light: #d4f0f1;
+  --secondary: oklch(0.55 0.22 263);
+  --secondary-hover: oklch(0.49 0.22 264);
+  --secondary-light: oklch(0.81 0.1 252 / 0.22);
 
-  /* ── 보더 & 입력 ── */
-  --border: #e4a2b1;
-  --border-light: #f0c8d3;
-  --input-bg: #ffffff;
-  --input-border: #d4a0aa;
-  --input-text: #12242e;
-  --input-placeholder: #b09080;
+  --border: oklch(0.922 0 0);
+  --border-light: oklch(0.95 0 0);
+  --input-bg: oklch(1 0 0);
+  --input-border: oklch(0.922 0 0);
+  --input-text: oklch(0.145 0 0);
+  --input-placeholder: oklch(0.556 0 0);
 
-  /* ── 상태 ── */
-  --success: #5a9e6f;
-  --success-bg: #e0f5e7;
-  --error: #c44;
-  --error-bg: #fde8e8;
+  --success: oklch(0.55 0.14 146);
+  --success-bg: oklch(0.97 0.03 146);
+  --error: oklch(0.577 0.245 27.325);
+  --error-bg: oklch(0.971 0.013 17.38);
 
-  /* ── 시프트 이벤트 ── */
-  --event-bg: #f2d0e4;
-  --event-text: #9b2d6b;
-  --event-sub: #c06a99;
+  --event-bg: oklch(0.81 0.1 252 / 0.22);
+  --event-text: oklch(0.49 0.22 264);
+  --event-sub: oklch(0.55 0.22 263);
 
-  /* ── 오늘 강조 ── */
-  --today-bg: #d04f99;
-  --today-text: #ffffff;
+  --today-bg: oklch(0.205 0 0);
+  --today-text: oklch(0.985 0 0);
 }
 
 .dark {
-  --bg-base: #12242e;
-  --bg-card: #1a3040;
-  --bg-surface: #1e3545;
-  --bg-muted: #15293a;
+  --bg-base: oklch(0.145 0 0);
+  --bg-card: oklch(0.205 0 0);
+  --bg-surface: oklch(0.205 0 0);
+  --bg-muted: oklch(0.269 0 0);
 
-  --bg-out-of-month: #141f28;   /* 이번 달 외 셀 배경 — bg-card보다 어둡게 */
-  --text-out-of-month: #3d5060; /* 이번 달 외 날짜 텍스트 — 눈에 덜 띄게 */
+  --bg-out-of-month: oklch(0.18 0 0);
+  --text-out-of-month: oklch(0.439 0 0);
 
-  --text-primary: #fbe2a7;
-  --text-secondary: #d4c09a;
-  --text-muted: #8a9aaa;
-  --text-on-primary: #12242e;
+  --text-primary: oklch(0.985 0 0);
+  --text-secondary: oklch(0.922 0 0);
+  --text-muted: oklch(0.708 0 0);
+  --text-on-primary: oklch(0.145 0 0);
 
-  --primary: #e4a2b1;
-  --primary-hover: #d08a9a;
-  --primary-light: #3d2535;
+  --primary: oklch(0.985 0 0);
+  --primary-hover: oklch(0.922 0 0);
+  --primary-light: oklch(0.269 0 0);
 
-  --secondary: #8acfd1;
-  --secondary-hover: #6bbcbe;
-  --secondary-light: #1a3540;
+  --secondary: oklch(0.81 0.1 252);
+  --secondary-hover: oklch(0.62 0.19 260);
+  --secondary-light: oklch(0.42 0.18 266 / 0.22);
 
-  --border: #2e4a55;
-  --border-light: #253d48;
-  --input-bg: #1a3040;
-  --input-border: #3d5565;
-  --input-text: #fbe2a7;
-  --input-placeholder: #7a8a9a;
+  --border: oklch(0.275 0 0);
+  --border-light: oklch(0.325 0 0);
+  --input-bg: oklch(0.205 0 0);
+  --input-border: oklch(0.275 0 0);
+  --input-text: oklch(0.985 0 0);
+  --input-placeholder: oklch(0.708 0 0);
 
-  --success: #6bba80;
-  --success-bg: #1a3028;
-  --error: #e07070;
-  --error-bg: #3a1a1a;
+  --success: oklch(0.72 0.16 146);
+  --success-bg: oklch(0.27 0.05 146);
+  --error: oklch(0.704 0.191 22.216);
+  --error-bg: oklch(0.269 0.03 22.216);
 
-  --event-bg: #3d2535;
-  --event-text: #e4a2b1;
-  --event-sub: #c08aaa;
+  --event-bg: oklch(0.42 0.18 266 / 0.22);
+  --event-text: oklch(0.81 0.1 252);
+  --event-sub: oklch(0.62 0.19 260);
 
-  --today-bg: #e4a2b1;
-  --today-text: #12242e;
+  --today-bg: oklch(0.985 0 0);
+  --today-text: oklch(0.145 0 0);
 }
 
 @theme inline {
@@ -110,5 +100,4 @@ body {
   background: var(--bg-base);
   color: var(--text-primary);
   font-family: Arial, Helvetica, sans-serif;
-  transition: background-color 0.2s, color 0.2s;
 }

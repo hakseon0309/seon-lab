@@ -115,7 +115,7 @@ export default function TeamsPage() {
           </h1>
           <button
             onClick={() => setShowJoinModal(true)}
-            className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors"
+            className="rounded-lg border px-4 py-2 text-sm font-medium"
             style={{
               borderColor: "var(--border)",
               color: "var(--text-secondary)",
@@ -143,7 +143,7 @@ export default function TeamsPage() {
           <button
             type="submit"
             disabled={creating}
-            className="rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
+            className="rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
             style={{
               backgroundColor: "var(--primary)",
               color: "var(--text-on-primary)",
@@ -166,7 +166,7 @@ export default function TeamsPage() {
               <Link
                 key={team.id}
                 href={`/teams/${team.id}`}
-                className="flex items-center justify-between rounded-lg border p-4 transition-colors"
+                className="flex items-center justify-between rounded-lg border p-4"
                 style={{
                   borderColor: "var(--border-light)",
                   backgroundColor: "var(--bg-card)",

@@ -54,7 +54,7 @@ export default function Calendar({ events }: CalendarProps) {
       <div className="mb-3 flex items-center justify-between px-4 lg:px-0">
         <button
           onClick={prevMonth}
-          className="rounded-md px-3 py-1.5 text-sm transition-colors"
+          className="rounded-md px-3 py-1.5 text-sm"
           style={{ color: "var(--text-muted)" }}
         >
           &larr;
@@ -67,7 +67,7 @@ export default function Calendar({ events }: CalendarProps) {
         </h2>
         <button
           onClick={nextMonth}
-          className="rounded-md px-3 py-1.5 text-sm transition-colors"
+          className="rounded-md px-3 py-1.5 text-sm"
           style={{ color: "var(--text-muted)" }}
         >
           &rarr;

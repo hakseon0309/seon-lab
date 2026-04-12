@@ -71,7 +71,7 @@ export default function DashboardPage() {
           </p>
           <button
             onClick={() => router.push("/settings")}
-            className="mt-6 rounded-lg px-6 py-2.5 text-sm font-medium transition-colors"
+            className="mt-6 rounded-lg px-6 py-2.5 text-sm font-medium"
             style={{
               backgroundColor: "var(--primary)",
               color: "var(--text-on-primary)",

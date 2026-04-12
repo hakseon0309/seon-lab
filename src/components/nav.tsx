@@ -40,7 +40,7 @@ export default function Nav() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+                  className="rounded-md px-3 py-1.5 text-sm font-medium"
                   style={{
                     backgroundColor: pathname.startsWith(link.href) ? "var(--primary-light)" : "transparent",
                     color: pathname.startsWith(link.href) ? "var(--primary)" : "var(--text-muted)",
@@ -54,7 +54,7 @@ export default function Nav() {
           <div className="flex items-center gap-3">
             <button
               onClick={toggle}
-              className="rounded-md px-2 py-1.5 text-sm transition-colors"
+              className="rounded-md px-2 py-1.5 text-sm"
               style={{ color: "var(--text-muted)" }}
               title={theme === "light" ? "다크 모드" : "라이트 모드"}
             >

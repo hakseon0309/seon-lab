@@ -83,7 +83,7 @@ export default function JoinTeamModal({ onClose, onJoin }: JoinTeamModalProps) {
             <button
               onClick={() => setMode("code")}
               disabled={loading}
-              className="flex w-full items-center gap-3 rounded-lg border px-4 py-3.5 text-left transition-colors disabled:opacity-50"
+              className="flex w-full items-center gap-3 rounded-lg border px-4 py-3.5 text-left disabled:opacity-50"
               style={{ borderColor: "var(--border-light)" }}
             >
               <span
@@ -111,7 +111,7 @@ export default function JoinTeamModal({ onClose, onJoin }: JoinTeamModalProps) {
             <button
               onClick={() => setMode("qr")}
               disabled={loading}
-              className="flex w-full items-center gap-3 rounded-lg border px-4 py-3.5 text-left transition-colors disabled:opacity-50"
+              className="flex w-full items-center gap-3 rounded-lg border px-4 py-3.5 text-left disabled:opacity-50"
               style={{ borderColor: "var(--border-light)" }}
             >
               <span

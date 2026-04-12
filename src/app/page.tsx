@@ -36,7 +36,7 @@ export default async function Home() {
         <div className="flex flex-col gap-3">
           <Link
             href="/login"
-            className="flex h-12 items-center justify-center rounded-lg text-sm font-medium transition-colors"
+            className="flex h-12 items-center justify-center rounded-lg text-sm font-medium"
             style={{
               backgroundColor: "var(--primary)",
               color: "var(--text-on-primary)",
@@ -46,7 +46,7 @@ export default async function Home() {
           </Link>
           <Link
             href="/signup"
-            className="flex h-12 items-center justify-center rounded-lg border text-sm font-medium transition-colors"
+            className="flex h-12 items-center justify-center rounded-lg border text-sm font-medium"
             style={{
               borderColor: "var(--border)",
               color: "var(--text-secondary)",

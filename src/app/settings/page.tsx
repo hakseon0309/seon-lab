@@ -161,7 +161,7 @@ export default function SettingsPage() {
           <button
             type="submit"
             disabled={saving}
-            className="w-full rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50"
+            className="w-full rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-50"
             style={{
               backgroundColor: "var(--primary)",
               color: "var(--text-on-primary)",

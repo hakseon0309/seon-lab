@@ -58,7 +58,7 @@ export default function SyncButton({ lastSynced, onSync }: SyncButtonProps) {
       <button
         onClick={handleSync}
         disabled={disabled}
-        className="rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
+        className="rounded-lg border px-3 py-1.5 text-sm font-medium disabled:opacity-50"
         style={{
           borderColor: "var(--border)",
           color: "var(--text-secondary)",
