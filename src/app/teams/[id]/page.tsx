@@ -7,10 +7,15 @@ import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import {
   format,
+  startOfMonth,
+  endOfMonth,
   startOfWeek,
+  endOfWeek,
   addDays,
   eachDayOfInterval,
+  eachWeekOfInterval,
   isSameDay,
+  isSameMonth,
 } from "date-fns";
 import { ko } from "date-fns/locale";
 import QRCode from "qrcode";
@@ -30,7 +35,7 @@ export default function TeamDetailPage({
   const [members, setMembers] = useState<MemberWithEvents[]>([]);
   const [loading, setLoading] = useState(true);
   const [qrUrl, setQrUrl] = useState("");
-  const [weekOffset, setWeekOffset] = useState(0);
+  const [currentDate, setCurrentDate] = useState(new Date());
   const supabase = createClient();
   const router = useRouter();
 
@@ -56,30 +61,46 @@ export default function TeamDetailPage({
       }
       setTeam(teamData);
 
-      // Generate QR with 6-char code only (not URL)
       const qr = await QRCode.toDataURL(teamData.invite_code, {
         width: 200,
         margin: 2,
       });
       setQrUrl(qr);
 
-      // Load members
-      const { data: memberData } = await supabase
+      const { data: memberData, error: memberError } = await supabase
         .from("team_members")
-        .select("*, user_profiles(*)")
+        .select("user_id")
         .eq("team_id", id);
 
-      if (memberData) {
+      if (memberError) {
+        console.error("team_members 조회 실패:", memberError);
+      }
+
+      if (memberData && memberData.length > 0) {
+        const userIds = memberData.map((m) => m.user_id);
+
+        const { data: profiles, error: profileError } = await supabase
+          .from("user_profiles")
+          .select("*")
+          .in("id", userIds);
+
+        if (profileError) {
+          console.error("user_profiles 조회 실패:", profileError);
+        }
+
         const memberEvents: MemberWithEvents[] = [];
-        for (const member of memberData) {
+        for (const userId of userIds) {
+          const profile = profiles?.find((p) => p.id === userId);
+          if (!profile) continue;
+
           const { data: events } = await supabase
             .from("events")
             .select("*")
-            .eq("user_id", member.user_id)
+            .eq("user_id", userId)
             .order("start_at", { ascending: true });
 
           memberEvents.push({
-            profile: member.user_profiles as UserProfile,
+            profile: profile as UserProfile,
             events: events || [],
           });
         }
@@ -95,7 +116,9 @@ export default function TeamDetailPage({
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="text-sm text-gray-400">로딩 중...</div>
+        <div className="text-sm" style={{ color: "var(--text-muted)" }}>
+          로딩 중...
+        </div>
       </div>
     );
   }
@@ -103,56 +126,95 @@ export default function TeamDetailPage({
   if (!team) return null;
 
   const today = new Date();
-  const weekStart = startOfWeek(addDays(today, weekOffset * 7), {
-    weekStartsOn: 1,
-  });
-  const weekDays = eachDayOfInterval({
-    start: weekStart,
-    end: addDays(weekStart, 6),
-  });
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(currentDate);
+  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+  const weekStarts = eachWeekOfInterval(
+    { start: calendarStart, end: calendarEnd },
+    { weekStartsOn: 1 }
+  );
+
+  function prevMonth() {
+    setCurrentDate(
+      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
+    );
+  }
+
+  function nextMonth() {
+    setCurrentDate(
+      new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1)
+    );
+  }
 
   return (
     <>
       <Nav />
-      <main className="mx-auto max-w-5xl px-4 py-6">
-        <div className="mb-6 flex items-start justify-between">
+      <main className="mx-auto max-w-5xl px-0 lg:px-4 py-4 lg:py-6 pb-24 lg:pb-6">
+        <div className="mb-4 flex items-start justify-between px-4 lg:px-0">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">{team.name}</h1>
-            <p className="text-xs text-gray-400">
+            <h1
+              className="text-xl font-bold"
+              style={{ color: "var(--text-primary)" }}
+            >
+              {team.name}
+            </h1>
+            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
               {members.length}명의 멤버
             </p>
           </div>
         </div>
 
         {/* Invite Section */}
-        <details className="mb-6 rounded-lg border border-gray-200 p-4">
-          <summary className="cursor-pointer text-sm font-medium text-gray-700">
+        <details
+          className="mb-4 lg:mb-6 mx-4 lg:mx-0 rounded-lg border p-4"
+          style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-card)" }}
+        >
+          <summary
+            className="cursor-pointer text-sm font-medium"
+            style={{ color: "var(--text-secondary)" }}
+          >
             팀 초대하기
           </summary>
           <div className="mt-4 flex flex-col items-center gap-6">
-            {/* 초대 코드 */}
             <div className="text-center">
-              <p className="mb-2 text-xs text-gray-500">초대 코드</p>
+              <p className="mb-2 text-xs" style={{ color: "var(--text-muted)" }}>
+                초대 코드
+              </p>
               <div className="flex items-center gap-3">
-                <span className="font-mono text-3xl font-bold tracking-[0.3em] text-gray-900">
+                <span
+                  className="font-mono text-3xl font-bold tracking-[0.3em]"
+                  style={{ color: "var(--primary)" }}
+                >
                   {team.invite_code}
                 </span>
                 <button
                   onClick={() => navigator.clipboard.writeText(team.invite_code)}
-                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                  className="rounded-lg border px-3 py-1.5 text-xs font-medium"
+                  style={{
+                    borderColor: "var(--border)",
+                    color: "var(--text-secondary)",
+                  }}
                 >
                   복사
                 </button>
               </div>
-              <p className="mt-2 text-xs text-gray-400">
+              <p
+                className="mt-2 text-xs"
+                style={{ color: "var(--text-muted)" }}
+              >
                 팀원에게 이 코드를 알려주세요
               </p>
             </div>
 
-            {/* QR 코드 */}
             {qrUrl && (
               <div className="text-center">
-                <p className="mb-2 text-xs text-gray-500">또는 QR 코드를 보여주세요</p>
+                <p
+                  className="mb-2 text-xs"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  또는 QR 코드를 보여주세요
+                </p>
                 <img
                   src={qrUrl}
                   alt="QR Code"
@@ -163,82 +225,153 @@ export default function TeamDetailPage({
           </div>
         </details>
 
-        {/* Week Navigation */}
-        <div className="mb-4 flex items-center justify-between">
+        {/* Month Navigation */}
+        <div className="mb-3 flex items-center justify-between px-4 lg:px-0">
           <button
-            onClick={() => setWeekOffset((w) => w - 1)}
-            className="rounded-md px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
+            onClick={prevMonth}
+            className="rounded-md px-3 py-1.5 text-sm"
+            style={{ color: "var(--text-muted)" }}
           >
-            &larr; 이전 주
+            &larr; 이전 달
           </button>
-          <span className="text-sm font-medium text-gray-700">
-            {format(weekDays[0], "M/d", { locale: ko })} -{" "}
-            {format(weekDays[6], "M/d", { locale: ko })}
-          </span>
-          <button
-            onClick={() => setWeekOffset((w) => w + 1)}
-            className="rounded-md px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
+          <h2
+            className="text-lg font-semibold"
+            style={{ color: "var(--text-primary)" }}
           >
-            다음 주 &rarr;
+            {format(currentDate, "yyyy년 M월", { locale: ko })}
+          </h2>
+          <button
+            onClick={nextMonth}
+            className="rounded-md px-3 py-1.5 text-sm"
+            style={{ color: "var(--text-muted)" }}
+          >
+            다음 달 &rarr;
           </button>
         </div>
 
         {/* Shift Table */}
-        <div className="overflow-x-auto rounded-lg border border-gray-200">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50">
-                <th className="sticky left-0 z-10 border-b border-r border-gray-200 bg-gray-50 px-4 py-3 text-left text-xs font-medium text-gray-500">
-                  멤버
-                </th>
-                {weekDays.map((day) => (
-                  <th
-                    key={day.toISOString()}
-                    className={`border-b border-gray-200 px-3 py-3 text-center text-xs font-medium ${
-                      isSameDay(day, today)
-                        ? "bg-gray-900 text-white"
-                        : "text-gray-500"
-                    }`}
-                  >
-                    <div>{format(day, "EEE", { locale: ko })}</div>
-                    <div>{format(day, "M/d")}</div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
+        <div
+          className="overflow-x-hidden lg:rounded-lg border-y lg:border"
+          style={{ borderColor: "var(--border-light)" }}
+        >
+          <table className="w-full table-fixed text-sm">
             <tbody>
-              {members.map(({ profile, events }) => (
-                <tr key={profile.id} className="border-b border-gray-100">
-                  <td className="sticky left-0 z-10 border-r border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900">
-                    {profile.display_name}
-                  </td>
-                  {weekDays.map((day) => {
-                    const dayEvents = events.filter((e) =>
-                      isSameDay(new Date(e.start_at), day)
-                    );
-                    return (
+              {weekStarts.map((weekStart, weekIdx) => {
+                const weekDays = eachDayOfInterval({
+                  start: weekStart,
+                  end: addDays(weekStart, 6),
+                });
+
+                return (
+                  <>
+                    <tr
+                      key={`header-${weekStart.toISOString()}`}
+                      style={{
+                        backgroundColor: "var(--bg-surface)",
+                        borderTopWidth: weekIdx === 0 ? 0 : 2,
+                        borderTopColor: "var(--border)",
+                      }}
+                    >
                       <td
-                        key={day.toISOString()}
-                        className="px-2 py-2 text-center"
-                      >
-                        {dayEvents.map((event) => (
+                        className="sticky left-0 z-10 w-14 lg:w-24"
+                        style={{
+                          backgroundColor: "var(--bg-surface)",
+                          borderRight: "1px solid var(--border-light)",
+                        }}
+                      />
+                      {weekDays.map((day) => (
+                        <td
+                          key={day.toISOString()}
+                          className="px-0.5 lg:px-3 py-1.5 lg:py-2 text-center text-xs font-medium"
+                          style={{
+                            color: isSameDay(day, today)
+                              ? "var(--text-primary)"
+                              : !isSameMonth(day, currentDate)
+                                ? "var(--text-out-of-month)"
+                                : "var(--text-secondary)",
+                          }}
+                        >
                           <div
-                            key={event.id}
-                            className="mb-1 rounded bg-blue-50 px-1.5 py-1 text-[11px] leading-tight text-blue-700"
-                            title={event.summary}
+                            className="text-[10px]"
+                            style={{ color: "inherit" }}
                           >
-                            <div className="font-medium">{event.summary}</div>
-                            <div className="text-blue-500">
-                              {format(new Date(event.start_at), "HH:mm")}-
-                              {format(new Date(event.end_at), "HH:mm")}
-                            </div>
+                            {format(day, "EEE", { locale: ko })}
                           </div>
-                        ))}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
+                          <span
+                            className="inline-flex items-center justify-center text-[11px]"
+                            style={
+                              isSameDay(day, today)
+                                ? {
+                                    width: "1.5rem",
+                                    height: "1.5rem",
+                                    borderRadius: "9999px",
+                                    backgroundColor: "var(--today-bg)",
+                                    color: "var(--today-text)",
+                                  }
+                                : {}
+                            }
+                          >
+                            {format(day, "d")}
+                          </span>
+                        </td>
+                      ))}
+                    </tr>
+
+                    {members.map(({ profile, events }, memberIdx) => (
+                      <tr
+                        key={`${weekStart.toISOString()}-${profile.id}`}
+                        style={{
+                          borderBottom:
+                            memberIdx < members.length - 1
+                              ? "1px solid var(--border-light)"
+                              : "none",
+                        }}
+                      >
+                        <td
+                          className="sticky left-0 z-10 w-14 lg:w-24 px-1.5 lg:px-4 py-2 lg:py-2.5 text-xs lg:text-sm font-medium"
+                          style={{
+                            backgroundColor: "var(--bg-card)",
+                            borderRight: "1px solid var(--border-light)",
+                            color: "var(--text-primary)",
+                          }}
+                        >
+                          <span className="block truncate">{profile.display_name}</span>
+                        </td>
+                        {weekDays.map((day) => {
+                          const dayEvents = events.filter((e) =>
+                            isSameDay(new Date(e.start_at), day)
+                          );
+                          return (
+                            <td
+                              key={day.toISOString()}
+                              className="px-0.5 lg:px-2 py-1 lg:py-2 text-center align-top"
+                              style={{
+                                backgroundColor: !isSameMonth(day, currentDate)
+                                  ? "var(--bg-out-of-month)"
+                                  : "var(--bg-card)",
+                              }}
+                            >
+                              {dayEvents.map((event) => (
+                                <div
+                                  key={event.id}
+                                  className="mb-0.5 rounded px-0.5 lg:px-1.5 py-0.5 lg:py-1 text-[9px] lg:text-[11px] leading-tight"
+                                  style={{
+                                    backgroundColor: "var(--event-bg)",
+                                    color: "var(--event-sub)",
+                                  }}
+                                >
+                                  <span className="lg:hidden">{format(new Date(event.start_at), "H:mm")}</span>
+                                  <span className="hidden lg:inline">{format(new Date(event.start_at), "HH:mm")}–{format(new Date(event.end_at), "HH:mm")}</span>
+                                </div>
+                              ))}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </>
+                );
+              })}
             </tbody>
           </table>
         </div>

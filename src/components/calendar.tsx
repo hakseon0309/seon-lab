@@ -24,8 +24,8 @@ export default function Calendar({ events }: CalendarProps) {
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
-  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
-  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
+  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
   function getEventsForDay(day: Date) {
@@ -47,33 +47,48 @@ export default function Calendar({ events }: CalendarProps) {
     );
   }
 
-  const weekDays = ["일", "월", "화", "수", "목", "금", "토"];
+  const weekDays = ["월", "화", "수", "목", "금", "토", "일"];
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between px-4 lg:px-0">
         <button
           onClick={prevMonth}
-          className="rounded-md px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
+          className="rounded-md px-3 py-1.5 text-sm transition-colors"
+          style={{ color: "var(--text-muted)" }}
         >
           &larr;
         </button>
-        <h2 className="text-lg font-semibold text-gray-900">
+        <h2
+          className="text-lg font-semibold"
+          style={{ color: "var(--text-primary)" }}
+        >
           {format(currentDate, "yyyy년 M월", { locale: ko })}
         </h2>
         <button
           onClick={nextMonth}
-          className="rounded-md px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
+          className="rounded-md px-3 py-1.5 text-sm transition-colors"
+          style={{ color: "var(--text-muted)" }}
         >
           &rarr;
         </button>
       </div>
 
-      <div className="grid grid-cols-7 gap-px overflow-hidden rounded-lg border border-gray-200 bg-gray-200">
+      <div
+        className="grid grid-cols-7 gap-px overflow-hidden lg:rounded-lg border-y lg:border"
+        style={{
+          borderColor: "var(--border-light)",
+          backgroundColor: "var(--border-light)",
+        }}
+      >
         {weekDays.map((day) => (
           <div
             key={day}
-            className="bg-gray-50 py-2 text-center text-xs font-medium text-gray-500"
+            className="py-1.5 lg:py-2 text-center text-xs font-medium"
+            style={{
+              backgroundColor: "var(--bg-surface)",
+              color: "var(--text-muted)",
+            }}
           >
             {day}
           </div>
@@ -83,30 +98,45 @@ export default function Calendar({ events }: CalendarProps) {
           return (
             <div
               key={day.toISOString()}
-              className={`min-h-[80px] bg-white p-1.5 ${
-                !isSameMonth(day, currentDate) ? "opacity-40" : ""
-              }`}
+              className="min-h-[56px] lg:min-h-[80px] p-0.5 lg:p-1.5"
+              style={{
+                backgroundColor: !isSameMonth(day, currentDate)
+                  ? "var(--bg-out-of-month)"
+                  : "var(--bg-card)",
+              }}
             >
               <div
-                className={`mb-1 text-xs font-medium ${
+                className="mb-1 flex items-center justify-center w-6 h-6 text-xs font-medium rounded-full"
+                style={
                   isToday(day)
-                    ? "flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-white"
-                    : "text-gray-700"
-                }`}
+                    ? {
+                        backgroundColor: "var(--today-bg)",
+                        color: "var(--today-text)",
+                      }
+                    : !isSameMonth(day, currentDate)
+                      ? { color: "var(--text-out-of-month)" }
+                      : { color: "var(--text-secondary)" }
+                }
               >
                 {format(day, "d")}
               </div>
               {dayEvents.slice(0, 2).map((event) => (
                 <div
                   key={event.id}
-                  className="mb-0.5 truncate rounded bg-blue-50 px-1 py-0.5 text-[10px] leading-tight text-blue-700"
-                  title={`${event.summary}\n${format(new Date(event.start_at), "HH:mm")} - ${format(new Date(event.end_at), "HH:mm")}`}
+                  className="mb-0.5 truncate rounded px-1 py-0.5 text-[10px] leading-tight"
+                  style={{
+                    backgroundColor: "var(--event-bg)",
+                    color: "var(--event-text)",
+                  }}
                 >
-                  {event.summary}
+                  {format(new Date(event.start_at), "HH:mm")}–{format(new Date(event.end_at), "HH:mm")}
                 </div>
               ))}
               {dayEvents.length > 2 && (
-                <div className="text-[10px] text-gray-400">
+                <div
+                  className="text-[10px]"
+                  style={{ color: "var(--text-muted)" }}
+                >
                   +{dayEvents.length - 2}
                 </div>
               )}

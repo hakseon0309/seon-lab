@@ -10,7 +10,9 @@ export default function JoinPage({
   params: Promise<{ invite_code: string }>;
 }) {
   const { invite_code } = use(params);
-  const [status, setStatus] = useState<"loading" | "joining" | "error" | "done">("loading");
+  const [status, setStatus] = useState<
+    "loading" | "joining" | "error" | "done"
+  >("loading");
   const [message, setMessage] = useState("");
   const supabase = createClient();
   const router = useRouter();
@@ -22,7 +24,6 @@ export default function JoinPage({
       } = await supabase.auth.getUser();
 
       if (!user) {
-        // Redirect to login, then come back
         router.push(`/login?next=/join/${invite_code}`);
         return;
       }
@@ -48,7 +49,6 @@ export default function JoinPage({
         setMessage("이미 참여 중인 팀입니다");
       }
 
-      // Redirect to team page
       setTimeout(() => {
         router.push(`/teams/${data.team_id}`);
       }, 1500);
@@ -59,28 +59,46 @@ export default function JoinPage({
   }, [invite_code]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
+    <div className="flex min-h-screen items-center justify-center">
       <div className="text-center">
         {status === "loading" && (
-          <p className="text-sm text-gray-500">인증 확인 중...</p>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            인증 확인 중...
+          </p>
         )}
         {status === "joining" && (
-          <p className="text-sm text-gray-500">팀에 참여하는 중...</p>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            팀에 참여하는 중...
+          </p>
         )}
         {status === "done" && (
           <div>
-            <p className="text-sm font-medium text-green-600">
+            <p
+              className="text-sm font-medium"
+              style={{ color: "var(--success)" }}
+            >
               {message || "팀에 참여했습니다!"}
             </p>
-            <p className="mt-1 text-xs text-gray-400">잠시 후 이동합니다...</p>
+            <p
+              className="mt-1 text-xs"
+              style={{ color: "var(--text-muted)" }}
+            >
+              잠시 후 이동합니다...
+            </p>
           </div>
         )}
         {status === "error" && (
           <div>
-            <p className="text-sm font-medium text-red-600">{message}</p>
+            <p
+              className="text-sm font-medium"
+              style={{ color: "var(--error)" }}
+            >
+              {message}
+            </p>
             <button
               onClick={() => router.push("/teams")}
-              className="mt-4 text-sm text-gray-500 hover:underline"
+              className="mt-4 text-sm hover:underline"
+              style={{ color: "var(--text-muted)" }}
             >
               팀 목록으로 이동
             </button>

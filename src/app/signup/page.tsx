@@ -39,17 +39,24 @@ export default function SignupPage() {
 
   if (success) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="w-full max-w-sm space-y-6 px-6 text-center">
-          <h1 className="text-2xl font-bold text-gray-900">이메일을 확인해주세요</h1>
-          <p className="text-sm text-gray-500">
-            <strong>{email}</strong>로 인증 링크를 발송했습니다.
+          <h1
+            className="text-2xl font-bold"
+            style={{ color: "var(--text-primary)" }}
+          >
+            이메일을 확인해주세요
+          </h1>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            <strong style={{ color: "var(--text-secondary)" }}>{email}</strong>
+            로 인증 링크를 발송했습니다.
             <br />
             메일함을 확인해주세요.
           </p>
           <Link
             href="/login"
-            className="inline-block text-sm font-medium text-gray-900 hover:underline"
+            className="inline-block text-sm font-medium hover:underline"
+            style={{ color: "var(--primary)" }}
           >
             로그인으로 돌아가기
           </Link>
@@ -58,67 +65,89 @@ export default function SignupPage() {
     );
   }
 
+  const inputStyle = {
+    backgroundColor: "var(--input-bg)",
+    borderColor: "var(--input-border)",
+    color: "var(--input-text)",
+    "--tw-ring-color": "var(--primary)",
+  } as React.CSSProperties;
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
+    <div className="flex min-h-screen items-center justify-center">
       <div className="w-full max-w-sm space-y-8 px-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+          <h1
+            className="text-2xl font-bold tracking-tight"
+            style={{ color: "var(--primary)" }}
+          >
             회원가입
           </h1>
-          <p className="mt-2 text-sm text-gray-500">
+          <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
             Seon Lab에 가입하여 팀 시프트를 공유하세요
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
+            <div
+              className="rounded-lg p-3 text-sm"
+              style={{ backgroundColor: "var(--error-bg)", color: "var(--error)" }}
+            >
               {error}
             </div>
           )}
 
           <div>
-            <label htmlFor="displayName" className="block text-sm font-medium text-gray-700">
+            <label
+              className="block text-sm font-medium"
+              style={{ color: "var(--text-secondary)" }}
+            >
               표시 이름
             </label>
             <input
-              id="displayName"
               type="text"
               required
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+              className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2"
+              style={inputStyle}
               placeholder="팀에서 보일 이름"
             />
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+            <label
+              className="block text-sm font-medium"
+              style={{ color: "var(--text-secondary)" }}
+            >
               이메일
             </label>
             <input
-              id="email"
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+              className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2"
+              style={inputStyle}
               placeholder="you@example.com"
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            <label
+              className="block text-sm font-medium"
+              style={{ color: "var(--text-secondary)" }}
+            >
               비밀번호
             </label>
             <input
-              id="password"
               type="password"
               required
               minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+              className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2"
+              style={inputStyle}
               placeholder="6자 이상"
             />
           </div>
@@ -126,15 +155,23 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+            className="w-full rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50"
+            style={{
+              backgroundColor: "var(--primary)",
+              color: "var(--text-on-primary)",
+            }}
           >
             {loading ? "가입 중..." : "가입하기"}
           </button>
         </form>
 
-        <p className="text-center text-sm text-gray-500">
+        <p className="text-center text-sm" style={{ color: "var(--text-muted)" }}>
           이미 계정이 있으신가요?{" "}
-          <Link href="/login" className="font-medium text-gray-900 hover:underline">
+          <Link
+            href="/login"
+            className="font-medium hover:underline"
+            style={{ color: "var(--primary)" }}
+          >
             로그인
           </Link>
         </p>

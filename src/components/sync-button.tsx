@@ -58,14 +58,25 @@ export default function SyncButton({ lastSynced, onSync }: SyncButtonProps) {
       <button
         onClick={handleSync}
         disabled={disabled}
-        className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+        className="rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
+        style={{
+          borderColor: "var(--border)",
+          color: "var(--text-secondary)",
+          backgroundColor: "var(--bg-card)",
+        }}
       >
         {loading ? "동기화 중..." : "새로고침"}
       </button>
       {remaining > 0 && (
-        <span className="text-xs text-gray-400">{remaining}분 후 가능</span>
+        <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+          {remaining}분 후 가능
+        </span>
       )}
-      {error && <span className="text-xs text-red-500">{error}</span>}
+      {error && (
+        <span className="text-xs" style={{ color: "var(--error)" }}>
+          {error}
+        </span>
+      )}
     </div>
   );
 }

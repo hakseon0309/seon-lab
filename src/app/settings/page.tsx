@@ -63,7 +63,6 @@ export default function SettingsPage() {
     } else {
       setMessage("저장되었습니다");
 
-      // If URL was set, trigger initial sync
       if (icsUrl.trim()) {
         const syncRes = await fetch("/api/sync", { method: "POST" });
         if (syncRes.ok) {
@@ -76,10 +75,19 @@ export default function SettingsPage() {
     setSaving(false);
   }
 
+  const inputStyle = {
+    backgroundColor: "var(--input-bg)",
+    borderColor: "var(--input-border)",
+    color: "var(--input-text)",
+    "--tw-ring-color": "var(--primary)",
+  } as React.CSSProperties;
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="text-sm text-gray-400">로딩 중...</div>
+        <div className="text-sm" style={{ color: "var(--text-muted)" }}>
+          로딩 중...
+        </div>
       </div>
     );
   }
@@ -87,35 +95,48 @@ export default function SettingsPage() {
   return (
     <>
       <Nav />
-      <main className="mx-auto max-w-lg px-4 py-8">
-        <h1 className="mb-6 text-xl font-bold text-gray-900">설정</h1>
+      <main className="mx-auto max-w-lg px-4 py-6 lg:py-8 pb-24 lg:pb-8">
+        <h1
+          className="mb-6 text-xl font-bold"
+          style={{ color: "var(--text-primary)" }}
+        >
+          설정
+        </h1>
 
         <form onSubmit={handleSave} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label
+              className="block text-sm font-medium"
+              style={{ color: "var(--text-secondary)" }}
+            >
               표시 이름
             </label>
             <input
               type="text"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+              className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2"
+              style={inputStyle}
               placeholder="팀에서 보일 이름"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label
+              className="block text-sm font-medium"
+              style={{ color: "var(--text-secondary)" }}
+            >
               캘린더 구독 URL
             </label>
             <input
               type="url"
               value={icsUrl}
               onChange={(e) => setIcsUrl(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+              className="mt-1 block w-full rounded-lg border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2"
+              style={inputStyle}
               placeholder="webcal://... 또는 https://..."
             />
-            <p className="mt-1.5 text-xs text-gray-400">
+            <p className="mt-1.5 text-xs" style={{ color: "var(--text-muted)" }}>
               Apple 캘린더 → 캘린더 우클릭 → 공유 설정 → 공개 캘린더에서 URL을
               복사하세요
             </p>
@@ -123,11 +144,15 @@ export default function SettingsPage() {
 
           {message && (
             <div
-              className={`rounded-lg p-3 text-sm ${
-                message.includes("실패")
-                  ? "bg-red-50 text-red-600"
-                  : "bg-green-50 text-green-700"
-              }`}
+              className="rounded-lg p-3 text-sm"
+              style={{
+                backgroundColor: message.includes("실패")
+                  ? "var(--error-bg)"
+                  : "var(--success-bg)",
+                color: message.includes("실패")
+                  ? "var(--error)"
+                  : "var(--success)",
+              }}
             >
               {message}
             </div>
@@ -136,7 +161,11 @@ export default function SettingsPage() {
           <button
             type="submit"
             disabled={saving}
-            className="w-full rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+            className="w-full rounded-lg px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50"
+            style={{
+              backgroundColor: "var(--primary)",
+              color: "var(--text-on-primary)",
+            }}
           >
             {saving ? "저장 중..." : "저장"}
           </button>

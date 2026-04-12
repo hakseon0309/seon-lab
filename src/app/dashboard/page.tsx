@@ -48,7 +48,9 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="text-sm text-gray-400">로딩 중...</div>
+        <div className="text-sm" style={{ color: "var(--text-muted)" }}>
+          로딩 중...
+        </div>
       </div>
     );
   }
@@ -58,15 +60,22 @@ export default function DashboardPage() {
       <>
         <Nav />
         <div className="mx-auto max-w-5xl px-4 py-16 text-center">
-          <h2 className="text-xl font-semibold text-gray-900">
+          <h2
+            className="text-xl font-semibold"
+            style={{ color: "var(--text-primary)" }}
+          >
             캘린더 URL을 등록해주세요
           </h2>
-          <p className="mt-2 text-sm text-gray-500">
+          <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
             설정 페이지에서 Apple 캘린더 구독 URL을 입력하면 시프트가 표시됩니다.
           </p>
           <button
             onClick={() => router.push("/settings")}
-            className="mt-6 rounded-lg bg-gray-900 px-6 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
+            className="mt-6 rounded-lg px-6 py-2.5 text-sm font-medium transition-colors"
+            style={{
+              backgroundColor: "var(--primary)",
+              color: "var(--text-on-primary)",
+            }}
           >
             설정으로 이동
           </button>
@@ -75,7 +84,6 @@ export default function DashboardPage() {
     );
   }
 
-  // Upcoming shifts: today + next 7 days
   const now = startOfDay(new Date());
   const weekLater = addDays(now, 7);
   const upcomingEvents = events.filter((e) => {
@@ -86,12 +94,17 @@ export default function DashboardPage() {
   return (
     <>
       <Nav />
-      <main className="mx-auto max-w-5xl px-4 py-6">
-        <div className="mb-6 flex items-center justify-between">
+      <main className="mx-auto max-w-5xl px-0 lg:px-4 py-4 lg:py-6 pb-24 lg:pb-6">
+        <div className="mb-4 flex items-center justify-between px-4 lg:px-0">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">내 시프트</h1>
+            <h1
+              className="text-xl font-bold"
+              style={{ color: "var(--text-primary)" }}
+            >
+              내 시프트
+            </h1>
             {profile.last_synced && (
-              <p className="text-xs text-gray-400">
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
                 마지막 동기화:{" "}
                 {format(new Date(profile.last_synced), "M/d HH:mm", {
                   locale: ko,
@@ -105,33 +118,51 @@ export default function DashboardPage() {
           />
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
+        <div className="grid gap-4 lg:gap-6 lg:grid-cols-[1fr_300px]">
           <Calendar events={events} />
 
-          <div>
-            <h3 className="mb-3 text-sm font-semibold text-gray-900">
+          <div className="px-4 lg:px-0">
+            <h3
+              className="mb-3 text-sm font-semibold"
+              style={{ color: "var(--text-primary)" }}
+            >
               다가오는 시프트
             </h3>
             {upcomingEvents.length === 0 ? (
-              <p className="text-sm text-gray-400">예정된 시프트가 없습니다</p>
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                예정된 시프트가 없습니다
+              </p>
             ) : (
               <div className="space-y-2">
                 {upcomingEvents.slice(0, 10).map((event) => (
                   <div
                     key={event.id}
-                    className="rounded-lg border border-gray-200 p-3"
+                    className="rounded-lg border p-3"
+                    style={{
+                      borderColor: "var(--border-light)",
+                      backgroundColor: "var(--bg-card)",
+                    }}
                   >
-                    <div className="text-sm font-medium text-gray-900">
+                    <div
+                      className="text-sm font-medium"
+                      style={{ color: "var(--text-primary)" }}
+                    >
                       {event.summary}
                     </div>
-                    <div className="mt-1 text-xs text-gray-500">
+                    <div
+                      className="mt-1 text-xs"
+                      style={{ color: "var(--text-muted)" }}
+                    >
                       {format(new Date(event.start_at), "M/d(EEE) HH:mm", {
                         locale: ko,
                       })}{" "}
                       - {format(new Date(event.end_at), "HH:mm")}
                     </div>
                     {event.location && (
-                      <div className="mt-0.5 text-xs text-gray-400">
+                      <div
+                        className="mt-0.5 text-xs"
+                        style={{ color: "var(--text-muted)" }}
+                      >
                         {event.location}
                       </div>
                     )}

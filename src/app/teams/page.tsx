@@ -95,7 +95,9 @@ export default function TeamsPage() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="text-sm text-gray-400">로딩 중...</div>
+        <div className="text-sm" style={{ color: "var(--text-muted)" }}>
+          로딩 중...
+        </div>
       </div>
     );
   }
@@ -103,12 +105,22 @@ export default function TeamsPage() {
   return (
     <>
       <Nav />
-      <main className="mx-auto max-w-lg px-4 py-8">
+      <main className="mx-auto max-w-lg px-4 py-6 lg:py-8 pb-24 lg:pb-8">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-900">팀</h1>
+          <h1
+            className="text-xl font-bold"
+            style={{ color: "var(--text-primary)" }}
+          >
+            팀
+          </h1>
           <button
             onClick={() => setShowJoinModal(true)}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors"
+            style={{
+              borderColor: "var(--border)",
+              color: "var(--text-secondary)",
+              backgroundColor: "var(--bg-card)",
+            }}
           >
             팀 참여
           </button>
@@ -119,20 +131,33 @@ export default function TeamsPage() {
             type="text"
             value={newTeamName}
             onChange={(e) => setNewTeamName(e.target.value)}
-            className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+            className="flex-1 rounded-lg border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2"
+            style={{
+              backgroundColor: "var(--input-bg)",
+              borderColor: "var(--input-border)",
+              color: "var(--input-text)",
+              "--tw-ring-color": "var(--primary)",
+            } as React.CSSProperties}
             placeholder="새 팀 이름"
           />
           <button
             type="submit"
             disabled={creating}
-            className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+            className="rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
+            style={{
+              backgroundColor: "var(--primary)",
+              color: "var(--text-on-primary)",
+            }}
           >
             {creating ? "생성 중..." : "생성"}
           </button>
         </form>
 
         {teams.length === 0 ? (
-          <p className="text-center text-sm text-gray-400">
+          <p
+            className="text-center text-sm"
+            style={{ color: "var(--text-muted)" }}
+          >
             아직 참여한 팀이 없습니다. 팀을 생성하거나 초대 코드로 참여하세요.
           </p>
         ) : (
@@ -141,12 +166,19 @@ export default function TeamsPage() {
               <Link
                 key={team.id}
                 href={`/teams/${team.id}`}
-                className="flex items-center justify-between rounded-lg border border-gray-200 p-4 transition-colors hover:bg-gray-50"
+                className="flex items-center justify-between rounded-lg border p-4 transition-colors"
+                style={{
+                  borderColor: "var(--border-light)",
+                  backgroundColor: "var(--bg-card)",
+                }}
               >
-                <span className="text-sm font-medium text-gray-900">
+                <span
+                  className="text-sm font-medium"
+                  style={{ color: "var(--text-primary)" }}
+                >
                   {team.name}
                 </span>
-                <span className="text-xs text-gray-400">&rarr;</span>
+                <span style={{ color: "var(--text-muted)" }}>&rarr;</span>
               </Link>
             ))}
           </div>
