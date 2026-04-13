@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { syncEventsSnapshot } from "@/lib/event-sync";
 import { fetchAndParseICS } from "@/lib/ics-parser";
 import { NextResponse } from "next/server";
 
@@ -39,21 +40,7 @@ export async function POST() {
 
   try {
     const events = await fetchAndParseICS(profile.ics_url);
-
-    // Upsert events
-    for (const event of events) {
-      await supabase.from("events").upsert(
-        {
-          user_id: user.id,
-          uid: event.uid,
-          summary: event.summary,
-          start_at: event.startAt.toISOString(),
-          end_at: event.endAt.toISOString(),
-          location: event.location,
-        },
-        { onConflict: "user_id,uid" }
-      );
-    }
+    await syncEventsSnapshot(supabase, user.id, events);
 
     // Update last_synced
     await supabase
