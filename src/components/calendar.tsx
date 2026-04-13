@@ -17,9 +17,10 @@ import { useState } from "react";
 
 interface CalendarProps {
   events: CalendarEvent[];
+  partnerEvents?: CalendarEvent[];
 }
 
-export default function Calendar({ events }: CalendarProps) {
+export default function Calendar({ events, partnerEvents = [] }: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const monthStart = startOfMonth(currentDate);
@@ -28,21 +29,14 @@ export default function Calendar({ events }: CalendarProps) {
   const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
-  function getEventsForDay(day: Date) {
+  function getMyEventsForDay(day: Date) {
     const dayKey = getSeoulDateKey(day);
-    return events.filter((event) => getSeoulDateKey(event.start_at) === dayKey);
+    return events.filter((e) => getSeoulDateKey(e.start_at) === dayKey);
   }
 
-  function prevMonth() {
-    setCurrentDate(
-      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
-    );
-  }
-
-  function nextMonth() {
-    setCurrentDate(
-      new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1)
-    );
+  function getPartnerEventsForDay(day: Date) {
+    const dayKey = getSeoulDateKey(day);
+    return partnerEvents.filter((e) => getSeoulDateKey(e.start_at) === dayKey);
   }
 
   const weekDays = ["월", "화", "수", "목", "금", "토", "일"];
@@ -51,20 +45,22 @@ export default function Calendar({ events }: CalendarProps) {
     <section className="w-full min-w-0">
       <div className="mb-3 flex items-center justify-between px-4 lg:px-0">
         <button
-          onClick={prevMonth}
+          onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}
           className="rounded-md px-2 py-1.5 text-sm sm:px-3"
           style={{ color: "var(--text-muted)" }}
         >
           &larr;
         </button>
+
         <h2
           className="text-xl font-semibold sm:text-2xl"
           style={{ color: "var(--text-primary)" }}
         >
           {format(currentDate, "yyyy년 M월", { locale: ko })}
         </h2>
+
         <button
-          onClick={nextMonth}
+          onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))}
           className="rounded-md px-2 py-1.5 text-sm sm:px-3"
           style={{ color: "var(--text-muted)" }}
         >
@@ -92,7 +88,8 @@ export default function Calendar({ events }: CalendarProps) {
           </div>
         ))}
         {days.map((day) => {
-          const dayEvents = getEventsForDay(day);
+          const myDayEvents = getMyEventsForDay(day);
+          const partnerDayEvents = getPartnerEventsForDay(day);
           return (
             <div
               key={day.toISOString()}
@@ -107,10 +104,7 @@ export default function Calendar({ events }: CalendarProps) {
                 className="mb-1 flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium sm:h-7 sm:w-7 sm:text-sm"
                 style={
                   isToday(day)
-                    ? {
-                        backgroundColor: "var(--today-bg)",
-                        color: "var(--today-text)",
-                      }
+                    ? { backgroundColor: "var(--today-bg)", color: "var(--today-text)" }
                     : !isSameMonth(day, currentDate)
                       ? { color: "var(--text-out-of-month)" }
                       : { color: "var(--text-secondary)" }
@@ -118,7 +112,9 @@ export default function Calendar({ events }: CalendarProps) {
               >
                 {format(day, "d")}
               </div>
-              {dayEvents.slice(0, 2).map((event) => (
+
+              {/* 내 시프트 */}
+              {myDayEvents.slice(0, 1).map((event) => (
                 <div
                   key={event.id}
                   className="mb-1 rounded-md px-1 py-1 text-center text-[11px] leading-tight sm:px-1.5 sm:text-[12px] lg:text-[13px]"
@@ -131,14 +127,28 @@ export default function Calendar({ events }: CalendarProps) {
                   <div>{formatSeoulTime(event.end_at)}</div>
                 </div>
               ))}
-              {dayEvents.length > 2 && (
+
+              {/* 파트너 시프트 */}
+              {partnerDayEvents.slice(0, 1).map((event) => (
                 <div
-                  className="text-[10px]"
-                  style={{ color: "var(--text-muted)" }}
+                  key={event.id}
+                  className="relative mb-1 rounded-md px-1 py-1 text-center text-[11px] leading-tight sm:px-1.5 sm:text-[12px] lg:text-[13px]"
+                  style={{
+                    backgroundColor: "var(--event-bg)",
+                    color: "var(--event-text)",
+                    opacity: 0.7,
+                  }}
                 >
-                  +{dayEvents.length - 2}
+                  <span
+                    className="absolute -top-1 -left-1 text-[9px] leading-none"
+                    style={{ color: "var(--error)" }}
+                  >
+                    ♥
+                  </span>
+                  <div>{formatSeoulTime(event.start_at)}</div>
+                  <div>{formatSeoulTime(event.end_at)}</div>
                 </div>
-              )}
+              ))}
             </div>
           );
         })}

@@ -39,28 +39,11 @@ create index idx_cafeteria_menu_date on public.cafeteria_menu_items (location_id
 
 
 -- ────────────────────────────────────────────────────────────
--- 3. 끼니별 점수 & 코멘트
--- ────────────────────────────────────────────────────────────
-
-create table public.cafeteria_meal_scores (
-  id          uuid        primary key default gen_random_uuid(),
-  location_id uuid        not null references public.cafeteria_locations(id) on delete cascade,
-  date        date        not null,
-  meal_type   text        not null check (meal_type in ('lunch', 'dinner', 'salad')),
-  score       numeric(2,1) not null check (score >= 0 and score <= 5),
-  comment     text,
-  created_at  timestamptz not null default now(),
-  unique (location_id, date, meal_type)
-);
-
-
--- ────────────────────────────────────────────────────────────
 -- RLS — 모든 인증 사용자가 읽기 가능, 쓰기는 service_role만
 -- ────────────────────────────────────────────────────────────
 
 alter table public.cafeteria_locations   enable row level security;
 alter table public.cafeteria_menu_items  enable row level security;
-alter table public.cafeteria_meal_scores enable row level security;
 
 create policy "Anyone authenticated can view locations"
   on public.cafeteria_locations for select
@@ -68,10 +51,6 @@ create policy "Anyone authenticated can view locations"
 
 create policy "Anyone authenticated can view menu items"
   on public.cafeteria_menu_items for select
-  using (auth.uid() is not null);
-
-create policy "Anyone authenticated can view meal scores"
-  on public.cafeteria_meal_scores for select
   using (auth.uid() is not null);
 
 

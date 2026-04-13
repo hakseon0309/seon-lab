@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { formatSeoulTime, getSeoulDateKey } from "@/lib/time";
 import { Team, CalendarEvent, UserProfile } from "@/lib/types";
 import Nav from "@/components/nav";
+import LoadingScreen from "@/components/loading-screen";
 import { useEffect, useState, use, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -143,11 +144,7 @@ export default function TeamDetailPage({
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-sm" style={{ color: "var(--text-muted)" }}>
-          로딩 중...
-        </div>
-      </div>
+      <LoadingScreen />
     );
   }
 

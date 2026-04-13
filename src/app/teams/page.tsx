@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Team } from "@/lib/types";
 import Nav from "@/components/nav";
 import JoinTeamModal from "@/components/join-team-modal";
+import LoadingScreen from "@/components/loading-screen";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -94,11 +95,7 @@ export default function TeamsPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-sm" style={{ color: "var(--text-muted)" }}>
-          로딩 중...
-        </div>
-      </div>
+      <LoadingScreen />
     );
   }
 

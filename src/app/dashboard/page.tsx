@@ -7,11 +7,13 @@ import Calendar from "@/components/calendar";
 import SyncButton from "@/components/sync-button";
 import TodayMenu from "@/components/today-menu";
 import Nav from "@/components/nav";
+import LoadingScreen from "@/components/loading-screen";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [partnerEvents, setPartnerEvents] = useState<CalendarEvent[]>([]);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
@@ -37,6 +39,23 @@ export default function DashboardPage() {
 
     if (profileRes.data) setProfile(profileRes.data);
     if (eventsRes.data) setEvents(eventsRes.data);
+
+    // 커플 파트너 이벤트 조회
+    const coupleRes = await fetch("/api/couples");
+    if (coupleRes.ok) {
+      const coupleData = await coupleRes.json();
+      if (coupleData.status === "accepted" && coupleData.partner_id) {
+        const { data: pEvents } = await supabase
+          .from("events")
+          .select("*")
+          .eq("user_id", coupleData.partner_id)
+          .order("start_at", { ascending: true });
+        setPartnerEvents(pEvents || []);
+      } else {
+        setPartnerEvents([]);
+      }
+    }
+
     setLoading(false);
   }
 
@@ -45,15 +64,7 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-sm" style={{ color: "var(--text-muted)" }}>
-          로딩 중...
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <LoadingScreen />;
 
   if (!profile?.ics_url) {
     return (
@@ -102,14 +113,14 @@ export default function DashboardPage() {
               </p>
             )}
           </div>
-          <SyncButton
-            lastSynced={profile.last_synced}
-            onSync={() => loadData()}
-          />
+          <SyncButton lastSynced={profile.last_synced} onSync={() => loadData()} />
         </div>
 
         <div className="w-full">
-          <Calendar events={events} />
+          <Calendar
+            events={events}
+            partnerEvents={partnerEvents}
+          />
         </div>
 
         <TodayMenu />

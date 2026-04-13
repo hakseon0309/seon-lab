@@ -44,6 +44,22 @@ export interface CafeteriaLocation {
   created_at: string;
 }
 
+export interface CoupleRequest {
+  id: string;
+  requester_id: string;
+  partner_id: string;
+  status: "pending" | "accepted";
+  created_at: string;
+}
+
+export interface CoupleStatus {
+  couple_code: string;
+  status: "none" | "pending_sent" | "pending_received" | "accepted";
+  request_id: string | null;
+  partner_id: string | null;
+  partner_name: string | null;
+}
+
 export interface CafeteriaMenuItem {
   id: string;
   location_id: string;
@@ -52,15 +68,5 @@ export interface CafeteriaMenuItem {
   item_name: string;
   is_featured: boolean;
   sort_order: number;
-  created_at: string;
-}
-
-export interface CafeteriaMealScore {
-  id: string;
-  location_id: string;
-  date: string;
-  meal_type: "lunch" | "dinner" | "salad";
-  score: number;
-  comment: string | null;
   created_at: string;
 }

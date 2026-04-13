@@ -37,11 +37,22 @@ type SupabaseLikeClient = {
   };
 };
 
+function deduplicateByDate(events: ParsedEvent[]): ParsedEvent[] {
+  const byDate = new Map<string, ParsedEvent>();
+  for (const event of events) {
+    const dateKey = event.startAt.toISOString().slice(0, 10); // "YYYY-MM-DD"
+    byDate.set(dateKey, event); // 같은 날짜면 뒤에 오는 것으로 덮어씀
+  }
+  return Array.from(byDate.values());
+}
+
 export async function syncEventsSnapshot(
   supabase: SupabaseLikeClient,
   userId: string,
   events: ParsedEvent[]
 ) {
+  const deduplicatedEvents = deduplicateByDate(events);
+
   const { data: existingEvents, error: existingError } = await supabase
     .from("events")
     .select("uid")
@@ -51,7 +62,7 @@ export async function syncEventsSnapshot(
     throw new Error(existingError.message);
   }
 
-  const nextUids = new Set(events.map((event) => event.uid));
+  const nextUids = new Set(deduplicatedEvents.map((event) => event.uid));
   const staleUids =
     existingEvents?.filter((event) => !nextUids.has(event.uid)).map((event) => event.uid) ?? [];
 
@@ -67,11 +78,11 @@ export async function syncEventsSnapshot(
     }
   }
 
-  if (events.length === 0) {
+  if (deduplicatedEvents.length === 0) {
     return;
   }
 
-  const rows = events.map((event) => ({
+  const rows = deduplicatedEvents.map((event) => ({
     user_id: userId,
     uid: event.uid,
     summary: event.summary,
