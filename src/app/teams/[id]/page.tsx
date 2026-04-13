@@ -360,8 +360,8 @@ export default function TeamDetailPage({
                                     color: "var(--event-sub)",
                                   }}
                                 >
-                                  <span className="lg:hidden">{format(new Date(event.start_at), "H:mm")}</span>
-                                  <span className="hidden lg:inline">{format(new Date(event.start_at), "HH:mm")}–{format(new Date(event.end_at), "HH:mm")}</span>
+                                  <div>{format(new Date(event.start_at), "HH:mm")}</div>
+                                  <div>{format(new Date(event.end_at), "HH:mm")}</div>
                                 </div>
                               ))}
                             </td>
