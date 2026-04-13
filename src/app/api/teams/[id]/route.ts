@@ -1,7 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
-export async function POST(request: Request) {
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
   const supabase = await createClient();
   const {
     data: { user },
@@ -9,6 +13,16 @@ export async function POST(request: Request) {
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { data: team } = await supabase
+    .from("teams")
+    .select("created_by")
+    .eq("id", id)
+    .single();
+
+  if (!team || team.created_by !== user.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   let body;
@@ -24,20 +38,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Team name is required" }, { status: 400 });
   }
 
-  const { data: team, error: teamError } = await supabase
+  const { data, error } = await supabase
     .from("teams")
-    .insert({ name: name.trim(), created_by: user.id })
+    .update({ name: name.trim() })
+    .eq("id", id)
     .select()
     .single();
 
-  if (teamError) {
-    return NextResponse.json({ error: teamError.message }, { status: 500 });
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Add creator as member
-  await supabase
-    .from("team_members")
-    .insert({ team_id: team.id, user_id: user.id });
-
-  return NextResponse.json(team);
+  return NextResponse.json(data);
 }

@@ -34,10 +34,17 @@ export default function TeamDetailPage({
   const [team, setTeam] = useState<Team | null>(null);
   const [members, setMembers] = useState<MemberWithEvents[]>([]);
   const [loading, setLoading] = useState(true);
-  const [qrUrl, setQrUrl] = useState("");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [showInvite, setShowInvite] = useState(false);
+  const [showMembers, setShowMembers] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [qrUrl, setQrUrl] = useState("");
   const supabase = createClient();
   const router = useRouter();
+
+  const isLeader = team?.created_by === currentUserId;
 
   useEffect(() => {
     async function load() {
@@ -48,6 +55,7 @@ export default function TeamDetailPage({
         router.push("/login");
         return;
       }
+      setCurrentUserId(user.id);
 
       const { data: teamData } = await supabase
         .from("teams")
@@ -60,6 +68,7 @@ export default function TeamDetailPage({
         return;
       }
       setTeam(teamData);
+      setNewName(teamData.name);
 
       const qr = await QRCode.toDataURL(teamData.invite_code, {
         width: 200,
@@ -67,41 +76,31 @@ export default function TeamDetailPage({
       });
       setQrUrl(qr);
 
-      const { data: memberData, error: memberError } = await supabase
+      const { data: memberData } = await supabase
         .from("team_members")
         .select("user_id")
         .eq("team_id", id);
 
-      if (memberError) {
-        console.error("team_members 조회 실패:", memberError);
-      }
-
       if (memberData && memberData.length > 0) {
         const userIds = memberData.map((m) => m.user_id);
 
-        const { data: profiles, error: profileError } = await supabase
-          .from("user_profiles")
-          .select("*")
-          .in("id", userIds);
-
-        if (profileError) {
-          console.error("user_profiles 조회 실패:", profileError);
-        }
+        const [{ data: profiles }, { data: allEvents }] = await Promise.all([
+          supabase.from("user_profiles").select("*").in("id", userIds),
+          supabase
+            .from("events")
+            .select("*")
+            .in("user_id", userIds)
+            .order("start_at", { ascending: true }),
+        ]);
 
         const memberEvents: MemberWithEvents[] = [];
         for (const userId of userIds) {
           const profile = profiles?.find((p) => p.id === userId);
           if (!profile) continue;
 
-          const { data: events } = await supabase
-            .from("events")
-            .select("*")
-            .eq("user_id", userId)
-            .order("start_at", { ascending: true });
-
           memberEvents.push({
             profile: profile as UserProfile,
-            events: events || [],
+            events: allEvents?.filter((e) => e.user_id === userId) || [],
           });
         }
         setMembers(memberEvents);
@@ -112,6 +111,34 @@ export default function TeamDetailPage({
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  async function handleRename() {
+    if (!newName.trim() || newName.trim() === team?.name) {
+      setEditingName(false);
+      return;
+    }
+    const res = await fetch(`/api/teams/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newName.trim() }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setTeam(updated);
+    }
+    setEditingName(false);
+  }
+
+  async function handleRemoveMember(userId: string) {
+    const res = await fetch(`/api/teams/${id}/members`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+    if (res.ok) {
+      setMembers((prev) => prev.filter((m) => m.profile.id !== userId));
+    }
+  }
 
   if (loading) {
     return (
@@ -151,79 +178,190 @@ export default function TeamDetailPage({
     <>
       <Nav />
       <main className="mx-auto max-w-5xl px-0 lg:px-4 py-4 lg:py-6 pb-24 lg:pb-6">
-        <div className="mb-4 flex items-start justify-between px-4 lg:px-0">
-          <div>
-            <h1
-              className="text-xl font-bold"
-              style={{ color: "var(--text-primary)" }}
-            >
-              {team.name}
-            </h1>
+        {/* Header */}
+        <div className="mb-4 flex items-center justify-between px-4 lg:px-0">
+          <div className="min-w-0 flex-1">
+            {editingName ? (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleRename();
+                }}
+                className="flex items-center gap-2"
+              >
+                <input
+                  autoFocus
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  onBlur={handleRename}
+                  className="text-xl font-bold rounded-md border px-2 py-0.5 focus:outline-none focus:ring-2"
+                  style={{
+                    color: "var(--text-primary)",
+                    backgroundColor: "var(--input-bg)",
+                    borderColor: "var(--input-border)",
+                    "--tw-ring-color": "var(--primary)",
+                  } as React.CSSProperties}
+                />
+              </form>
+            ) : (
+              <div className="flex items-center gap-2">
+                <h1
+                  className="text-xl font-bold truncate"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {team.name}
+                </h1>
+                {isLeader && (
+                  <button
+                    onClick={() => setEditingName(true)}
+                    className="shrink-0 text-xs"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    수정
+                  </button>
+                )}
+              </div>
+            )}
             <p className="text-xs" style={{ color: "var(--text-muted)" }}>
               {members.length}명의 멤버
             </p>
           </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => { setShowMembers(!showMembers); setShowInvite(false); }}
+              className="rounded-lg border px-3 py-1.5 text-xs font-medium"
+              style={{
+                borderColor: "var(--border)",
+                color: "var(--text-secondary)",
+              }}
+            >
+              멤버
+            </button>
+            <button
+              onClick={() => { setShowInvite(!showInvite); setShowMembers(false); }}
+              className="rounded-lg px-3 py-1.5 text-xs font-medium"
+              style={{
+                backgroundColor: "var(--primary)",
+                color: "var(--text-on-primary)",
+              }}
+            >
+              초대
+            </button>
+          </div>
         </div>
 
-        {/* Invite Section */}
-        <details
-          className="mb-4 lg:mb-6 mx-4 lg:mx-0 rounded-lg border p-4"
-          style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-card)" }}
-        >
-          <summary
-            className="cursor-pointer text-sm font-medium"
-            style={{ color: "var(--text-secondary)" }}
+        {/* Members Panel */}
+        {showMembers && (
+          <div
+            className="mb-4 mx-4 lg:mx-0 rounded-lg border p-4"
+            style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-card)" }}
           >
-            팀 초대하기
-          </summary>
-          <div className="mt-4 flex flex-col items-center gap-6">
-            <div className="text-center">
-              <p className="mb-2 text-xs" style={{ color: "var(--text-muted)" }}>
-                초대 코드
-              </p>
-              <div className="flex items-center gap-3">
-                <span
-                  className="font-mono text-3xl font-bold tracking-[0.3em]"
-                  style={{ color: "var(--primary)" }}
+            <h3
+              className="mb-3 text-sm font-semibold"
+              style={{ color: "var(--text-primary)" }}
+            >
+              팀원 목록
+            </h3>
+            <div className="space-y-2">
+              {members.map(({ profile }) => (
+                <div
+                  key={profile.id}
+                  className="flex items-center justify-between rounded-lg px-3 py-2"
+                  style={{ backgroundColor: "var(--bg-surface)" }}
                 >
-                  {team.invite_code}
-                </span>
-                <button
-                  onClick={() => navigator.clipboard.writeText(team.invite_code)}
-                  className="rounded-lg border px-3 py-1.5 text-xs font-medium"
-                  style={{
-                    borderColor: "var(--border)",
-                    color: "var(--text-secondary)",
-                  }}
-                >
-                  복사
-                </button>
-              </div>
-              <p
-                className="mt-2 text-xs"
-                style={{ color: "var(--text-muted)" }}
-              >
-                팀원에게 이 코드를 알려주세요
-              </p>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="text-sm font-medium"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {profile.display_name}
+                    </span>
+                    {profile.id === team.created_by && (
+                      <span
+                        className="rounded-full px-2 py-0.5 text-[10px] font-medium"
+                        style={{
+                          backgroundColor: "var(--primary)",
+                          color: "var(--text-on-primary)",
+                        }}
+                      >
+                        팀장
+                      </span>
+                    )}
+                  </div>
+                  {isLeader && profile.id !== currentUserId && (
+                    <button
+                      onClick={() => {
+                        if (confirm(`${profile.display_name}님을 팀에서 제거할까요?`)) {
+                          handleRemoveMember(profile.id);
+                        }
+                      }}
+                      className="text-xs"
+                      style={{ color: "var(--error)" }}
+                    >
+                      제거
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
+          </div>
+        )}
 
-            {qrUrl && (
+        {/* Invite Panel */}
+        {showInvite && (
+          <div
+            className="mb-4 mx-4 lg:mx-0 rounded-lg border p-4"
+            style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-card)" }}
+          >
+            <div className="flex flex-col items-center gap-6">
               <div className="text-center">
+                <p className="mb-2 text-xs" style={{ color: "var(--text-muted)" }}>
+                  초대 코드
+                </p>
+                <div className="flex items-center gap-3">
+                  <span
+                    className="font-mono text-3xl font-bold tracking-[0.3em]"
+                    style={{ color: "var(--primary)" }}
+                  >
+                    {team.invite_code}
+                  </span>
+                  <button
+                    onClick={() => navigator.clipboard.writeText(team.invite_code)}
+                    className="rounded-lg border px-3 py-1.5 text-xs font-medium"
+                    style={{
+                      borderColor: "var(--border)",
+                      color: "var(--text-secondary)",
+                    }}
+                  >
+                    복사
+                  </button>
+                </div>
                 <p
-                  className="mb-2 text-xs"
+                  className="mt-2 text-xs"
                   style={{ color: "var(--text-muted)" }}
                 >
-                  또는 QR 코드를 보여주세요
+                  팀원에게 이 코드를 알려주세요
                 </p>
-                <img
-                  src={qrUrl}
-                  alt="QR Code"
-                  className="mx-auto h-[180px] w-[180px] rounded-lg"
-                />
               </div>
-            )}
+
+              {qrUrl && (
+                <div className="text-center">
+                  <p
+                    className="mb-2 text-xs"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    또는 QR 코드를 보여주세요
+                  </p>
+                  <img
+                    src={qrUrl}
+                    alt="QR Code"
+                    className="mx-auto h-[180px] w-[180px] rounded-lg"
+                  />
+                </div>
+              )}
+            </div>
           </div>
-        </details>
+        )}
 
         {/* Month Navigation */}
         <div className="mb-3 flex items-center justify-between px-4 lg:px-0">
@@ -265,7 +403,6 @@ export default function TeamDetailPage({
                 return (
                   <Fragment key={weekStart.toISOString()}>
                     <tr
-                      key={`header-${weekStart.toISOString()}`}
                       style={{
                         backgroundColor: "var(--bg-surface)",
                         borderTopWidth: weekIdx === 0 ? 0 : 2,
@@ -354,7 +491,7 @@ export default function TeamDetailPage({
                               {dayEvents.map((event) => (
                                 <div
                                   key={event.id}
-                                  className="mb-0.5 rounded px-0.5 lg:px-1.5 py-0.5 lg:py-1 text-[9px] lg:text-[11px] leading-tight"
+                                  className="mb-0.5 rounded px-0.5 lg:px-1.5 py-0.5 lg:py-1 text-[11px] lg:text-[13px] leading-tight"
                                   style={{
                                     backgroundColor: "var(--event-bg)",
                                     color: "var(--event-sub)",

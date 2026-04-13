@@ -123,7 +123,7 @@ export default function Calendar({ events }: CalendarProps) {
               {dayEvents.slice(0, 2).map((event) => (
                 <div
                   key={event.id}
-                  className="mb-0.5 rounded px-1 py-0.5 text-[10px] leading-tight text-center"
+                  className="mb-0.5 rounded px-1 py-0.5 text-[12px] leading-tight text-center"
                   style={{
                     backgroundColor: "var(--event-bg)",
                     color: "var(--event-text)",
