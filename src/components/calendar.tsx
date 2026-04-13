@@ -123,13 +123,14 @@ export default function Calendar({ events }: CalendarProps) {
               {dayEvents.slice(0, 2).map((event) => (
                 <div
                   key={event.id}
-                  className="mb-0.5 truncate rounded px-1 py-0.5 text-[10px] leading-tight"
+                  className="mb-0.5 rounded px-1 py-0.5 text-[10px] leading-tight text-center"
                   style={{
                     backgroundColor: "var(--event-bg)",
                     color: "var(--event-text)",
                   }}
                 >
-                  {format(new Date(event.start_at), "HH:mm")}–{format(new Date(event.end_at), "HH:mm")}
+                  <div>{format(new Date(event.start_at), "HH:mm")}</div>
+                  <div>{format(new Date(event.end_at), "HH:mm")}</div>
                 </div>
               ))}
               {dayEvents.length > 2 && (
