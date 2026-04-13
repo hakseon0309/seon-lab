@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { Team, CalendarEvent, UserProfile } from "@/lib/types";
 import Nav from "@/components/nav";
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import {
   format,
@@ -263,7 +263,7 @@ export default function TeamDetailPage({
                 });
 
                 return (
-                  <>
+                  <Fragment key={weekStart.toISOString()}>
                     <tr
                       key={`header-${weekStart.toISOString()}`}
                       style={{
@@ -369,7 +369,7 @@ export default function TeamDetailPage({
                         })}
                       </tr>
                     ))}
-                  </>
+                  </Fragment>
                 );
               })}
             </tbody>
