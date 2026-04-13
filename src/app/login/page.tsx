@@ -13,6 +13,21 @@ export default function LoginPage() {
   const router = useRouter();
   const supabase = createClient();
 
+  async function handleGoogleLogin() {
+    setError("");
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/api/auth/callback`,
+      },
+    });
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -120,6 +135,29 @@ export default function LoginPage() {
             {loading ? "로그인 중..." : "로그인"}
           </button>
         </form>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t" style={{ borderColor: "var(--input-border)" }} />
+          </div>
+          <div className="relative flex justify-center text-xs">
+            <span className="px-2" style={{ backgroundColor: "var(--bg)", color: "var(--text-muted)" }}>또는</span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleGoogleLogin}
+          disabled={loading}
+          className="w-full rounded-lg border px-4 py-2.5 text-sm font-medium disabled:opacity-50"
+          style={{
+            backgroundColor: "var(--input-bg)",
+            borderColor: "var(--input-border)",
+            color: "var(--text-secondary)",
+          }}
+        >
+          Google로 로그인
+        </button>
 
         <p className="text-center text-sm" style={{ color: "var(--text-muted)" }}>
           계정이 없으신가요?{" "}
