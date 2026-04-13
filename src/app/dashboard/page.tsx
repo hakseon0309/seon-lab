@@ -1,13 +1,13 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
+import { formatSeoulDateTime } from "@/lib/time";
 import { CalendarEvent, UserProfile } from "@/lib/types";
 import Calendar from "@/components/calendar";
 import SyncButton from "@/components/sync-button";
+import TodayMenu from "@/components/today-menu";
 import Nav from "@/components/nav";
 import { useEffect, useState } from "react";
-import { format } from "date-fns";
-import { ko } from "date-fns/locale";
 import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
@@ -87,8 +87,8 @@ export default function DashboardPage() {
   return (
     <>
       <Nav />
-      <main className="mx-auto max-w-5xl px-0 lg:px-4 py-4 lg:py-6 pb-24 lg:pb-6">
-        <div className="mb-4 flex items-center justify-between px-4 lg:px-0">
+      <main className="mx-auto w-full max-w-5xl px-0 lg:px-4 py-4 pb-24 lg:py-6 lg:pb-6">
+        <div className="mb-4 flex items-center justify-between gap-3 px-4 lg:px-0">
           <div>
             <h1
               className="text-xl font-bold"
@@ -98,10 +98,7 @@ export default function DashboardPage() {
             </h1>
             {profile.last_synced && (
               <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                마지막 동기화:{" "}
-                {format(new Date(profile.last_synced), "M/d HH:mm", {
-                  locale: ko,
-                })}
+                마지막 동기화: {formatSeoulDateTime(profile.last_synced)}
               </p>
             )}
           </div>
@@ -111,7 +108,11 @@ export default function DashboardPage() {
           />
         </div>
 
-        <Calendar events={events} />
+        <div className="w-full">
+          <Calendar events={events} />
+        </div>
+
+        <TodayMenu />
       </main>
     </>
   );

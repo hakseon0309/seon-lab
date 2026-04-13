@@ -1,6 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
+import { formatSeoulTime, getSeoulDateKey } from "@/lib/time";
 import { Team, CalendarEvent, UserProfile } from "@/lib/types";
 import Nav from "@/components/nav";
 import { useEffect, useState, use, Fragment } from "react";
@@ -475,8 +476,9 @@ export default function TeamDetailPage({
                           <span className="block truncate">{profile.display_name}</span>
                         </td>
                         {weekDays.map((day) => {
-                          const dayEvents = events.filter((e) =>
-                            isSameDay(new Date(e.start_at), day)
+                          const dayKey = getSeoulDateKey(day);
+                          const dayEvents = events.filter(
+                            (e) => getSeoulDateKey(e.start_at) === dayKey
                           );
                           return (
                             <td
@@ -497,8 +499,8 @@ export default function TeamDetailPage({
                                     color: "var(--event-sub)",
                                   }}
                                 >
-                                  <div>{format(new Date(event.start_at), "HH:mm")}</div>
-                                  <div>{format(new Date(event.end_at), "HH:mm")}</div>
+                                  <div>{formatSeoulTime(event.start_at)}</div>
+                                  <div>{formatSeoulTime(event.end_at)}</div>
                                 </div>
                               ))}
                             </td>

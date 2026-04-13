@@ -1,6 +1,7 @@
 "use client";
 
 import { CalendarEvent } from "@/lib/types";
+import { formatSeoulTime, getSeoulDateKey } from "@/lib/time";
 import {
   format,
   startOfMonth,
@@ -9,7 +10,6 @@ import {
   endOfWeek,
   eachDayOfInterval,
   isSameMonth,
-  isSameDay,
   isToday,
 } from "date-fns";
 import { ko } from "date-fns/locale";
@@ -29,10 +29,8 @@ export default function Calendar({ events }: CalendarProps) {
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
   function getEventsForDay(day: Date) {
-    return events.filter((event) => {
-      const eventStart = new Date(event.start_at);
-      return isSameDay(eventStart, day);
-    });
+    const dayKey = getSeoulDateKey(day);
+    return events.filter((event) => getSeoulDateKey(event.start_at) === dayKey);
   }
 
   function prevMonth() {
@@ -50,24 +48,24 @@ export default function Calendar({ events }: CalendarProps) {
   const weekDays = ["월", "화", "수", "목", "금", "토", "일"];
 
   return (
-    <div>
+    <section className="w-full min-w-0">
       <div className="mb-3 flex items-center justify-between px-4 lg:px-0">
         <button
           onClick={prevMonth}
-          className="rounded-md px-3 py-1.5 text-sm"
+          className="rounded-md px-2 py-1.5 text-sm sm:px-3"
           style={{ color: "var(--text-muted)" }}
         >
           &larr;
         </button>
         <h2
-          className="text-lg font-semibold"
+          className="text-xl font-semibold sm:text-2xl"
           style={{ color: "var(--text-primary)" }}
         >
           {format(currentDate, "yyyy년 M월", { locale: ko })}
         </h2>
         <button
           onClick={nextMonth}
-          className="rounded-md px-3 py-1.5 text-sm"
+          className="rounded-md px-2 py-1.5 text-sm sm:px-3"
           style={{ color: "var(--text-muted)" }}
         >
           &rarr;
@@ -75,7 +73,7 @@ export default function Calendar({ events }: CalendarProps) {
       </div>
 
       <div
-        className="grid grid-cols-7 gap-px overflow-hidden lg:rounded-lg border-y lg:border"
+        className="grid w-full min-w-0 grid-cols-7 gap-px overflow-hidden border-y lg:rounded-lg lg:border"
         style={{
           borderColor: "var(--border-light)",
           backgroundColor: "var(--border-light)",
@@ -84,7 +82,7 @@ export default function Calendar({ events }: CalendarProps) {
         {weekDays.map((day) => (
           <div
             key={day}
-            className="py-1.5 lg:py-2 text-center text-xs font-medium"
+            className="py-2 text-center text-[11px] font-medium sm:text-xs lg:py-2.5"
             style={{
               backgroundColor: "var(--bg-surface)",
               color: "var(--text-muted)",
@@ -98,7 +96,7 @@ export default function Calendar({ events }: CalendarProps) {
           return (
             <div
               key={day.toISOString()}
-              className="min-h-[56px] lg:min-h-[80px] p-0.5 lg:p-1.5"
+              className="min-h-[82px] p-1 sm:min-h-[108px] sm:p-1.5 lg:min-h-[128px] lg:p-2"
               style={{
                 backgroundColor: !isSameMonth(day, currentDate)
                   ? "var(--bg-out-of-month)"
@@ -106,7 +104,7 @@ export default function Calendar({ events }: CalendarProps) {
               }}
             >
               <div
-                className="mb-1 flex items-center justify-center w-6 h-6 text-xs font-medium rounded-full"
+                className="mb-1 flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium sm:h-7 sm:w-7 sm:text-sm"
                 style={
                   isToday(day)
                     ? {
@@ -123,14 +121,14 @@ export default function Calendar({ events }: CalendarProps) {
               {dayEvents.slice(0, 2).map((event) => (
                 <div
                   key={event.id}
-                  className="mb-0.5 rounded px-1 py-0.5 text-[12px] leading-tight text-center"
+                  className="mb-1 rounded-md px-1 py-1 text-center text-[11px] leading-tight sm:px-1.5 sm:text-[12px] lg:text-[13px]"
                   style={{
                     backgroundColor: "var(--event-bg)",
                     color: "var(--event-text)",
                   }}
                 >
-                  <div>{format(new Date(event.start_at), "HH:mm")}</div>
-                  <div>{format(new Date(event.end_at), "HH:mm")}</div>
+                  <div>{formatSeoulTime(event.start_at)}</div>
+                  <div>{formatSeoulTime(event.end_at)}</div>
                 </div>
               ))}
               {dayEvents.length > 2 && (
@@ -145,6 +143,6 @@ export default function Calendar({ events }: CalendarProps) {
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }

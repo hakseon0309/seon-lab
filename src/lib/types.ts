@@ -33,3 +33,34 @@ export interface TeamMember {
   joined_at: string;
   user_profiles?: UserProfile;
 }
+
+export interface CafeteriaLocation {
+  id: string;
+  name: string;
+  lunch_start: string;
+  lunch_end: string;
+  dinner_start: string;
+  dinner_end: string;
+  created_at: string;
+}
+
+export interface CafeteriaMenuItem {
+  id: string;
+  location_id: string;
+  date: string;
+  meal_type: "lunch" | "dinner" | "salad";
+  item_name: string;
+  is_featured: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface CafeteriaMealScore {
+  id: string;
+  location_id: string;
+  date: string;
+  meal_type: "lunch" | "dinner" | "salad";
+  score: number;
+  comment: string | null;
+  created_at: string;
+}
