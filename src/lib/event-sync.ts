@@ -5,36 +5,16 @@ type EventRow = {
 };
 
 type SupabaseLikeClient = {
-  from: (table: string) => {
-    select: (columns: string) => {
-      eq: (column: string, value: string) => Promise<{ data: EventRow[] | null; error: { message: string } | null }>;
-    };
-    delete: () => {
-      eq: (column: string, value: string) => {
-        in: (column: string, values: string[]) => Promise<{ error: { message: string } | null }>;
-      };
-    };
-    upsert: (
-      values:
-        | {
-            user_id: string;
-            uid: string;
-            summary: string;
-            start_at: string;
-            end_at: string;
-            location: string | null;
-          }
-        | {
-            user_id: string;
-            uid: string;
-            summary: string;
-            start_at: string;
-            end_at: string;
-            location: string | null;
-          }[],
-      options: { onConflict: string }
-    ) => Promise<{ error: { message: string } | null }>;
-  };
+  from: (table: string) => any;
+};
+
+type ExistingEventsResult = {
+  data: EventRow[] | null;
+  error: { message: string } | null;
+};
+
+type MutationResult = {
+  error: { message: string } | null;
 };
 
 function deduplicateByDate(events: ParsedEvent[]): ParsedEvent[] {
@@ -53,10 +33,10 @@ export async function syncEventsSnapshot(
 ) {
   const deduplicatedEvents = deduplicateByDate(events);
 
-  const { data: existingEvents, error: existingError } = await supabase
+  const { data: existingEvents, error: existingError } = (await supabase
     .from("events")
     .select("uid")
-    .eq("user_id", userId);
+    .eq("user_id", userId)) as ExistingEventsResult;
 
   if (existingError) {
     throw new Error(existingError.message);
@@ -67,11 +47,11 @@ export async function syncEventsSnapshot(
     existingEvents?.filter((event) => !nextUids.has(event.uid)).map((event) => event.uid) ?? [];
 
   if (staleUids.length > 0) {
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = (await supabase
       .from("events")
       .delete()
       .eq("user_id", userId)
-      .in("uid", staleUids);
+      .in("uid", staleUids)) as MutationResult;
 
     if (deleteError) {
       throw new Error(deleteError.message);
@@ -91,9 +71,9 @@ export async function syncEventsSnapshot(
     location: event.location,
   }));
 
-  const { error: upsertError } = await supabase
+  const { error: upsertError } = (await supabase
     .from("events")
-    .upsert(rows, { onConflict: "user_id,uid" });
+    .upsert(rows, { onConflict: "user_id,uid" })) as MutationResult;
 
   if (upsertError) {
     throw new Error(upsertError.message);
