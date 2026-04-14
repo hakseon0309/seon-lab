@@ -38,11 +38,11 @@ export async function updateSession(request: NextRequest) {
 
   if (!user && !isPublicRoute && !isJoinRoute && path !== "/") {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = "/";
     return NextResponse.redirect(url);
   }
 
-  if (user && (path === "/login" || path === "/signup")) {
+  if (user && (path === "/" || path === "/login" || path === "/signup")) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
