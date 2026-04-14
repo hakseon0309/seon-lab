@@ -16,6 +16,8 @@ export async function GET(request: Request) {
     if (!error) {
       return NextResponse.redirect(`${origin}${next}`);
     }
+    console.error("[auth/callback] exchangeCodeForSession:", error.message);
+    return NextResponse.redirect(`${origin}/?error=${encodeURIComponent(error.message)}`);
   }
 
   if (token_hash && type) {
@@ -23,7 +25,9 @@ export async function GET(request: Request) {
     if (!error) {
       return NextResponse.redirect(`${origin}${next}`);
     }
+    console.error("[auth/callback] verifyOtp:", error.message);
+    return NextResponse.redirect(`${origin}/?error=${encodeURIComponent(error.message)}`);
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth`);
+  return NextResponse.redirect(`${origin}/?error=${encodeURIComponent("인증 코드가 없습니다")}`);
 }
