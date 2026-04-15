@@ -9,6 +9,15 @@ export async function GET(request: Request) {
   const type = searchParams.get("type") as EmailOtpType | null;
   const next = searchParams.get("next") ?? "/dashboard";
 
+  const oauthError = searchParams.get("error");
+  const oauthErrorDescription = searchParams.get("error_description");
+  if (oauthError) {
+    console.error("[auth/callback] OAuth error:", oauthError, oauthErrorDescription);
+    return NextResponse.redirect(
+      `${origin}/?error=${encodeURIComponent(oauthErrorDescription ?? oauthError)}`
+    );
+  }
+
   const supabase = await createClient();
 
   if (code) {
