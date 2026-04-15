@@ -429,7 +429,7 @@ export default function TeamDetailPage({
           className="overflow-x-hidden lg:rounded-lg border-y lg:border"
           style={{ borderColor: "var(--border-light)" }}
         >
-          <table className="w-full table-fixed text-sm">
+          <table className="w-full table-fixed text-sm" style={{ backgroundColor: "var(--bg-card)" }}>
             <tbody>
               {weekStarts.map((weekStart, weekIdx) => {
                 const weekDays = eachDayOfInterval({
@@ -467,7 +467,7 @@ export default function TeamDetailPage({
                           <td
                             key={day.toISOString()}
                             className="px-0.5 lg:px-3 py-1.5 lg:py-2 text-center text-xs font-medium"
-                            style={{ color: headerColor }}
+                            style={{ color: headerColor, backgroundColor: ws ? ws.bg : "var(--bg-surface)" }}
                           >
                             <div className="text-[10px]" style={{ color: "inherit" }}>
                               {format(day, "EEE", { locale: ko })}

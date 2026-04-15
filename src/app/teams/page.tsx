@@ -114,8 +114,9 @@ export default function TeamsPage() {
   return (
     <>
       <Nav />
-      <main className="mx-auto max-w-lg px-4 py-6 lg:py-8 pb-24 lg:pb-8">
-        <div className="mb-6 flex items-center justify-between">
+      <main className="mx-auto w-full max-w-lg py-6 lg:py-8 pb-24 lg:pb-8">
+        {/* 헤더 */}
+        <div className="mb-6 flex items-center justify-between px-4 lg:px-0">
           <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
             팀
           </h1>
@@ -132,17 +133,17 @@ export default function TeamsPage() {
           </button>
         </div>
 
-        {/* 회사 팀 목록 (미참여 + ICS가 회사 URL인 경우에만) */}
+        {/* 회사 팀 목록 */}
         {isCorpUser && corpTeams.length > 0 && (
-          <div className="mb-6">
-            <p className="mb-2 text-xs font-medium" style={{ color: "var(--text-muted)" }}>
+          <div className="mb-4">
+            <p className="mb-2 px-4 lg:px-0 text-xs font-medium" style={{ color: "var(--text-muted)" }}>
               🏢 회사 팀
             </p>
-            <div className="space-y-2">
+            <div className="divide-y" style={{ borderColor: "var(--border-light)" }}>
               {corpTeams.map((team) => (
                 <div
                   key={team.id}
-                  className="flex items-center justify-between rounded-lg border p-4"
+                  className="flex items-center justify-between border-y px-4 py-4 lg:mx-0 lg:rounded-lg lg:border lg:mb-2"
                   style={{
                     borderColor: "var(--primary)",
                     backgroundColor: "var(--primary-light)",
@@ -166,7 +167,7 @@ export default function TeamsPage() {
               ))}
             </div>
             {joinError && (
-              <p className="mt-1 text-xs" style={{ color: "var(--error)" }}>
+              <p className="mt-1 px-4 lg:px-0 text-xs" style={{ color: "var(--error)" }}>
                 {joinError}
               </p>
             )}
@@ -174,7 +175,7 @@ export default function TeamsPage() {
         )}
 
         {/* 팀 생성 */}
-        <form onSubmit={handleCreate} className="mb-6 flex gap-2">
+        <form onSubmit={handleCreate} className="mb-2 flex gap-2 px-4 lg:px-0">
           <input
             type="text"
             value={newTeamName}
@@ -201,7 +202,7 @@ export default function TeamsPage() {
         {/* 내 팀 목록 */}
         {myTeams.length === 0 ? (
           <div
-            className="w-full rounded-lg border p-6 text-center"
+            className="mx-4 lg:mx-0 mt-4 rounded-lg border p-6 text-center"
             style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-card)" }}
           >
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
@@ -209,12 +210,12 @@ export default function TeamsPage() {
             </p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="mt-4 divide-y border-y lg:space-y-2 lg:divide-none lg:border-none" style={{ borderColor: "var(--border-light)" }}>
             {myTeams.map((team) => (
               <Link
                 key={team.id}
                 href={`/teams/${team.id}`}
-                className="flex items-center justify-between rounded-lg border p-4"
+                className="flex items-center justify-between px-4 py-4 lg:rounded-lg lg:border lg:px-4"
                 style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-card)" }}
               >
                 <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>

@@ -46,12 +46,12 @@
   --today-bg: oklch(0.205 0 0);
   --today-text: oklch(0.985 0 0);
 
-  --weekend-sat-text: oklch(0.58 0.14 264);
-  --weekend-sun-text: oklch(0.62 0.16 27);
-  --weekend-sat-bg: oklch(0.81 0.1 252 / 0.06);
-  --weekend-sun-bg: oklch(0.971 0.013 17.38 / 0.25);
-  --weekend-sat-bg-dim: oklch(0.81 0.1 252 / 0.03);
-  --weekend-sun-bg-dim: oklch(0.971 0.013 17.38 / 0.12);
+  --weekend-sat-text: oklch(0.64 0.09 264);
+  --weekend-sun-text: oklch(0.66 0.10 27);
+  --weekend-sat-bg: oklch(0.81 0.1 252 / 0.04);
+  --weekend-sun-bg: oklch(0.971 0.013 17.38 / 0.14);
+  --weekend-sat-bg-dim: oklch(0.81 0.1 252 / 0.02);
+  --weekend-sun-bg-dim: oklch(0.971 0.013 17.38 / 0.07);
 }
 
 .dark {
@@ -95,12 +95,12 @@
   --today-bg: oklch(0.985 0 0);
   --today-text: oklch(0.145 0 0);
 
-  --weekend-sat-text: oklch(0.72 0.1 264);
-  --weekend-sun-text: oklch(0.72 0.12 27);
-  --weekend-sat-bg: oklch(0.42 0.18 266 / 0.07);
-  --weekend-sun-bg: oklch(0.269 0.03 22.216 / 0.25);
-  --weekend-sat-bg-dim: oklch(0.42 0.18 266 / 0.03);
-  --weekend-sun-bg-dim: oklch(0.269 0.03 22.216 / 0.12);
+  --weekend-sat-text: oklch(0.76 0.07 264);
+  --weekend-sun-text: oklch(0.76 0.08 27);
+  --weekend-sat-bg: oklch(0.72 0.1 264 / 0.06);
+  --weekend-sun-bg: oklch(0.72 0.08 20 / 0.07);
+  --weekend-sat-bg-dim: oklch(0.72 0.1 264 / 0.03);
+  --weekend-sun-bg-dim: oklch(0.72 0.08 20 / 0.03);
 }
 
 @theme inline {
