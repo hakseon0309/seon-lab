@@ -3,7 +3,15 @@ export interface UserProfile {
   display_name: string;
   ics_url: string | null;
   last_synced: string | null;
+  is_admin?: boolean;
   created_at: string;
+}
+
+export interface AdminUserRow {
+  id: string;
+  display_name: string;
+  is_admin: boolean;
+  teams: { id: string; name: string }[];
 }
 
 export interface CalendarEvent {
@@ -22,6 +30,7 @@ export interface Team {
   name: string;
   invite_code: string;
   invite_expires_at: string | null;
+  is_corp_team: boolean;
   created_by: string;
   created_at: string;
 }

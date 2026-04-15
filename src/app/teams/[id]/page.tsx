@@ -43,6 +43,7 @@ export default function TeamDetailPage({
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState("");
   const [qrUrl, setQrUrl] = useState("");
+  const [renameError, setRenameError] = useState("");
   const supabase = createClient();
   const router = useRouter();
 
@@ -119,6 +120,7 @@ export default function TeamDetailPage({
       setEditingName(false);
       return;
     }
+    setRenameError("");
     const res = await fetch(`/api/teams/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -127,8 +129,11 @@ export default function TeamDetailPage({
     if (res.ok) {
       const updated = await res.json();
       setTeam(updated);
+      setEditingName(false);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setRenameError(data.error || "이름 변경에 실패했습니다");
     }
-    setEditingName(false);
   }
 
   async function handleRemoveMember(userId: string) {
@@ -160,6 +165,19 @@ export default function TeamDetailPage({
     { weekStartsOn: 1 }
   );
 
+  function weekendStyle(day: Date, inMonth: boolean) {
+    const dow = day.getDay();
+    if (dow === 6) return {
+      text: inMonth ? "var(--weekend-sat-text)" : "var(--text-out-of-month)",
+      bg: inMonth ? "var(--weekend-sat-bg)" : "var(--weekend-sat-bg-dim)",
+    };
+    if (dow === 0) return {
+      text: inMonth ? "var(--weekend-sun-text)" : "var(--text-out-of-month)",
+      bg: inMonth ? "var(--weekend-sun-bg)" : "var(--weekend-sun-bg-dim)",
+    };
+    return null;
+  }
+
   function prevMonth() {
     setCurrentDate(
       new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
@@ -180,27 +198,48 @@ export default function TeamDetailPage({
         <div className="mb-4 flex items-center justify-between px-4 lg:px-0">
           <div className="min-w-0 flex-1">
             {editingName ? (
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleRename();
-                }}
-                className="flex items-center gap-2"
-              >
-                <input
-                  autoFocus
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  onBlur={handleRename}
-                  className="text-xl font-bold rounded-md border px-2 py-0.5 focus:outline-none focus:ring-2"
-                  style={{
-                    color: "var(--text-primary)",
-                    backgroundColor: "var(--input-bg)",
-                    borderColor: "var(--input-border)",
-                    "--tw-ring-color": "var(--primary)",
-                  } as React.CSSProperties}
-                />
-              </form>
+              <div>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleRename();
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <input
+                    autoFocus
+                    value={newName}
+                    onChange={(e) => { setNewName(e.target.value); setRenameError(""); }}
+                    className="text-xl font-bold rounded-md border px-2 py-0.5 focus:outline-none focus:ring-2"
+                    style={{
+                      color: "var(--text-primary)",
+                      backgroundColor: "var(--input-bg)",
+                      borderColor: renameError ? "var(--error)" : "var(--input-border)",
+                      "--tw-ring-color": "var(--primary)",
+                    } as React.CSSProperties}
+                  />
+                  <button
+                    type="submit"
+                    className="shrink-0 text-xs font-medium"
+                    style={{ color: "var(--primary)" }}
+                  >
+                    저장
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setEditingName(false); setRenameError(""); setNewName(team.name); }}
+                    className="shrink-0 text-xs"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    취소
+                  </button>
+                </form>
+                {renameError && (
+                  <p className="mt-1 text-xs" style={{ color: "var(--error)" }}>
+                    {renameError}
+                  </p>
+                )}
+              </div>
             ) : (
               <div className="flex items-center gap-2">
                 <h1
@@ -414,42 +453,38 @@ export default function TeamDetailPage({
                           borderRight: "1px solid var(--border-light)",
                         }}
                       />
-                      {weekDays.map((day) => (
-                        <td
-                          key={day.toISOString()}
-                          className="px-0.5 lg:px-3 py-1.5 lg:py-2 text-center text-xs font-medium"
-                          style={{
-                            color: isSameDay(day, today)
-                              ? "var(--text-primary)"
-                              : !isSameMonth(day, currentDate)
-                                ? "var(--text-out-of-month)"
-                                : "var(--text-secondary)",
-                          }}
-                        >
-                          <div
-                            className="text-[10px]"
-                            style={{ color: "inherit" }}
+                      {weekDays.map((day) => {
+                        const inMonth = isSameMonth(day, currentDate);
+                        const ws = weekendStyle(day, inMonth);
+                        const headerColor = isSameDay(day, today)
+                          ? "var(--text-primary)"
+                          : ws
+                            ? ws.text
+                            : inMonth
+                              ? "var(--text-secondary)"
+                              : "var(--text-out-of-month)";
+                        return (
+                          <td
+                            key={day.toISOString()}
+                            className="px-0.5 lg:px-3 py-1.5 lg:py-2 text-center text-xs font-medium"
+                            style={{ color: headerColor }}
                           >
-                            {format(day, "EEE", { locale: ko })}
-                          </div>
-                          <span
-                            className="inline-flex items-center justify-center text-[11px]"
-                            style={
-                              isSameDay(day, today)
-                                ? {
-                                    width: "1.5rem",
-                                    height: "1.5rem",
-                                    borderRadius: "9999px",
-                                    backgroundColor: "var(--today-bg)",
-                                    color: "var(--today-text)",
-                                  }
-                                : {}
-                            }
-                          >
-                            {format(day, "d")}
-                          </span>
-                        </td>
-                      ))}
+                            <div className="text-[10px]" style={{ color: "inherit" }}>
+                              {format(day, "EEE", { locale: ko })}
+                            </div>
+                            <span
+                              className="inline-flex items-center justify-center text-[11px]"
+                              style={
+                                isSameDay(day, today)
+                                  ? { width: "1.5rem", height: "1.5rem", borderRadius: "9999px", backgroundColor: "var(--today-bg)", color: "var(--today-text)" }
+                                  : {}
+                              }
+                            >
+                              {format(day, "d")}
+                            </span>
+                          </td>
+                        );
+                      })}
                     </tr>
 
                     {members.map(({ profile, events }, memberIdx) => (
@@ -477,15 +512,14 @@ export default function TeamDetailPage({
                           const dayEvents = events.filter(
                             (e) => getSeoulDateKey(e.start_at) === dayKey
                           );
+                          const inMonth = isSameMonth(day, currentDate);
+                          const ws = weekendStyle(day, inMonth);
+                          const cellBg = ws ? ws.bg : inMonth ? "var(--bg-card)" : "var(--bg-out-of-month)";
                           return (
                             <td
                               key={day.toISOString()}
                               className="px-0.5 lg:px-2 py-1 lg:py-2 text-center align-top"
-                              style={{
-                                backgroundColor: !isSameMonth(day, currentDate)
-                                  ? "var(--bg-out-of-month)"
-                                  : "var(--bg-card)",
-                              }}
+                              style={{ backgroundColor: cellBg }}
                             >
                               {dayEvents.map((event) => (
                                 <div

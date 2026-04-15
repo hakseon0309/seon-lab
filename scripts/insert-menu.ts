@@ -21,7 +21,7 @@ const supabase = createClient(
 );
 
 // ── 지점 이름 ──
-const LOCATION_NAME = "스타필드하남점";
+const LOCATION_NAME = "스타필드 하남점";
 
 // ── 메뉴 데이터 ──
 interface MenuEntry {

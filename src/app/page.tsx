@@ -46,7 +46,7 @@ function HomeContent() {
             className="text-3xl font-bold tracking-tight"
             style={{ color: "var(--primary)" }}
           >
-            Seon Lab
+            SEON LAB
           </h1>
           <p className="mt-3 text-base" style={{ color: "var(--text-secondary)" }}>
             팀원들의 근무 시프트를 한눈에 확인하세요

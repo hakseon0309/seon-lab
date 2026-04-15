@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/lib/theme";
+import { I18nProvider } from "@/lib/i18n";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Seon Lab — 팀 시프트 공유",
+  title: "SEON LAB — 팀 시프트 공유",
   description:
     "Apple 캘린더 구독 URL을 활용하여 팀원들의 근무 시프트를 한눈에 공유·확인하는 서비스",
 };
@@ -31,7 +32,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <ThemeProvider>{children}</ThemeProvider>
+        <I18nProvider>
+          <ThemeProvider>{children}</ThemeProvider>
+        </I18nProvider>
       </body>
     </html>
   );

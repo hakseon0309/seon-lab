@@ -40,7 +40,7 @@ export default function DashboardPage() {
     if (profileRes.data) setProfile(profileRes.data);
     if (eventsRes.data) setEvents(eventsRes.data);
 
-    // 커플 파트너 이벤트 조회
+    // 커플 상대방 이벤트 조회
     const coupleRes = await fetch("/api/couples");
     if (coupleRes.ok) {
       const coupleData = await coupleRes.json();

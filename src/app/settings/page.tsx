@@ -21,6 +21,8 @@ export default function SettingsPage() {
   const [partnerCodeInput, setPartnerCodeInput] = useState("");
   const [coupleMessage, setCoupleMessage] = useState("");
   const [coupleLoading, setCoupleLoading] = useState(false);
+  const [coupleExpanded, setCoupleExpanded] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const supabase = createClient();
   const router = useRouter();
@@ -48,6 +50,7 @@ export default function SettingsPage() {
       if (profileRes.data) {
         setDisplayName(profileRes.data.display_name || "");
         setIcsUrl(profileRes.data.ics_url || "");
+        setIsAdmin(!!profileRes.data.is_admin);
       }
 
       if (coupleRes.ok) {
@@ -159,7 +162,7 @@ export default function SettingsPage() {
         <form onSubmit={handleSave} className="space-y-5">
           <div>
             <label className="block text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
-              표시 이름
+              이름
             </label>
             <input
               type="text"
@@ -210,12 +213,28 @@ export default function SettingsPage() {
         {/* ── 커플 연결 ── */}
         {coupleStatus && (
           <div
-            className="mt-8 rounded-lg border p-4"
+            className="mt-8 rounded-lg border"
             style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-card)" }}
           >
-            <h2 className="mb-3 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-              커플 연결
-            </h2>
+            <button
+              type="button"
+              onClick={() => setCoupleExpanded((v) => !v)}
+              className="flex w-full items-center justify-between p-4 text-left"
+            >
+              <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                커플 연결
+                {coupleStatus.status === "accepted" && (
+                  <span className="ml-2 text-xs font-normal" style={{ color: "var(--text-muted)" }}>
+                    ♥ {coupleStatus.partner_name}
+                  </span>
+                )}
+              </span>
+              <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                {coupleExpanded ? "▲" : "▼"}
+              </span>
+            </button>
+            {coupleExpanded && (
+            <div className="border-t px-4 pb-4 pt-4" style={{ borderColor: "var(--border-light)" }}>
 
             {coupleStatus.status === "none" && (
               <>
@@ -240,14 +259,14 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <p className="mb-2 text-xs" style={{ color: "var(--text-muted)" }}>
-                  파트너 코드로 연결
+                  상대방 코드로 연결
                 </p>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={partnerCodeInput}
                     onChange={(e) => setPartnerCodeInput(e.target.value)}
-                    placeholder="파트너 코드 입력"
+                    placeholder="상대방 코드 입력"
                     maxLength={6}
                     className="flex-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2"
                     style={inputStyle}
@@ -326,25 +345,39 @@ export default function SettingsPage() {
                 </button>
               </div>
             )}
+            </div>
+            )}
           </div>
         )}
 
         {/* ── 테마 ── */}
-        <div
-          className="mt-8 flex items-center justify-between rounded-lg border p-4"
+        <button
+          onClick={toggle}
+          className="mt-8 flex w-full items-center justify-between rounded-lg border p-4 text-left"
           style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-card)" }}
         >
           <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
             {theme === "light" ? "라이트 모드" : "다크 모드"}
           </span>
+          <span className="text-sm" style={{ color: "var(--text-muted)" }}>
+            {theme === "light" ? "🌙" : "☀️"}
+          </span>
+        </button>
+
+        {/* ── 관리자 ── */}
+        {isAdmin && (
           <button
-            onClick={toggle}
-            className="rounded-md px-3 py-1.5 text-sm border"
-            style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}
+            onClick={() => router.push("/admin")}
+            className="mt-4 w-full rounded-lg border p-4 text-left text-sm font-medium"
+            style={{
+              borderColor: "var(--border-light)",
+              backgroundColor: "var(--bg-card)",
+              color: "var(--text-primary)",
+            }}
           >
-            {theme === "light" ? "🌙 다크로 전환" : "☀️ 라이트로 전환"}
+            관리자 페이지
           </button>
-        </div>
+        )}
 
         {/* ── 로그아웃 ── */}
         <div

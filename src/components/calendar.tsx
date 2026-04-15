@@ -41,6 +41,19 @@ export default function Calendar({ events, partnerEvents = [] }: CalendarProps) 
 
   const weekDays = ["월", "화", "수", "목", "금", "토", "일"];
 
+  function weekendStyle(day: Date, inMonth: boolean) {
+    const dow = day.getDay();
+    if (dow === 6) return {
+      text: inMonth ? "var(--weekend-sat-text)" : "var(--text-out-of-month)",
+      bg: inMonth ? "var(--weekend-sat-bg)" : "var(--weekend-sat-bg-dim)",
+    };
+    if (dow === 0) return {
+      text: inMonth ? "var(--weekend-sun-text)" : "var(--text-out-of-month)",
+      bg: inMonth ? "var(--weekend-sun-bg)" : "var(--weekend-sun-bg-dim)",
+    };
+    return null;
+  }
+
   return (
     <section className="w-full min-w-0">
       <div className="mb-3 flex items-center justify-between px-4 lg:px-0">
@@ -75,39 +88,48 @@ export default function Calendar({ events, partnerEvents = [] }: CalendarProps) 
           backgroundColor: "var(--border-light)",
         }}
       >
-        {weekDays.map((day) => (
-          <div
-            key={day}
-            className="py-2 text-center text-[11px] font-medium sm:text-xs lg:py-2.5"
-            style={{
-              backgroundColor: "var(--bg-surface)",
-              color: "var(--text-muted)",
-            }}
-          >
-            {day}
-          </div>
-        ))}
+        {weekDays.map((day, idx) => {
+          const color =
+            idx === 5
+              ? "var(--weekend-sat-text)"
+              : idx === 6
+                ? "var(--weekend-sun-text)"
+                : "var(--text-muted)";
+          return (
+            <div
+              key={day}
+              className="py-2 text-center text-[11px] font-medium sm:text-xs lg:py-2.5"
+              style={{ backgroundColor: "var(--bg-surface)", color }}
+            >
+              {day}
+            </div>
+          );
+        })}
         {days.map((day) => {
           const myDayEvents = getMyEventsForDay(day);
           const partnerDayEvents = getPartnerEventsForDay(day);
+          const inMonth = isSameMonth(day, currentDate);
+          const weekend = weekendStyle(day, inMonth);
+          const bg = weekend ? weekend.bg : inMonth ? "var(--bg-card)" : "var(--bg-out-of-month)";
+          const dayNumColor = isToday(day)
+            ? undefined
+            : weekend
+              ? weekend.text
+              : inMonth
+                ? "var(--text-secondary)"
+                : "var(--text-out-of-month)";
           return (
             <div
               key={day.toISOString()}
               className="min-h-[82px] p-1 sm:min-h-[108px] sm:p-1.5 lg:min-h-[128px] lg:p-2"
-              style={{
-                backgroundColor: !isSameMonth(day, currentDate)
-                  ? "var(--bg-out-of-month)"
-                  : "var(--bg-card)",
-              }}
+              style={{ backgroundColor: bg }}
             >
               <div
                 className="mb-1 flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium sm:h-7 sm:w-7 sm:text-sm"
                 style={
                   isToday(day)
                     ? { backgroundColor: "var(--today-bg)", color: "var(--today-text)" }
-                    : !isSameMonth(day, currentDate)
-                      ? { color: "var(--text-out-of-month)" }
-                      : { color: "var(--text-secondary)" }
+                    : { color: dayNumColor }
                 }
               >
                 {format(day, "d")}
@@ -128,7 +150,7 @@ export default function Calendar({ events, partnerEvents = [] }: CalendarProps) 
                 </div>
               ))}
 
-              {/* 파트너 시프트 */}
+              {/* 상대방 시프트 */}
               {partnerDayEvents.slice(0, 1).map((event) => (
                 <div
                   key={event.id}

@@ -32,7 +32,7 @@ export async function updateSession(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // Public routes that don't need auth
-  const publicRoutes = ["/login", "/signup", "/api/auth/callback", "/api/sync/cron"];
+  const publicRoutes = ["/login", "/api/auth/callback", "/api/sync/cron"];
   const isPublicRoute = publicRoutes.some((route) => path.startsWith(route));
   const isJoinRoute = path.startsWith("/join/");
 
@@ -42,7 +42,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && (path === "/" || path === "/login" || path === "/signup")) {
+  if (user && (path === "/" || path === "/login")) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);

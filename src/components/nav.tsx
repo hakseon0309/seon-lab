@@ -7,9 +7,9 @@ export default function Nav() {
   const pathname = usePathname();
 
   const links = [
-    { href: "/dashboard", label: "달력", icon: "📅" },
-    { href: "/teams", label: "팀", icon: "👥" },
-    { href: "/settings", label: "설정", icon: "⚙️" },
+    { href: "/dashboard", label: "달력" },
+    { href: "/teams", label: "팀" },
+    { href: "/settings", label: "설정" },
   ];
 
   return (
@@ -22,7 +22,7 @@ export default function Nav() {
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
           <div className="flex items-center gap-6">
             <Link href="/dashboard" className="text-lg font-bold" style={{ color: "var(--primary)" }}>
-              Seon Lab
+              SEON LAB
             </Link>
             <div className="flex gap-1">
               {links.map((link) => (
@@ -49,13 +49,13 @@ export default function Nav() {
         style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-light)" }}
       >
         <span className="text-base font-bold" style={{ color: "var(--primary)" }}>
-          Seon Lab
+          SEON LAB
         </span>
       </header>
 
       {/* ── 모바일: 하단 탭바 ── */}
       <nav
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 flex border-t"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 flex h-14 border-t"
         style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-light)" }}
       >
         {links.map((link) => {
@@ -64,11 +64,10 @@ export default function Nav() {
             <Link
               key={link.href}
               href={link.href}
-              className="flex flex-1 flex-col items-center justify-center py-2 gap-0.5"
+              className="flex flex-1 items-center justify-center text-sm font-medium"
               style={{ color: active ? "var(--primary)" : "var(--text-muted)" }}
             >
-              <span className="text-xl leading-none">{link.icon}</span>
-              <span className="text-[10px] font-medium">{link.label}</span>
+              {link.label}
             </Link>
           );
         })}

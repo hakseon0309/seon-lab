@@ -55,8 +55,8 @@ create policy "Anyone authenticated can view menu items"
 
 
 -- ────────────────────────────────────────────────────────────
--- 초기 데이터: 스타필드하남점
+-- 초기 데이터: 스타필드 하남점
 -- ────────────────────────────────────────────────────────────
 
 insert into public.cafeteria_locations (name, lunch_start, lunch_end, dinner_start, dinner_end)
-values ('스타필드하남점', '11:30', '14:30', '16:40', '18:30');
+values ('스타필드 하남점', '11:30', '14:30', '16:40', '18:30');

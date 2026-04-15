@@ -55,6 +55,15 @@ export default function SyncButton({ lastSynced, onSync }: SyncButtonProps) {
 
   return (
     <div className="flex items-center gap-3">
+      {error ? (
+        <span className="text-xs" style={{ color: "var(--error)" }}>
+          {error}
+        </span>
+      ) : remaining > 0 ? (
+        <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+          {remaining}분 후 가능
+        </span>
+      ) : null}
       <button
         onClick={handleSync}
         disabled={disabled}
@@ -67,16 +76,6 @@ export default function SyncButton({ lastSynced, onSync }: SyncButtonProps) {
       >
         {loading ? "동기화 중..." : "새로고침"}
       </button>
-      {remaining > 0 && (
-        <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-          {remaining}분 후 가능
-        </span>
-      )}
-      {error && (
-        <span className="text-xs" style={{ color: "var(--error)" }}>
-          {error}
-        </span>
-      )}
     </div>
   );
 }

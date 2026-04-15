@@ -45,6 +45,13 @@
 
   --today-bg: oklch(0.205 0 0);
   --today-text: oklch(0.985 0 0);
+
+  --weekend-sat-text: oklch(0.58 0.14 264);
+  --weekend-sun-text: oklch(0.62 0.16 27);
+  --weekend-sat-bg: oklch(0.81 0.1 252 / 0.06);
+  --weekend-sun-bg: oklch(0.971 0.013 17.38 / 0.25);
+  --weekend-sat-bg-dim: oklch(0.81 0.1 252 / 0.03);
+  --weekend-sun-bg-dim: oklch(0.971 0.013 17.38 / 0.12);
 }
 
 .dark {
@@ -87,6 +94,13 @@
 
   --today-bg: oklch(0.985 0 0);
   --today-text: oklch(0.145 0 0);
+
+  --weekend-sat-text: oklch(0.72 0.1 264);
+  --weekend-sun-text: oklch(0.72 0.12 27);
+  --weekend-sat-bg: oklch(0.42 0.18 266 / 0.07);
+  --weekend-sun-bg: oklch(0.269 0.03 22.216 / 0.25);
+  --weekend-sat-bg-dim: oklch(0.42 0.18 266 / 0.03);
+  --weekend-sun-bg-dim: oklch(0.269 0.03 22.216 / 0.12);
 }
 
 @theme inline {
@@ -100,4 +114,13 @@ body {
   background: var(--bg-base);
   color: var(--text-primary);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* 버튼 누름 피드백 — 모든 버튼 공통 */
+button {
+  transition: opacity 0.1s ease, transform 0.1s ease;
+}
+button:not(:disabled):active {
+  opacity: 0.6;
+  transform: scale(0.97);
 }
