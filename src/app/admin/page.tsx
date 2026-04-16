@@ -81,8 +81,10 @@ export default function AdminPage() {
     return (
       <>
         <Nav />
-        <main className="mx-auto max-w-lg px-4 py-8">
-          <p className="text-sm" style={{ color: "var(--error)" }}>{loadError}</p>
+        <main className="mx-auto w-full max-w-lg py-8">
+          <div className="px-4 lg:px-0">
+            <p className="text-sm" style={{ color: "var(--error)" }}>{loadError}</p>
+          </div>
         </main>
       </>
     );
@@ -96,140 +98,146 @@ export default function AdminPage() {
   return (
     <>
       <Nav />
-      <main className="mx-auto max-w-3xl px-4 py-6 lg:py-8 pb-24 lg:pb-8">
-        <h1 className="mb-4 text-xl font-bold" style={{ color: "var(--text-primary)" }}>
-          관리자
-        </h1>
-
-        {/* 탭 */}
-        <div className="mb-6 flex gap-4 border-b" style={{ borderColor: "var(--border-light)" }}>
-          {(["users", "teams"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className="pb-2 text-sm font-medium"
-              style={tabStyle(tab === t)}
-            >
-              {t === "users" ? `사용자 (${users.length})` : `팀 (${teams.length})`}
-            </button>
-          ))}
-        </div>
-
-        {/* 사용자 탭 */}
-        {tab === "users" && (
-          <div className="space-y-3">
-            {users.map((u) => (
-              <div
-                key={u.id}
-                className="rounded-lg border p-4"
-                style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-card)" }}
-              >
-                <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
-                  {u.display_name || "(이름 없음)"}
-                  {u.is_admin && (
-                    <span
-                      className="ml-2 rounded px-1.5 py-0.5 text-[10px]"
-                      style={{ backgroundColor: "var(--primary-light)", color: "var(--primary)" }}
-                    >
-                      ADMIN
-                    </span>
-                  )}
-                </p>
-                <p className="mb-3 text-xs" style={{ color: "var(--text-muted)" }}>
-                  {u.id}
-                </p>
-
-                <div className="flex flex-wrap gap-1.5">
-                  {u.teams.length === 0 ? (
-                    <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-                      참여 팀 없음
-                    </span>
-                  ) : (
-                    u.teams.map((t) => (
-                      <button
-                        key={t.id}
-                        disabled={busyUserId === u.id}
-                        onClick={() => removeFromTeam(u.id, t.id)}
-                        className="rounded-md px-2 py-0.5 text-xs disabled:opacity-50"
-                        style={{ backgroundColor: "var(--event-bg)", color: "var(--event-text)" }}
-                        title="클릭하여 제거"
-                      >
-                        {t.name} ✕
-                      </button>
-                    ))
-                  )}
-                </div>
-
-                <div className="mt-3">
-                  <select
-                    disabled={busyUserId === u.id}
-                    onChange={(e) => { addToTeam(u.id, e.target.value); e.target.value = ""; }}
-                    className="rounded-md border px-2 py-1 text-xs"
-                    style={{
-                      borderColor: "var(--border)",
-                      backgroundColor: "var(--input-bg)",
-                      color: "var(--input-text)",
-                    }}
-                    defaultValue=""
-                  >
-                    <option value="">+ 팀에 추가</option>
-                    {teams
-                      .filter((t) => !u.teams.some((ut) => ut.id === t.id))
-                      .map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name}{t.is_corp_team ? " 🏢" : ""}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              </div>
-            ))}
+      <main className="mx-auto w-full max-w-3xl py-6 pb-24 lg:py-8 lg:pb-8">
+        <div className="px-4 lg:px-0">
+          <div className="page-title-block">
+            <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
+              관리자
+            </h1>
           </div>
-        )}
 
-        {/* 팀 탭 */}
-        {tab === "teams" && (
-          <div className="space-y-3">
-            {teams.map((t) => (
-              <div
-                key={t.id}
-                className="flex items-center justify-between rounded-lg border p-4"
-                style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-card)" }}
-              >
-                <div>
-                  <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
-                    {t.name}
-                    {t.is_corp_team && (
-                      <span className="ml-1.5 text-xs" style={{ color: "var(--text-muted)" }}>
-                        🏢
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                    {t.id}
-                  </p>
-                </div>
+          <div className="page-stack">
+            {/* 탭 */}
+            <div className="flex gap-4 border-b" style={{ borderColor: "var(--border-light)" }}>
+              {(["users", "teams"] as const).map((t) => (
                 <button
-                  disabled={busyTeamId === t.id}
-                  onClick={() => toggleCorpTeam(t.id, t.is_corp_team)}
-                  className="rounded-md border px-3 py-1.5 text-xs font-medium disabled:opacity-50"
-                  style={
-                    t.is_corp_team
-                      ? { borderColor: "var(--primary)", color: "var(--primary)", backgroundColor: "var(--primary-light)" }
-                      : { borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "var(--bg-card)" }
-                  }
+                  key={t}
+                  onClick={() => setTab(t)}
+                  className="pb-2 text-sm font-medium"
+                  style={tabStyle(tab === t)}
                 >
-                  {t.is_corp_team ? "회사팀 ✓" : "회사팀 지정"}
+                  {t === "users" ? `사용자 (${users.length})` : `팀 (${teams.length})`}
                 </button>
+              ))}
+            </div>
+
+            {/* 사용자 탭 */}
+            {tab === "users" && (
+              <div className="space-y-3">
+                {users.map((u) => (
+                  <div
+                    key={u.id}
+                    className="rounded-lg border p-4"
+                    style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-card)" }}
+                  >
+                    <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+                      {u.display_name || "(이름 없음)"}
+                      {u.is_admin && (
+                        <span
+                          className="ml-2 rounded px-1.5 py-0.5 text-[10px]"
+                          style={{ backgroundColor: "var(--primary-light)", color: "var(--primary)" }}
+                        >
+                          ADMIN
+                        </span>
+                      )}
+                    </p>
+                    <p className="mb-3 text-xs" style={{ color: "var(--text-muted)" }}>
+                      {u.id}
+                    </p>
+
+                    <div className="flex flex-wrap gap-1.5">
+                      {u.teams.length === 0 ? (
+                        <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                          참여 팀 없음
+                        </span>
+                      ) : (
+                        u.teams.map((t) => (
+                          <button
+                            key={t.id}
+                            disabled={busyUserId === u.id}
+                            onClick={() => removeFromTeam(u.id, t.id)}
+                            className="rounded-md px-2 py-0.5 text-xs disabled:opacity-50"
+                            style={{ backgroundColor: "var(--event-bg)", color: "var(--event-text)" }}
+                            title="클릭하여 제거"
+                          >
+                            {t.name} ✕
+                          </button>
+                        ))
+                      )}
+                    </div>
+
+                    <div className="mt-3">
+                      <select
+                        disabled={busyUserId === u.id}
+                        onChange={(e) => { addToTeam(u.id, e.target.value); e.target.value = ""; }}
+                        className="rounded-md border px-2 py-1 text-xs"
+                        style={{
+                          borderColor: "var(--border)",
+                          backgroundColor: "var(--input-bg)",
+                          color: "var(--input-text)",
+                        }}
+                        defaultValue=""
+                      >
+                        <option value="">+ 팀에 추가</option>
+                        {teams
+                          .filter((t) => !u.teams.some((ut) => ut.id === t.id))
+                          .map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.name}{t.is_corp_team ? " 🏢" : ""}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-            {teams.length === 0 && (
-              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                팀이 없습니다.
-              </p>
+            )}
+
+            {/* 팀 탭 */}
+            {tab === "teams" && (
+              <div className="space-y-3">
+                {teams.map((t) => (
+                  <div
+                    key={t.id}
+                    className="flex items-center justify-between rounded-lg border p-4"
+                    style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-card)" }}
+                  >
+                    <div>
+                      <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+                        {t.name}
+                        {t.is_corp_team && (
+                          <span className="ml-1.5 text-xs" style={{ color: "var(--text-muted)" }}>
+                            🏢
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                        {t.id}
+                      </p>
+                    </div>
+                    <button
+                      disabled={busyTeamId === t.id}
+                      onClick={() => toggleCorpTeam(t.id, t.is_corp_team)}
+                      className="rounded-md border px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+                      style={
+                        t.is_corp_team
+                          ? { borderColor: "var(--primary)", color: "var(--primary)", backgroundColor: "var(--primary-light)" }
+                          : { borderColor: "var(--border)", color: "var(--text-muted)", backgroundColor: "var(--bg-card)" }
+                      }
+                    >
+                      {t.is_corp_team ? "회사팀 ✓" : "회사팀 지정"}
+                    </button>
+                  </div>
+                ))}
+                {teams.length === 0 && (
+                  <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                    팀이 없습니다.
+                  </p>
+                )}
+              </div>
             )}
           </div>
-        )}
+        </div>
       </main>
     </>
   );

@@ -1,70 +1,68 @@
-"use client";
-
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/server";
 import { formatSeoulDateTime } from "@/lib/time";
 import { CalendarEvent, UserProfile } from "@/lib/types";
 import Calendar from "@/components/calendar";
 import SyncButton from "@/components/sync-button";
 import TodayMenu from "@/components/today-menu";
 import Nav from "@/components/nav";
-import LoadingScreen from "@/components/loading-screen";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { addMonths, startOfMonth, subMonths } from "date-fns";
 
-export default function DashboardPage() {
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [partnerEvents, setPartnerEvents] = useState<CalendarEvent[]>([]);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const supabase = createClient();
-  const router = useRouter();
+const EVENT_COLUMNS =
+  "id, user_id, uid, summary, start_at, end_at, location, created_at";
 
-  async function loadData() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      router.push("/login");
-      return;
-    }
+export default async function DashboardPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-    const [profileRes, eventsRes] = await Promise.all([
-      supabase.from("user_profiles").select("*").eq("id", user.id).single(),
-      supabase
-        .from("events")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("start_at", { ascending: true }),
-    ]);
-
-    if (profileRes.data) setProfile(profileRes.data);
-    if (eventsRes.data) setEvents(eventsRes.data);
-
-    // 커플 상대방 이벤트 조회
-    const coupleRes = await fetch("/api/couples");
-    if (coupleRes.ok) {
-      const coupleData = await coupleRes.json();
-      if (coupleData.status === "accepted" && coupleData.partner_id) {
-        const { data: pEvents } = await supabase
-          .from("events")
-          .select("*")
-          .eq("user_id", coupleData.partner_id)
-          .order("start_at", { ascending: true });
-        setPartnerEvents(pEvents || []);
-      } else {
-        setPartnerEvents([]);
-      }
-    }
-
-    setLoading(false);
+  if (!user) {
+    redirect("/");
   }
 
-  useEffect(() => {
-    loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const rangeStart = startOfMonth(subMonths(new Date(), 1)).toISOString();
+  const rangeEnd = startOfMonth(addMonths(new Date(), 6)).toISOString();
 
-  if (loading) return <LoadingScreen />;
+  const [profileRes, eventsRes, coupleRes] = await Promise.all([
+    supabase
+      .from("user_profiles")
+      .select("id, display_name, ics_url, last_synced, created_at")
+      .eq("id", user.id)
+      .single(),
+    supabase
+      .from("events")
+      .select(EVENT_COLUMNS)
+      .eq("user_id", user.id)
+      .gte("start_at", rangeStart)
+      .lt("start_at", rangeEnd)
+      .order("start_at", { ascending: true }),
+    supabase
+      .from("couple_requests")
+      .select("requester_id, partner_id, status")
+      .or(`requester_id.eq.${user.id},partner_id.eq.${user.id}`)
+      .eq("status", "accepted")
+      .limit(1),
+  ]);
+
+  const profile = (profileRes.data as UserProfile | null) ?? null;
+  const events = (eventsRes.data as CalendarEvent[] | null) ?? [];
+  const request = coupleRes.data?.[0];
+  const partnerId =
+    request?.requester_id === user.id ? request.partner_id : request?.requester_id;
+
+  let partnerEvents: CalendarEvent[] = [];
+  if (partnerId) {
+    const { data } = await supabase
+      .from("events")
+      .select(EVENT_COLUMNS)
+      .eq("user_id", partnerId)
+      .gte("start_at", rangeStart)
+      .lt("start_at", rangeEnd)
+      .order("start_at", { ascending: true });
+    partnerEvents = (data as CalendarEvent[] | null) ?? [];
+  }
 
   if (!profile?.ics_url) {
     return (
@@ -75,21 +73,27 @@ export default function DashboardPage() {
             className="text-xl font-semibold"
             style={{ color: "var(--text-primary)" }}
           >
-            캘린더 URL을 등록해주세요
+            캘린더 구독 URL을 등록해주세요
           </h2>
-          <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
-            설정 페이지에서 Apple 캘린더 구독 URL을 입력하면 시프트가 표시됩니다.
+          <p
+            className="mx-auto mt-3 max-w-xl text-sm leading-7"
+            style={{ color: "var(--text-muted)" }}
+          >
+            설정에서 캘린더 구독 URL을 입력하면
+            <br className="lg:hidden" />
+            <span className="hidden lg:inline"> </span>
+            시프트가 자동으로 입력되고 표시됩니다.
           </p>
-          <button
-            onClick={() => router.push("/settings")}
-            className="mt-6 rounded-lg px-6 py-2.5 text-sm font-medium"
+          <Link
+            href="/settings"
+            className="mt-8 inline-flex rounded-lg px-6 py-2.5 text-sm font-medium"
             style={{
               backgroundColor: "var(--primary)",
               color: "var(--text-on-primary)",
             }}
           >
             설정으로 이동
-          </button>
+          </Link>
         </div>
       </>
     );
@@ -113,7 +117,7 @@ export default function DashboardPage() {
               </p>
             )}
           </div>
-          <SyncButton lastSynced={profile.last_synced} onSync={() => loadData()} />
+          <SyncButton lastSynced={profile.last_synced} />
         </div>
 
         <div className="w-full">

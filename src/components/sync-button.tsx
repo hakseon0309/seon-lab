@@ -1,16 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 interface SyncButtonProps {
   lastSynced: string | null;
-  onSync: () => void;
 }
 
-export default function SyncButton({ lastSynced, onSync }: SyncButtonProps) {
+export default function SyncButton({ lastSynced }: SyncButtonProps) {
   const [loading, setLoading] = useState(false);
   const [remaining, setRemaining] = useState(0);
   const [error, setError] = useState("");
+  const router = useRouter();
 
   useEffect(() => {
     if (!lastSynced) return;
@@ -43,7 +44,7 @@ export default function SyncButton({ lastSynced, onSync }: SyncButtonProps) {
         return;
       }
 
-      onSync();
+      router.refresh();
     } catch {
       setError("동기화에 실패했습니다");
     } finally {

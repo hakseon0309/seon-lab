@@ -21,6 +21,7 @@ export default function TeamsPage() {
   const [joinError, setJoinError] = useState("");
   const supabase = createClient();
   const router = useRouter();
+  const hasJoinedCorpTeam = myTeams.some((team) => team.is_corp_team);
 
   async function loadTeams() {
     const {
@@ -116,7 +117,7 @@ export default function TeamsPage() {
       <Nav />
       <main className="mx-auto w-full max-w-lg py-6 lg:py-8 pb-24 lg:pb-8">
         {/* 헤더 */}
-        <div className="mb-6 flex items-center justify-between px-4 lg:px-0">
+        <div className="page-title-block flex items-center justify-between px-4 lg:px-0">
           <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
             팀
           </h1>
@@ -133,104 +134,106 @@ export default function TeamsPage() {
           </button>
         </div>
 
-        {/* 회사 팀 목록 */}
-        {isCorpUser && corpTeams.length > 0 && (
-          <div className="mb-4">
-            <p className="mb-2 px-4 lg:px-0 text-xs font-medium" style={{ color: "var(--text-muted)" }}>
-              🏢 회사 팀
-            </p>
-            <div className="divide-y" style={{ borderColor: "var(--border-light)" }}>
-              {corpTeams.map((team) => (
-                <div
-                  key={team.id}
-                  className="flex items-center justify-between border-y px-4 py-4 lg:mx-0 lg:rounded-lg lg:border lg:mb-2"
-                  style={{
-                    borderColor: "var(--primary)",
-                    backgroundColor: "var(--primary-light)",
-                  }}
-                >
-                  <span className="text-sm font-medium" style={{ color: "var(--primary)" }}>
-                    {team.name}
-                  </span>
-                  <button
-                    onClick={() => handleCorpJoin(team)}
-                    disabled={joiningId === team.id}
-                    className="rounded-md px-3 py-1 text-xs font-medium disabled:opacity-50"
+        <div className="page-stack">
+          {/* 회사 팀 목록 */}
+          {isCorpUser && !hasJoinedCorpTeam && corpTeams.length > 0 && (
+            <div>
+              <p className="mb-2 px-4 lg:px-0 text-xs font-medium" style={{ color: "var(--text-muted)" }}>
+                🏢 회사 팀
+              </p>
+              <div className="divide-y" style={{ borderColor: "var(--border-light)" }}>
+                {corpTeams.map((team) => (
+                  <div
+                    key={team.id}
+                    className="flex items-center justify-between border-y px-4 py-4 lg:mx-0 lg:rounded-lg lg:border lg:mb-2"
                     style={{
-                      backgroundColor: "var(--primary)",
-                      color: "var(--text-on-primary)",
+                      borderColor: "var(--primary)",
+                      backgroundColor: "var(--primary-light)",
                     }}
                   >
-                    {joiningId === team.id ? "참여 중..." : "참여"}
-                  </button>
-                </div>
+                    <span className="text-sm font-medium" style={{ color: "var(--primary)" }}>
+                      {team.name}
+                    </span>
+                    <button
+                      onClick={() => handleCorpJoin(team)}
+                      disabled={joiningId === team.id}
+                      className="rounded-md px-3 py-1 text-xs font-medium disabled:opacity-50"
+                      style={{
+                        backgroundColor: "var(--primary)",
+                        color: "var(--text-on-primary)",
+                      }}
+                    >
+                      {joiningId === team.id ? "참여 중..." : "참여"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {joinError && (
+                <p className="mt-1 px-4 lg:px-0 text-xs" style={{ color: "var(--error)" }}>
+                  {joinError}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* 팀 생성 */}
+          <form onSubmit={handleCreate} className="flex gap-2 px-4 lg:px-0">
+            <input
+              type="text"
+              value={newTeamName}
+              onChange={(e) => setNewTeamName(e.target.value)}
+              className="flex-1 rounded-lg border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2"
+              style={{
+                backgroundColor: "var(--input-bg)",
+                borderColor: "var(--input-border)",
+                color: "var(--input-text)",
+                "--tw-ring-color": "var(--primary)",
+              } as React.CSSProperties}
+              placeholder="새 팀 이름"
+            />
+            <button
+              type="submit"
+              disabled={creating}
+              className="rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
+              style={{ backgroundColor: "var(--primary)", color: "var(--text-on-primary)" }}
+            >
+              {creating ? "생성 중..." : "생성"}
+            </button>
+          </form>
+
+          {/* 내 팀 목록 */}
+          {myTeams.length === 0 ? (
+            <div
+              className="mx-4 lg:mx-0 rounded-lg border p-6 text-center"
+              style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-card)" }}
+            >
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                아직 참여한 팀이 없습니다. 팀을 생성하거나 초대 코드로 참여하세요.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y border-y lg:space-y-2 lg:divide-none lg:border-none" style={{ borderColor: "var(--border-light)" }}>
+              {myTeams.map((team) => (
+                <Link
+                  key={team.id}
+                  href={`/teams/${team.id}`}
+                  className="flex items-center justify-between px-4 py-4 lg:rounded-lg lg:border lg:px-4"
+                  style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-card)" }}
+                >
+                  <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+                    {team.name}
+                    {team.is_corp_team && (
+                      <span className="ml-2 text-xs" style={{ color: "var(--text-muted)" }}>
+                        🏢
+                      </span>
+                    )}
+                  </span>
+                  <span style={{ color: "var(--text-muted)" }}>&rarr;</span>
+                </Link>
               ))}
             </div>
-            {joinError && (
-              <p className="mt-1 px-4 lg:px-0 text-xs" style={{ color: "var(--error)" }}>
-                {joinError}
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* 팀 생성 */}
-        <form onSubmit={handleCreate} className="mb-2 flex gap-2 px-4 lg:px-0">
-          <input
-            type="text"
-            value={newTeamName}
-            onChange={(e) => setNewTeamName(e.target.value)}
-            className="flex-1 rounded-lg border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2"
-            style={{
-              backgroundColor: "var(--input-bg)",
-              borderColor: "var(--input-border)",
-              color: "var(--input-text)",
-              "--tw-ring-color": "var(--primary)",
-            } as React.CSSProperties}
-            placeholder="새 팀 이름"
-          />
-          <button
-            type="submit"
-            disabled={creating}
-            className="rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
-            style={{ backgroundColor: "var(--primary)", color: "var(--text-on-primary)" }}
-          >
-            {creating ? "생성 중..." : "생성"}
-          </button>
-        </form>
-
-        {/* 내 팀 목록 */}
-        {myTeams.length === 0 ? (
-          <div
-            className="mx-4 lg:mx-0 mt-4 rounded-lg border p-6 text-center"
-            style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-card)" }}
-          >
-            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-              아직 참여한 팀이 없습니다. 팀을 생성하거나 초대 코드로 참여하세요.
-            </p>
-          </div>
-        ) : (
-          <div className="mt-4 divide-y border-y lg:space-y-2 lg:divide-none lg:border-none" style={{ borderColor: "var(--border-light)" }}>
-            {myTeams.map((team) => (
-              <Link
-                key={team.id}
-                href={`/teams/${team.id}`}
-                className="flex items-center justify-between px-4 py-4 lg:rounded-lg lg:border lg:px-4"
-                style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-card)" }}
-              >
-                <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
-                  {team.name}
-                  {team.is_corp_team && (
-                    <span className="ml-2 text-xs" style={{ color: "var(--text-muted)" }}>
-                      🏢
-                    </span>
-                  )}
-                </span>
-                <span style={{ color: "var(--text-muted)" }}>&rarr;</span>
-              </Link>
-            ))}
-          </div>
-        )}
+          )}
+        </div>
       </main>
 
       {showJoinModal && (

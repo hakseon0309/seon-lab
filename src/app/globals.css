@@ -52,6 +52,9 @@
   --weekend-sun-bg: oklch(0.971 0.013 17.38 / 0.14);
   --weekend-sat-bg-dim: oklch(0.81 0.1 252 / 0.02);
   --weekend-sun-bg-dim: oklch(0.971 0.013 17.38 / 0.07);
+
+  --page-title-gap: 2.25rem;
+  --page-section-gap: 1.5rem;
 }
 
 .dark {
@@ -101,6 +104,9 @@
   --weekend-sun-bg: oklch(0.72 0.08 20 / 0.07);
   --weekend-sat-bg-dim: oklch(0.72 0.1 264 / 0.03);
   --weekend-sun-bg-dim: oklch(0.72 0.08 20 / 0.03);
+
+  --page-title-gap: 2.25rem;
+  --page-section-gap: 1.5rem;
 }
 
 @theme inline {
@@ -116,11 +122,31 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* 버튼 누름 피드백 — 모든 버튼 공통 */
-button {
+/* 모든 인터랙션 요소 공통 누름 피드백 */
+button,
+a.interactive-press {
   transition: opacity 0.1s ease, transform 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
 }
-button:not(:disabled):active {
+button:not(:disabled):active,
+a.interactive-press:active {
   opacity: 0.6;
   transform: scale(0.97);
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* Hide the Next.js dev badge so it doesn't overlap the mobile tab bar. */
+nextjs-portal {
+  display: none !important;
+}
+
+.page-title-block {
+  margin-bottom: var(--page-title-gap);
+}
+
+.page-stack > * + * {
+  margin-top: var(--page-section-gap);
 }

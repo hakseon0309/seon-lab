@@ -21,7 +21,11 @@ export default function Nav() {
       >
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
           <div className="flex items-center gap-6">
-            <Link href="/dashboard" className="text-lg font-bold" style={{ color: "var(--primary)" }}>
+            <Link
+              href="/dashboard"
+              className="interactive-press rounded-md px-1 py-1 text-xl font-bold"
+              style={{ color: "var(--primary)" }}
+            >
               SEON LAB
             </Link>
             <div className="flex gap-1">
@@ -29,7 +33,7 @@ export default function Nav() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="rounded-md px-3 py-1.5 text-sm font-medium"
+                  className="interactive-press rounded-md px-3 py-1.5 text-sm font-medium"
                   style={{
                     backgroundColor: pathname.startsWith(link.href) ? "var(--primary-light)" : "transparent",
                     color: pathname.startsWith(link.href) ? "var(--primary)" : "var(--text-muted)",
@@ -45,13 +49,18 @@ export default function Nav() {
 
       {/* ── 모바일: 상단 타이틀바 ── */}
       <header
-        className="lg:hidden flex items-center justify-between px-4 h-12 border-b"
+        className="lg:hidden fixed top-0 left-0 right-0 z-40 flex h-14 items-center justify-between px-4 border-b"
         style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-light)" }}
       >
-        <span className="text-base font-bold" style={{ color: "var(--primary)" }}>
+        <Link
+          href="/dashboard"
+          className="interactive-press rounded-md px-1 py-1 text-lg font-bold"
+          style={{ color: "var(--primary)" }}
+        >
           SEON LAB
-        </span>
+        </Link>
       </header>
+      <div className="h-14 lg:hidden" />
 
       {/* ── 모바일: 하단 탭바 ── */}
       <nav
@@ -64,8 +73,11 @@ export default function Nav() {
             <Link
               key={link.href}
               href={link.href}
-              className="flex flex-1 items-center justify-center text-sm font-medium"
-              style={{ color: active ? "var(--primary)" : "var(--text-muted)" }}
+              className="interactive-press flex flex-1 items-center justify-center text-sm font-medium"
+              style={{
+                color: active ? "var(--primary)" : "var(--text-muted)",
+                backgroundColor: active ? "var(--primary-light)" : "transparent",
+              }}
             >
               {link.label}
             </Link>

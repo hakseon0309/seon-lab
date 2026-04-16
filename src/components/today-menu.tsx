@@ -1,12 +1,9 @@
-"use client";
-
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/server";
 import { getSeoulDateKey, isTradersHoliday } from "@/lib/time";
 import {
   CafeteriaLocation,
   CafeteriaMenuItem,
 } from "@/lib/types";
-import { useEffect, useState } from "react";
 
 interface MealSection {
   mealType: "lunch" | "dinner" | "salad";
@@ -15,77 +12,49 @@ interface MealSection {
   items: CafeteriaMenuItem[];
 }
 
-export default function TodayMenu() {
-  const [location, setLocation] = useState<CafeteriaLocation | null>(null);
-  const [meals, setMeals] = useState<MealSection[]>([]);
-  const [loading, setLoading] = useState(true);
-  const supabase = createClient();
+export default async function TodayMenu() {
+  const supabase = await createClient();
+  const { data: locations } = await supabase
+    .from("cafeteria_locations")
+    .select("id, name, lunch_start, lunch_end, dinner_start, dinner_end")
+    .limit(1);
 
-  useEffect(() => {
-    async function loadMenu() {
-      // 1. 지점 가져오기 (첫 번째 지점)
-      const { data: locations } = await supabase
-        .from("cafeteria_locations")
-        .select("*")
-        .limit(1);
+  if (!locations || locations.length === 0) return null;
 
-      if (!locations || locations.length === 0) {
-        setLoading(false);
-        return;
-      }
+  const location = locations[0] as CafeteriaLocation;
+  const todayKey = getSeoulDateKey(new Date());
 
-      const loc = locations[0] as CafeteriaLocation;
-      setLocation(loc);
+  const { data: menuData } = await supabase
+    .from("cafeteria_menu_items")
+    .select("id, location_id, date, meal_type, item_name, is_featured, sort_order")
+    .eq("location_id", location.id)
+    .eq("date", todayKey)
+    .order("sort_order", { ascending: true });
 
-      // 2. 오늘 날짜 (서울 기준)
-      const todayKey = getSeoulDateKey(new Date());
+  const items = (menuData || []) as CafeteriaMenuItem[];
+  const formatTime = (t: string) => t.slice(0, 5); // "11:30:00" -> "11:30"
+  const allSections: MealSection[] = [
+    {
+      mealType: "lunch" as const,
+      label: "중식",
+      timeRange: `${formatTime(location.lunch_start)}–${formatTime(location.lunch_end)}`,
+      items: items.filter((i) => i.meal_type === "lunch"),
+    },
+    {
+      mealType: "salad" as const,
+      label: "샐러드",
+      timeRange: `${formatTime(location.lunch_start)}–${formatTime(location.lunch_end)}`,
+      items: items.filter((i) => i.meal_type === "salad"),
+    },
+    {
+      mealType: "dinner" as const,
+      label: "석식",
+      timeRange: `${formatTime(location.dinner_start)}–${formatTime(location.dinner_end)}`,
+      items: items.filter((i) => i.meal_type === "dinner"),
+    },
+  ];
+  const meals = allSections.filter((section) => section.items.length > 0);
 
-      // 3. 오늘 메뉴 조회
-      const { data: menuData } = await supabase
-        .from("cafeteria_menu_items")
-        .select("*")
-        .eq("location_id", loc.id)
-        .eq("date", todayKey)
-        .order("sort_order", { ascending: true });
-
-      const items = (menuData || []) as CafeteriaMenuItem[];
-
-      // 4. 끼니별 그룹핑
-      const formatTime = (t: string) => t.slice(0, 5); // "11:30:00" -> "11:30"
-      const allSections: MealSection[] = [
-        {
-          mealType: "lunch" as const,
-          label: "중식",
-          timeRange: `${formatTime(loc.lunch_start)}–${formatTime(loc.lunch_end)}`,
-          items: items.filter((i) => i.meal_type === "lunch"),
-        },
-        {
-          mealType: "salad" as const,
-          label: "샐러드",
-          timeRange: `${formatTime(loc.lunch_start)}–${formatTime(loc.lunch_end)}`,
-          items: items.filter((i) => i.meal_type === "salad"),
-        },
-        {
-          mealType: "dinner" as const,
-          label: "석식",
-          timeRange: `${formatTime(loc.dinner_start)}–${formatTime(loc.dinner_end)}`,
-          items: items.filter((i) => i.meal_type === "dinner"),
-        },
-      ];
-      const sections = allSections.filter((s) => s.items.length > 0);
-
-      setMeals(sections);
-      setLoading(false);
-    }
-
-    loadMenu();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  if (loading) return null;
-  if (!location) return null;
-
-  const formatTime = (t: string) => t.slice(0, 5);
   const tradersHoliday = isTradersHoliday(new Date());
 
   const todayLabel = new Intl.DateTimeFormat("ko-KR", {
