@@ -17,6 +17,8 @@ export default function AdminPage() {
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [teams, setTeams] = useState<TeamOption[]>([]);
   const [loadError, setLoadError] = useState("");
+  const [syncingAll, setSyncingAll] = useState(false);
+  const [syncMessage, setSyncMessage] = useState("");
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
   const [busyTeamId, setBusyTeamId] = useState<string | null>(null);
   const [tab, setTab] = useState<"users" | "teams">("users");
@@ -75,6 +77,27 @@ export default function AdminPage() {
     setBusyTeamId(null);
   }
 
+  async function handleSyncAllUsers() {
+    setSyncingAll(true);
+    setSyncMessage("");
+
+    try {
+      const res = await fetch("/api/admin/sync-all", { method: "POST" });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setSyncMessage(data.error || "전체 동기화에 실패했습니다");
+        return;
+      }
+
+      setSyncMessage(`전체 동기화 완료: ${data.synced}/${data.total}명 성공, ${data.failed}명 실패`);
+    } catch {
+      setSyncMessage("전체 동기화에 실패했습니다");
+    } finally {
+      setSyncingAll(false);
+    }
+  }
+
   if (loading) return <LoadingScreen />;
 
   if (loadError) {
@@ -107,6 +130,42 @@ export default function AdminPage() {
           </div>
 
           <div className="page-stack">
+            <div
+              className="rounded-lg border p-4"
+              style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-card)" }}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+                    모든 사용자 시프트 동기화
+                  </p>
+                  <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
+                    관리자 권한으로 전체 사용자 ICS 데이터를 즉시 새로고침합니다.
+                  </p>
+                </div>
+                <button
+                  onClick={handleSyncAllUsers}
+                  disabled={syncingAll}
+                  className="rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
+                  style={{ backgroundColor: "var(--primary)", color: "var(--text-on-primary)" }}
+                >
+                  {syncingAll ? "동기화 중..." : "전체 새로고침"}
+                </button>
+              </div>
+              {syncMessage && (
+                <p
+                  className="mt-3 text-xs"
+                  style={{
+                    color: syncMessage.includes("실패")
+                      ? "var(--error)"
+                      : "var(--text-muted)",
+                  }}
+                >
+                  {syncMessage}
+                </p>
+              )}
+            </div>
+
             {/* 탭 */}
             <div className="flex gap-4 border-b" style={{ borderColor: "var(--border-light)" }}>
               {(["users", "teams"] as const).map((t) => (

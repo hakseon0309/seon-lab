@@ -52,7 +52,7 @@ function HomeContent() {
             팀원들의 근무 시프트를 한눈에 확인하세요
           </p>
           <p className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>
-            Apple 캘린더 구독 URL 기반 시프트 공유 서비스
+            캘린더 구독 URL 기반 시프트 공유 서비스
           </p>
         </div>
 
