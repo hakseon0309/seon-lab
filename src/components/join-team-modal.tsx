@@ -48,10 +48,11 @@ export default function JoinTeamModal({ onClose, onJoin }: JoinTeamModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
       <div
         className="w-full max-w-sm rounded-2xl p-6"
         style={{ backgroundColor: "var(--bg-card)" }}
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-5 flex items-center justify-between">
           <h3

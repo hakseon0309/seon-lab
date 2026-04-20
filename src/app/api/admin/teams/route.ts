@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient, requireAdmin } from "@/lib/supabase/admin";
+import { revalidatePath } from "next/cache";
 
 // 팀 is_corp_team 토글
 export async function PATCH(req: Request) {
@@ -20,5 +21,7 @@ export async function PATCH(req: Request) {
     .eq("id", team_id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  revalidatePath("/admin");
+  revalidatePath("/teams");
   return NextResponse.json({ success: true });
 }

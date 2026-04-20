@@ -5,6 +5,8 @@ import Calendar from "@/components/calendar";
 import SyncButton from "@/components/sync-button";
 import TodayMenu from "@/components/today-menu";
 import Nav from "@/components/nav";
+import PageHeader from "@/components/page-header";
+import RouteTransitionDone from "@/components/route-transition-done";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { addMonths, startOfMonth, subMonths } from "date-fns";
@@ -67,6 +69,7 @@ export default async function DashboardPage() {
   if (!profile?.ics_url) {
     return (
       <>
+        <RouteTransitionDone />
         <Nav />
         <div className="mx-auto max-w-5xl px-4 py-16 text-center">
           <h2
@@ -101,25 +104,25 @@ export default async function DashboardPage() {
 
   return (
     <>
+      <RouteTransitionDone />
       <Nav />
-      <main className="mx-auto w-full max-w-5xl px-0 lg:px-4 py-4 pb-24 lg:py-6 lg:pb-6">
-        <div className="mb-4 flex items-center justify-between gap-3 px-4 lg:px-0">
-          <div>
-            <h1
-              className="text-xl font-bold"
-              style={{ color: "var(--text-primary)" }}
-            >
-              내 시프트
-            </h1>
-            {profile.last_synced && (
-              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                마지막 동기화: {formatSeoulDateTime(profile.last_synced)}
-              </p>
-            )}
-          </div>
-          <SyncButton lastSynced={profile.last_synced} />
+      <PageHeader>
+        <div>
+          <h1
+            className="text-xl font-bold"
+            style={{ color: "var(--text-primary)" }}
+          >
+            내 시프트
+          </h1>
+          {profile.last_synced && (
+            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+              마지막 동기화: {formatSeoulDateTime(profile.last_synced)}
+            </p>
+          )}
         </div>
-
+        <SyncButton lastSynced={profile.last_synced} />
+      </PageHeader>
+      <main className="mx-auto w-full max-w-5xl px-0 lg:px-4 py-4 pb-24 lg:py-6 lg:pb-6">
         <div className="w-full">
           <Calendar
             events={events}

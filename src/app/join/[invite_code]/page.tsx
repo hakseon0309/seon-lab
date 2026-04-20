@@ -1,6 +1,8 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
+import RouteTransitionDone from "@/components/route-transition-done";
+import { useRouteTransition } from "@/components/route-transition-provider";
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -16,6 +18,7 @@ export default function JoinPage({
   const [message, setMessage] = useState("");
   const supabase = createClient();
   const router = useRouter();
+  const { startNavigation } = useRouteTransition();
 
   useEffect(() => {
     async function join() {
@@ -24,6 +27,7 @@ export default function JoinPage({
       } = await supabase.auth.getUser();
 
       if (!user) {
+        startNavigation();
         router.push(`/login?next=/join/${invite_code}`);
         return;
       }
@@ -50,6 +54,7 @@ export default function JoinPage({
       }
 
       setTimeout(() => {
+        startNavigation();
         router.push(`/teams/${data.team_id}`);
       }, 1500);
     }
@@ -60,6 +65,7 @@ export default function JoinPage({
 
   return (
     <div className="flex min-h-screen items-center justify-center">
+      {(status === "error" || status === "done") && <RouteTransitionDone />}
       <div className="text-center">
         {status === "loading" && (
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
@@ -96,7 +102,10 @@ export default function JoinPage({
               {message}
             </p>
             <button
-              onClick={() => router.push("/teams")}
+              onClick={() => {
+                startNavigation();
+                router.push("/teams");
+              }}
               className="mt-4 text-sm hover:underline"
               style={{ color: "var(--text-muted)" }}
             >

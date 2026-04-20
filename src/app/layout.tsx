@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/lib/theme";
 import { I18nProvider } from "@/lib/i18n";
 import ButtonGuard from "@/components/button-guard";
+import { RouteTransitionProvider } from "@/components/route-transition-provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -35,8 +36,10 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <I18nProvider>
           <ThemeProvider>
-            <ButtonGuard />
-            {children}
+            <RouteTransitionProvider>
+              <ButtonGuard />
+              {children}
+            </RouteTransitionProvider>
           </ThemeProvider>
         </I18nProvider>
       </body>

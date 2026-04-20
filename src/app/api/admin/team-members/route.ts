@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient, requireAdmin } from "@/lib/supabase/admin";
+import { revalidatePath } from "next/cache";
 
 export async function POST(req: Request) {
   const guard = await requireAdmin();
@@ -22,6 +23,7 @@ export async function POST(req: Request) {
   if (error && !error.message.includes("duplicate")) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+  revalidatePath("/admin");
   return NextResponse.json({ success: true });
 }
 
@@ -44,5 +46,6 @@ export async function DELETE(req: Request) {
     .eq("team_id", team_id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  revalidatePath("/admin");
   return NextResponse.json({ success: true });
 }

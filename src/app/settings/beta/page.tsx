@@ -1,12 +1,12 @@
-"use client";
-
 import Nav from "@/components/nav";
 import CoupleSettingsPanel from "@/components/couple-settings-panel";
+import RouteTransitionDone from "@/components/route-transition-done";
 import Link from "next/link";
 
 export default function BetaSettingsPage() {
   return (
     <>
+      <RouteTransitionDone />
       <Nav />
       <main className="mx-auto w-full max-w-lg py-6 pb-24 lg:py-8 lg:pb-8">
         <div className="px-4 lg:px-0">

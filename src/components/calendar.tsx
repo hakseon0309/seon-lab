@@ -20,6 +20,30 @@ interface CalendarProps {
   partnerEvents?: CalendarEvent[];
 }
 
+function weekendOverlay(day: Date, inMonth: boolean) {
+  const dow = day.getDay();
+  if (dow === 6) return {
+    text: inMonth ? "var(--weekend-sat-text)" : "var(--text-out-of-month)",
+    overlay: inMonth ? "var(--overlay-weekend-sat)" : "var(--overlay-weekend-sat-dim)",
+  };
+  if (dow === 0) return {
+    text: inMonth ? "var(--weekend-sun-text)" : "var(--text-out-of-month)",
+    overlay: inMonth ? "var(--overlay-weekend-sun)" : "var(--overlay-weekend-sun-dim)",
+  };
+  return null;
+}
+
+function cellBackground(day: Date, inMonth: boolean) {
+  const weekend = weekendOverlay(day, inMonth);
+  const base = inMonth ? "var(--bg-card)" : "var(--bg-out-of-month)";
+  const overlays: string[] = [];
+  if (weekend) overlays.push(`linear-gradient(${weekend.overlay},${weekend.overlay})`);
+  return {
+    backgroundColor: base,
+    ...(overlays.length > 0 && { backgroundImage: overlays.join(",") }),
+  };
+}
+
 export default function Calendar({ events, partnerEvents = [] }: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -41,28 +65,15 @@ export default function Calendar({ events, partnerEvents = [] }: CalendarProps) 
 
   const weekDays = ["월", "화", "수", "목", "금", "토", "일"];
 
-  function weekendStyle(day: Date, inMonth: boolean) {
-    const dow = day.getDay();
-    if (dow === 6) return {
-      text: inMonth ? "var(--weekend-sat-text)" : "var(--text-out-of-month)",
-      bg: inMonth ? "var(--weekend-sat-bg)" : "var(--weekend-sat-bg-dim)",
-    };
-    if (dow === 0) return {
-      text: inMonth ? "var(--weekend-sun-text)" : "var(--text-out-of-month)",
-      bg: inMonth ? "var(--weekend-sun-bg)" : "var(--weekend-sun-bg-dim)",
-    };
-    return null;
-  }
-
   return (
     <section className="w-full min-w-0">
       <div className="mb-3 flex items-center justify-between px-4 lg:px-0">
         <button
           onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}
-          className="rounded-md px-2 py-1.5 text-sm sm:px-3"
-          style={{ color: "var(--text-muted)" }}
+          className="flex h-9 w-9 items-center justify-center rounded-full text-base font-medium"
+          style={{ color: "var(--text-muted)", backgroundColor: "var(--bg-card)" }}
         >
-          &larr;
+          &lt;
         </button>
 
         <h2
@@ -74,10 +85,10 @@ export default function Calendar({ events, partnerEvents = [] }: CalendarProps) 
 
         <button
           onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))}
-          className="rounded-md px-2 py-1.5 text-sm sm:px-3"
-          style={{ color: "var(--text-muted)" }}
+          className="flex h-9 w-9 items-center justify-center rounded-full text-base font-medium"
+          style={{ color: "var(--text-muted)", backgroundColor: "var(--bg-card)" }}
         >
-          &rarr;
+          &gt;
         </button>
       </div>
 
@@ -89,17 +100,27 @@ export default function Calendar({ events, partnerEvents = [] }: CalendarProps) 
         }}
       >
         {weekDays.map((day, idx) => {
-          const color =
-            idx === 5
-              ? "var(--weekend-sat-text)"
-              : idx === 6
-                ? "var(--weekend-sun-text)"
-                : "var(--text-muted)";
+          const isSat = idx === 5;
+          const isSun = idx === 6;
+          const color = isSat
+            ? "var(--weekend-sat-text)"
+            : isSun
+              ? "var(--weekend-sun-text)"
+              : "var(--text-muted)";
+          const headerBg = isSat
+            ? "var(--overlay-weekend-sat)"
+            : isSun
+              ? "var(--overlay-weekend-sun)"
+              : undefined;
           return (
             <div
               key={day}
               className="py-2 text-center text-[11px] font-medium sm:text-xs lg:py-2.5"
-              style={{ backgroundColor: "var(--bg-surface)", color }}
+              style={{
+                backgroundColor: "var(--bg-surface)",
+                backgroundImage: headerBg ? `linear-gradient(${headerBg},${headerBg})` : undefined,
+                color,
+              }}
             >
               {day}
             </div>
@@ -109,28 +130,25 @@ export default function Calendar({ events, partnerEvents = [] }: CalendarProps) 
           const myDayEvents = getMyEventsForDay(day);
           const partnerDayEvents = getPartnerEventsForDay(day);
           const inMonth = isSameMonth(day, currentDate);
-          const weekend = weekendStyle(day, inMonth);
-          const bg = weekend ? weekend.bg : inMonth ? "var(--bg-card)" : "var(--bg-out-of-month)";
-          const dayNumColor = isToday(day)
-            ? undefined
-            : weekend
-              ? weekend.text
-              : inMonth
-                ? "var(--text-secondary)"
-                : "var(--text-out-of-month)";
+          const weekend = weekendOverlay(day, inMonth);
+          const bg = cellBackground(day, inMonth);
+          const dayNumColor = weekend
+            ? weekend.text
+            : inMonth
+              ? "var(--text-secondary)"
+              : "var(--text-out-of-month)";
+          const todayStyle = isToday(day)
+            ? { ...bg, boxShadow: "inset 0 0 0 1.5px var(--today-border)" }
+            : bg;
           return (
             <div
               key={day.toISOString()}
               className="min-h-[82px] p-1 sm:min-h-[108px] sm:p-1.5 lg:min-h-[128px] lg:p-2"
-              style={{ backgroundColor: bg }}
+              style={todayStyle}
             >
               <div
-                className="mb-1 flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium sm:h-7 sm:w-7 sm:text-sm"
-                style={
-                  isToday(day)
-                    ? { backgroundColor: "var(--today-bg)", color: "var(--today-text)" }
-                    : { color: dayNumColor }
-                }
+                className={`mb-1 text-xs font-medium sm:text-sm ${isToday(day) ? "font-bold" : ""}`}
+                style={{ color: dayNumColor }}
               >
                 {format(day, "d")}
               </div>

@@ -45,6 +45,14 @@ style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-card)" }
 - Use `var(--bg-card)` for primary surfaces.
 - Use `var(--bg-surface)` for softer nested surfaces.
 - Use `var(--border-light)` for standard borders.
+- Settings cards are the baseline style for simple navigation rows and action panels.
+- If a page contains navigational cards like team entry buttons, match the settings card language first before introducing a new list-row style.
+- Default clickable card pattern:
+
+```tsx
+className="interactive-press flex items-center justify-between rounded-lg border p-4"
+style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-card)" }}
+```
 
 ## Typography
 

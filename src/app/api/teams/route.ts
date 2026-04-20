@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -38,6 +39,8 @@ export async function POST(request: Request) {
   await supabase
     .from("team_members")
     .insert({ team_id: team.id, user_id: user.id });
+
+  revalidatePath("/teams");
 
   return NextResponse.json(team);
 }

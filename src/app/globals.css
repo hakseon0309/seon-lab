@@ -1,110 +1,134 @@
 @import "tailwindcss";
 
 /*
- * Seon Lab theme tokens
- * Update light and dark values here to recolor the app globally.
+ * ══════════════════════════════════════════════════════
+ *  Seon Lab — Design Tokens
+ *  라이트/다크 모드 색상을 이곳에서 일괄 관리합니다.
+ * ══════════════════════════════════════════════════════
  */
 
 :root {
-  --bg-base: oklch(1 0 0);
-  --bg-card: oklch(1 0 0);
-  --bg-surface: oklch(0.985 0 0);
-  --bg-muted: oklch(0.97 0 0);
+  /* ── 배경 (Background) ─────────────────────────────── */
+  --bg-base: oklch(1 0 0);              /* 페이지 기본 배경 */
+  --bg-card: oklch(1 0 0);              /* 카드·셀 등 주요 표면 */
+  --bg-surface: oklch(0.985 0 0);       /* 보조 표면 (요일 헤더, 테이블 행 등) */
+  --bg-muted: oklch(0.97 0 0);          /* 비활성·약한 배경 */
+  --bg-out-of-month: oklch(0.985 0 0);  /* 이번 달이 아닌 날짜 셀 */
 
-  --bg-out-of-month: oklch(0.985 0 0);
-  --text-out-of-month: oklch(0.708 0 0);
+  /* ── 텍스트 (Text) ─────────────────────────────────── */
+  --text-primary: oklch(0.145 0 0);     /* 제목·본문 */
+  --text-secondary: oklch(0.205 0 0);   /* 보조 텍스트 */
+  --text-muted: oklch(0.556 0 0);       /* 흐린 텍스트 (레이블, 안내 등) */
+  --text-on-primary: oklch(0.985 0 0);  /* primary 배경 위 텍스트 */
+  --text-out-of-month: oklch(0.708 0 0);/* 이번 달이 아닌 날짜 숫자 */
 
-  --text-primary: oklch(0.145 0 0);
-  --text-secondary: oklch(0.205 0 0);
-  --text-muted: oklch(0.556 0 0);
-  --text-on-primary: oklch(0.985 0 0);
+  /* ── 주요 색상 (Primary) ───────────────────────────── */
+  --primary: oklch(0.205 0 0);          /* 주요 버튼·강조 */
+  --primary-hover: oklch(0.145 0 0);    /* 주요 버튼 호버 */
+  --primary-light: oklch(0.97 0 0);     /* 주요 색상 연한 배경 (활성 탭 등) */
 
-  --primary: oklch(0.205 0 0);
-  --primary-hover: oklch(0.145 0 0);
-  --primary-light: oklch(0.97 0 0);
-
-  --secondary: oklch(0.55 0.22 263);
+  /* ── 보조 색상 (Secondary) ─────────────────────────── */
+  --secondary: oklch(0.55 0.22 263);    /* 보조 강조 (블루 계열) */
   --secondary-hover: oklch(0.49 0.22 264);
   --secondary-light: oklch(0.81 0.1 252 / 0.22);
 
-  --border: oklch(0.922 0 0);
-  --border-light: oklch(0.95 0 0);
+  /* ── 테두리 (Border) ───────────────────────────────── */
+  --border: oklch(0.922 0 0);           /* 기본 테두리 */
+  --border-light: oklch(0.95 0 0);      /* 약한 테두리 (구분선 등) */
+
+  /* ── 입력 필드 (Input) ─────────────────────────────── */
   --input-bg: oklch(1 0 0);
   --input-border: oklch(0.922 0 0);
   --input-text: oklch(0.145 0 0);
   --input-placeholder: oklch(0.556 0 0);
 
-  --success: oklch(0.55 0.14 146);
-  --success-bg: oklch(0.97 0.03 146);
-  --error: oklch(0.577 0.245 27.325);
-  --error-bg: oklch(0.971 0.013 17.38);
+  /* ── 상태 색상 (Status) ────────────────────────────── */
+  --success: oklch(0.55 0.14 146);      /* 성공 텍스트 (초록) */
+  --success-bg: oklch(0.97 0.03 146);   /* 성공 배경 */
+  --error: oklch(0.577 0.245 27.325);   /* 오류 텍스트 (빨강) */
+  --error-bg: oklch(0.971 0.013 17.38); /* 오류 배경 */
 
-  --event-bg: oklch(0.81 0.1 252 / 0.22);
-  --event-text: oklch(0.49 0.22 264);
-  --event-sub: oklch(0.55 0.22 263);
+  /* ── 이벤트/시프트 (Event) ─────────────────────────── */
+  --event-bg: oklch(0.81 0.1 252 / 0.22);  /* 시프트 카드 배경 */
+  --event-text: oklch(0.49 0.22 264);       /* 시프트 카드 텍스트 */
+  --event-sub: oklch(0.55 0.22 263);        /* 시프트 카드 보조 텍스트 */
 
-  --today-bg: oklch(0.205 0 0);
-  --today-text: oklch(0.985 0 0);
+  /* ── 달력 오버레이 (Calendar Overlays) ─────────────── */
+  /* 셀 배경 위에 겹쳐서 색상을 변화시키는 반투명 레이어.
+     A(셀 기본색) + B(오버레이) = C(최종 보이는 색) 방식. */
+  --today-border: oklch(0.45 0 0);                     /* 오늘 날짜 셀 테두리 */
+  --overlay-weekend-sat: oklch(0.55 0.15 260 / 0.06);  /* 토요일 셀 (블루 계열) */
+  --overlay-weekend-sun: oklch(0.60 0.18 25 / 0.06);   /* 일요일 셀 (레드 계열) */
+  --overlay-weekend-sat-dim: oklch(0.55 0.15 260 / 0.03); /* 이번 달 아닌 토요일 */
+  --overlay-weekend-sun-dim: oklch(0.60 0.18 25 / 0.03);  /* 이번 달 아닌 일요일 */
 
-  --weekend-sat-text: oklch(0.64 0.09 264);
-  --weekend-sun-text: oklch(0.66 0.10 27);
-  --weekend-sat-bg: oklch(0.81 0.1 252 / 0.04);
-  --weekend-sun-bg: oklch(0.971 0.013 17.38 / 0.14);
-  --weekend-sat-bg-dim: oklch(0.81 0.1 252 / 0.02);
-  --weekend-sun-bg-dim: oklch(0.971 0.013 17.38 / 0.07);
+  /* ── 달력 주말 텍스트 (Weekend Text) ───────────────── */
+  --weekend-sat-text: oklch(0.64 0.09 264); /* 토요일 날짜·요일 텍스트 (블루) */
+  --weekend-sun-text: oklch(0.66 0.10 27);  /* 일요일 날짜·요일 텍스트 (레드) */
 
-  --page-title-gap: 2.25rem;
-  --page-section-gap: 1.5rem;
+  /* ── 간격 (Spacing) ────────────────────────────────── */
+  --page-title-gap: 2.25rem;    /* 페이지 제목과 본문 사이 */
+  --page-section-gap: 1.5rem;   /* 섹션 간 간격 */
 }
 
 .dark {
+  /* ── 배경 ── */
   --bg-base: oklch(0.145 0 0);
   --bg-card: oklch(0.205 0 0);
   --bg-surface: oklch(0.205 0 0);
   --bg-muted: oklch(0.269 0 0);
-
   --bg-out-of-month: oklch(0.18 0 0);
-  --text-out-of-month: oklch(0.439 0 0);
 
+  /* ── 텍스트 ── */
   --text-primary: oklch(0.985 0 0);
   --text-secondary: oklch(0.922 0 0);
   --text-muted: oklch(0.708 0 0);
   --text-on-primary: oklch(0.145 0 0);
+  --text-out-of-month: oklch(0.439 0 0);
 
+  /* ── 주요 색상 ── */
   --primary: oklch(0.985 0 0);
   --primary-hover: oklch(0.922 0 0);
   --primary-light: oklch(0.269 0 0);
 
+  /* ── 보조 색상 ── */
   --secondary: oklch(0.81 0.1 252);
   --secondary-hover: oklch(0.62 0.19 260);
   --secondary-light: oklch(0.42 0.18 266 / 0.22);
 
+  /* ── 테두리 ── */
   --border: oklch(0.275 0 0);
   --border-light: oklch(0.325 0 0);
+
+  /* ── 입력 필드 ── */
   --input-bg: oklch(0.205 0 0);
   --input-border: oklch(0.275 0 0);
   --input-text: oklch(0.985 0 0);
   --input-placeholder: oklch(0.708 0 0);
 
+  /* ── 상태 색상 ── */
   --success: oklch(0.72 0.16 146);
   --success-bg: oklch(0.27 0.05 146);
   --error: oklch(0.704 0.191 22.216);
   --error-bg: oklch(0.269 0.03 22.216);
 
+  /* ── 이벤트/시프트 ── */
   --event-bg: oklch(0.42 0.18 266 / 0.22);
   --event-text: oklch(0.81 0.1 252);
   --event-sub: oklch(0.62 0.19 260);
 
-  --today-bg: oklch(0.985 0 0);
-  --today-text: oklch(0.145 0 0);
+  /* ── 달력 오버레이 ── */
+  --today-border: oklch(0.65 0 0);
+  --overlay-weekend-sat: oklch(0.72 0.1 264 / 0.06);
+  --overlay-weekend-sun: oklch(0.72 0.08 20 / 0.07);
+  --overlay-weekend-sat-dim: oklch(0.72 0.1 264 / 0.03);
+  --overlay-weekend-sun-dim: oklch(0.72 0.08 20 / 0.03);
 
+  /* ── 달력 주말 텍스트 ── */
   --weekend-sat-text: oklch(0.76 0.07 264);
   --weekend-sun-text: oklch(0.76 0.08 27);
-  --weekend-sat-bg: oklch(0.72 0.1 264 / 0.06);
-  --weekend-sun-bg: oklch(0.72 0.08 20 / 0.07);
-  --weekend-sat-bg-dim: oklch(0.72 0.1 264 / 0.03);
-  --weekend-sun-bg-dim: oklch(0.72 0.08 20 / 0.03);
 
+  /* ── 간격 ── */
   --page-title-gap: 2.25rem;
   --page-section-gap: 1.5rem;
 }
