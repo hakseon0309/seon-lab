@@ -1,23 +1,13 @@
 "use client";
 
 import { CoupleStatus } from "@/lib/types";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-export default function CoupleSettingsPanel() {
-  const [coupleStatus, setCoupleStatus] = useState<CoupleStatus | null>(null);
+export default function CoupleSettingsPanel({ initialCoupleStatus }: { initialCoupleStatus: CoupleStatus }) {
+  const [coupleStatus, setCoupleStatus] = useState<CoupleStatus>(initialCoupleStatus);
   const [partnerCodeInput, setPartnerCodeInput] = useState("");
   const [coupleMessage, setCoupleMessage] = useState("");
   const [coupleLoading, setCoupleLoading] = useState(false);
-
-  useEffect(() => {
-    async function loadCoupleStatus() {
-      const res = await fetch("/api/couples");
-      if (!res.ok) return;
-      setCoupleStatus(await res.json());
-    }
-
-    loadCoupleStatus();
-  }, []);
 
   async function refreshCoupleStatus() {
     const res = await fetch("/api/couples");
@@ -73,8 +63,6 @@ export default function CoupleSettingsPanel() {
     color: "var(--input-text)",
     "--tw-ring-color": "var(--primary)",
   } as React.CSSProperties;
-
-  if (!coupleStatus) return null;
 
   return (
     <div

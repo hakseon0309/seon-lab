@@ -25,6 +25,32 @@ Seon Lab UI changes should follow these rules unless there is a strong product r
 - Top and bottom nav should remain visible even during loading states.
 - Any loading screen should render the shared `Nav` component.
 
+## Page Header (`PageHeader` component)
+
+Every page must render `<PageHeader>` between `<Nav />` and `<main>`. This creates a sticky sub-header on mobile (fixed below the top nav at `top-14`) and a normal flow header on desktop.
+
+- Top-level pages: put just the `<h1>` inside.
+- Sub-pages (e.g. settings sub-pages): put a back link and `<h1>` side by side inside a flex wrapper.
+- Always pass `maxWidth` to match the page's `max-w-*` (e.g. `max-w-lg` for settings pages).
+
+```tsx
+// Top-level page
+<PageHeader maxWidth="max-w-lg">
+  <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>페이지 제목</h1>
+</PageHeader>
+
+// Sub-page with back navigation
+<PageHeader maxWidth="max-w-lg">
+  <div className="flex items-center gap-3">
+    <Link href="/parent" className="text-sm" style={{ color: "var(--text-muted)" }}>← 상위 페이지</Link>
+    <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>페이지 제목</h1>
+  </div>
+</PageHeader>
+```
+
+- Page descriptions or sub-text go inside `<main>`, not in the header.
+- Omitting `PageHeader` breaks mobile layout — the content starts hidden behind the fixed top nav.
+
 ## Spacing
 
 - Page titles: usually `mb-6`.

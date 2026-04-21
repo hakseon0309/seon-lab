@@ -50,17 +50,6 @@ export default function TeamsFooterActions() {
     <>
       <PageFooter>
         <button
-          onClick={() => setShowJoin(true)}
-          className="flex-1 rounded-full py-3.5 text-sm font-medium border"
-          style={{
-            borderColor: "var(--border)",
-            color: "var(--text-secondary)",
-            backgroundColor: "var(--bg-card)",
-          }}
-        >
-          팀 참여하기
-        </button>
-        <button
           onClick={() => setShowCreate(true)}
           disabled={creating}
           className="flex-1 rounded-full py-3.5 text-sm font-medium disabled:opacity-50"
@@ -70,6 +59,17 @@ export default function TeamsFooterActions() {
           }}
         >
           {creating ? "생성 중..." : "팀 생성하기"}
+        </button>
+        <button
+          onClick={() => setShowJoin(true)}
+          className="flex-1 rounded-full py-3.5 text-sm font-medium border"
+          style={{
+            borderColor: "var(--border)",
+            color: "var(--text-secondary)",
+            backgroundColor: "var(--bg-card)",
+          }}
+        >
+          팀 참여하기
         </button>
       </PageFooter>
 
