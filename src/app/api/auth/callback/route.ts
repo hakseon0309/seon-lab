@@ -1,6 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
+import { mapOAuthErrorToKorean } from "@/lib/oauth-error";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+
+function redirectWithError(origin: string, code: string, raw?: string) {
+  const params = new URLSearchParams();
+  params.set("error", mapOAuthErrorToKorean(code));
+  params.set("code", code);
+  if (raw) params.set("raw", raw);
+  return NextResponse.redirect(`${origin}/?${params.toString()}`);
+}
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -13,9 +22,7 @@ export async function GET(request: Request) {
   const oauthErrorDescription = searchParams.get("error_description");
   if (oauthError) {
     console.error("[auth/callback] OAuth error:", oauthError, oauthErrorDescription);
-    return NextResponse.redirect(
-      `${origin}/?error=${encodeURIComponent(oauthErrorDescription ?? oauthError)}`
-    );
+    return redirectWithError(origin, oauthError, oauthErrorDescription ?? undefined);
   }
 
   const supabase = await createClient();
@@ -26,7 +33,7 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${origin}${next}`);
     }
     console.error("[auth/callback] exchangeCodeForSession:", error.message);
-    return NextResponse.redirect(`${origin}/?error=${encodeURIComponent(error.message)}`);
+    return redirectWithError(origin, "invalid_grant", error.message);
   }
 
   if (token_hash && type) {
@@ -35,8 +42,8 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${origin}${next}`);
     }
     console.error("[auth/callback] verifyOtp:", error.message);
-    return NextResponse.redirect(`${origin}/?error=${encodeURIComponent(error.message)}`);
+    return redirectWithError(origin, "invalid_grant", error.message);
   }
 
-  return NextResponse.redirect(`${origin}/?error=${encodeURIComponent("인증 코드가 없습니다")}`);
+  return redirectWithError(origin, "invalid_request", "missing code");
 }

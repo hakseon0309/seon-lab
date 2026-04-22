@@ -28,9 +28,12 @@ export default async function TeamDetailPage({
 
   const { data: memberRows } = await supabase
     .from("team_members")
-    .select("user_id")
+    .select("user_id, joined_at")
     .eq("team_id", id);
 
+  const joinedAtByUser = new Map(
+    (memberRows ?? []).map((m: { user_id: string; joined_at: string }) => [m.user_id, m.joined_at])
+  );
   const userIds = (memberRows ?? []).map((m: { user_id: string }) => m.user_id);
 
   const members: MemberWithEvents[] = [];
@@ -49,6 +52,7 @@ export default async function TeamDetailPage({
       if (!profile) continue;
       members.push({
         profile,
+        joinedAt: joinedAtByUser.get(userId) ?? null,
         events: ((allEvents as CalendarEvent[] | null) ?? []).filter((e) => e.user_id === userId),
       });
     }

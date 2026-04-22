@@ -2,19 +2,38 @@
 
 import { createClient } from "@/lib/supabase/client";
 import RouteTransitionDone from "@/components/route-transition-done";
-import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { useToast } from "@/components/toast-provider";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
 
 function HomeContent() {
   const [error, setError] = useState("");
+  const [errorCode, setErrorCode] = useState("");
   const [loading, setLoading] = useState(false);
   const supabase = createClient();
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const toast = useToast();
+  const handledReasonRef = useRef(false);
 
   useEffect(() => {
     const urlError = searchParams.get("error");
+    const urlCode = searchParams.get("code");
     if (urlError) setError(decodeURIComponent(urlError));
+    if (urlCode) setErrorCode(urlCode);
   }, [searchParams]);
+
+  useEffect(() => {
+    if (handledReasonRef.current) return;
+    const reason = searchParams.get("reason");
+    if (reason === "expired") {
+      handledReasonRef.current = true;
+      toast.info("세션이 만료되었습니다. 다시 로그인해주세요");
+      const url = new URL(window.location.href);
+      url.searchParams.delete("reason");
+      router.replace(url.pathname + (url.search || ""));
+    }
+  }, [searchParams, toast, router]);
 
   useEffect(() => {
     const handlePageShow = (e: PageTransitionEvent) => {
@@ -63,7 +82,12 @@ function HomeContent() {
             className="rounded-lg p-3 text-sm"
             style={{ backgroundColor: "var(--error-bg)", color: "var(--error)" }}
           >
-            {error}
+            <p>{error}</p>
+            {errorCode && (
+              <p className="mt-1 font-mono text-xs opacity-70">
+                코드: {errorCode}
+              </p>
+            )}
           </div>
         )}
 

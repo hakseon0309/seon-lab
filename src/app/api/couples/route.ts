@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { apiError, apiErrors, parseJsonBody } from "@/lib/api-error";
 
 export async function GET() {
   const supabase = await createClient();
@@ -7,7 +8,7 @@ export async function GET() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return apiErrors.unauthorized();
 
   const { data: profile } = await supabase
     .from("user_profiles")
@@ -64,14 +65,15 @@ export async function POST(req: Request) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return apiErrors.unauthorized();
 
-  const { couple_code } = await req.json();
-  if (!couple_code?.trim()) {
-    return NextResponse.json({ error: "코드를 입력해주세요" }, { status: 400 });
+  const parsed = await parseJsonBody<{ couple_code?: unknown }>(req);
+  if (!parsed.ok) return parsed.response;
+  const { couple_code } = parsed.body;
+  if (!couple_code || typeof couple_code !== "string" || !couple_code.trim()) {
+    return apiErrors.badRequest("코드를 입력해주세요");
   }
 
-  // 이미 요청이 있는지 확인
   const { data: existing } = await supabase
     .from("couple_requests")
     .select("id")
@@ -79,25 +81,21 @@ export async function POST(req: Request) {
     .limit(1);
 
   if (existing && existing.length > 0) {
-    return NextResponse.json({ error: "이미 연결 중인 상태입니다" }, { status: 400 });
+    return apiErrors.badRequest("이미 연결 중인 상태입니다");
   }
 
-  // couple_code로 파트너 찾기
   const { data: partnerProfile } = await supabase
     .from("user_profiles")
     .select("id")
     .eq("couple_code", couple_code.trim().toLowerCase())
     .single();
 
-  if (!partnerProfile) {
-    return NextResponse.json({ error: "존재하지 않는 코드입니다" }, { status: 404 });
-  }
+  if (!partnerProfile) return apiErrors.notFound("존재하지 않는 코드입니다");
 
   if (partnerProfile.id === user.id) {
-    return NextResponse.json({ error: "본인과는 연결할 수 없습니다" }, { status: 400 });
+    return apiErrors.badRequest("본인과는 연결할 수 없습니다");
   }
 
-  // 파트너도 이미 연결 중인지 확인
   const { data: partnerExisting } = await supabase
     .from("couple_requests")
     .select("id")
@@ -105,14 +103,14 @@ export async function POST(req: Request) {
     .limit(1);
 
   if (partnerExisting && partnerExisting.length > 0) {
-    return NextResponse.json({ error: "상대방이 이미 다른 연결 중입니다" }, { status: 400 });
+    return apiErrors.badRequest("상대방이 이미 다른 연결 중입니다");
   }
 
   const { error } = await supabase
     .from("couple_requests")
     .insert({ requester_id: user.id, partner_id: partnerProfile.id });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return apiError(500, error.message);
 
   return NextResponse.json({ success: true });
 }

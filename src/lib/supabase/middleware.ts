@@ -39,6 +39,12 @@ export async function updateSession(request: NextRequest) {
   if (!user && !isPublicRoute && !isJoinRoute && path !== "/") {
     const url = request.nextUrl.clone();
     url.pathname = "/";
+    const hadAuthCookie = request.cookies
+      .getAll()
+      .some((c) => c.name.startsWith("sb-") && c.name.endsWith("-auth-token"));
+    if (hadAuthCookie) {
+      url.searchParams.set("reason", "expired");
+    }
     return NextResponse.redirect(url);
   }
 

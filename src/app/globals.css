@@ -140,6 +140,12 @@
   --font-mono: var(--font-geist-mono);
 }
 
+html,
+body {
+  /* 모바일 PWA에서 위에서 당겨 새로고침되는 동작을 차단 (상태 유실 방지) */
+  overscroll-behavior-y: contain;
+}
+
 body {
   background: var(--bg-base);
   color: var(--text-primary);
@@ -165,6 +171,41 @@ button:disabled {
 /* Hide the Next.js dev badge so it doesn't overlap the mobile tab bar. */
 nextjs-portal {
   display: none !important;
+}
+
+/* ══════════════════════════════════════════════════════
+ * Splash Screen
+ * 초기 로딩 시 SEON LAB 텍스트를 전체 화면에 표시하고,
+ * React hydration 완료 후(body.app-ready) 서서히 사라진다.
+ * 다크/라이트 모드는 prefers-color-scheme 으로 반전.
+ * ══════════════════════════════════════════════════════ */
+.splash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-weight: 700;
+  font-size: 1.875rem;
+  letter-spacing: 0.02em;
+  background: #ffffff;
+  color: #000000;
+  pointer-events: none;
+  transition: opacity 250ms ease 80ms, visibility 0s linear 330ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  .splash-screen {
+    background: #000000;
+    color: #ffffff;
+  }
+}
+
+body.app-ready .splash-screen {
+  opacity: 0;
+  visibility: hidden;
 }
 
 .page-title-block {

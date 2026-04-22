@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { createAdminClient, requireAdmin } from "@/lib/supabase/admin";
+import { apiError } from "@/lib/api-error";
 
 export async function GET() {
   const guard = await requireAdmin();
-  if ("error" in guard) {
-    return NextResponse.json({ error: guard.error }, { status: guard.status });
+  if (guard.error) {
+    return apiError(guard.status, guard.error, "forbidden");
   }
 
   const admin = createAdminClient();

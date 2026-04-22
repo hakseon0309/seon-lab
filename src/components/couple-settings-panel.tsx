@@ -2,12 +2,14 @@
 
 import { CoupleStatus } from "@/lib/types";
 import { useState } from "react";
+import { useToast } from "@/components/toast-provider";
 
 export default function CoupleSettingsPanel({ initialCoupleStatus }: { initialCoupleStatus: CoupleStatus }) {
   const [coupleStatus, setCoupleStatus] = useState<CoupleStatus>(initialCoupleStatus);
   const [partnerCodeInput, setPartnerCodeInput] = useState("");
   const [coupleMessage, setCoupleMessage] = useState("");
   const [coupleLoading, setCoupleLoading] = useState(false);
+  const toast = useToast();
 
   async function refreshCoupleStatus() {
     const res = await fetch("/api/couples");
@@ -28,9 +30,11 @@ export default function CoupleSettingsPanel({ initialCoupleStatus }: { initialCo
     const data = await res.json();
     if (!res.ok) {
       setCoupleMessage(data.error);
+      toast.error(data.error || "요청에 실패했습니다");
     } else {
       await refreshCoupleStatus();
       setPartnerCodeInput("");
+      toast.success("연결 요청을 보냈습니다");
     }
     setCoupleLoading(false);
   }
@@ -38,22 +42,41 @@ export default function CoupleSettingsPanel({ initialCoupleStatus }: { initialCo
   async function handleCoupleAccept() {
     if (!coupleStatus?.request_id) return;
     setCoupleLoading(true);
-    await fetch(`/api/couples/${coupleStatus.request_id}`, { method: "PATCH" });
+    const res = await fetch(`/api/couples/${coupleStatus.request_id}`, { method: "PATCH" });
+    if (res.ok) {
+      toast.success("연결이 완료되었습니다");
+    } else {
+      const data = await res.json().catch(() => ({}));
+      toast.error(data.error || "수락에 실패했습니다");
+    }
     await refreshCoupleStatus();
     setCoupleLoading(false);
   }
 
   async function handleCoupleDelete() {
     if (!coupleStatus?.request_id) return;
+    const prevStatus = coupleStatus.status;
     setCoupleLoading(true);
-    await fetch(`/api/couples/${coupleStatus.request_id}`, { method: "DELETE" });
-    setCoupleStatus({
-      couple_code: coupleStatus.couple_code,
-      status: "none",
-      request_id: null,
-      partner_id: null,
-      partner_name: null,
-    });
+    const res = await fetch(`/api/couples/${coupleStatus.request_id}`, { method: "DELETE" });
+    if (res.ok) {
+      setCoupleStatus({
+        couple_code: coupleStatus.couple_code,
+        status: "none",
+        request_id: null,
+        partner_id: null,
+        partner_name: null,
+      });
+      const msg =
+        prevStatus === "accepted"
+          ? "연결을 해제했습니다"
+          : prevStatus === "pending_sent"
+            ? "요청을 취소했습니다"
+            : "요청을 거절했습니다";
+      toast.success(msg);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      toast.error(data.error || "처리에 실패했습니다");
+    }
     setCoupleLoading(false);
   }
 

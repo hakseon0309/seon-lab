@@ -1,16 +1,17 @@
 import { NextResponse } from "next/server";
 import { createAdminClient, requireAdmin } from "@/lib/supabase/admin";
+import { apiError, apiErrors } from "@/lib/api-error";
 import { revalidatePath } from "next/cache";
 
 export async function POST(req: Request) {
   const guard = await requireAdmin();
-  if ("error" in guard) {
-    return NextResponse.json({ error: guard.error }, { status: guard.status });
+  if (guard.error) {
+    return apiError(guard.status, guard.error, "forbidden");
   }
 
   const { user_id, team_id } = await req.json();
   if (!user_id || !team_id) {
-    return NextResponse.json({ error: "user_id and team_id required" }, { status: 400 });
+    return apiErrors.badRequest("user_id, team_id가 필요합니다");
   }
 
   const admin = createAdminClient();
@@ -21,7 +22,7 @@ export async function POST(req: Request) {
     .single();
 
   if (error && !error.message.includes("duplicate")) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return apiErrors.server("멤버 추가에 실패했습니다", error.message);
   }
   revalidatePath("/admin");
   return NextResponse.json({ success: true });
@@ -29,13 +30,13 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   const guard = await requireAdmin();
-  if ("error" in guard) {
-    return NextResponse.json({ error: guard.error }, { status: guard.status });
+  if (guard.error) {
+    return apiError(guard.status, guard.error, "forbidden");
   }
 
   const { user_id, team_id } = await req.json();
   if (!user_id || !team_id) {
-    return NextResponse.json({ error: "user_id and team_id required" }, { status: 400 });
+    return apiErrors.badRequest("user_id, team_id가 필요합니다");
   }
 
   const admin = createAdminClient();
@@ -45,7 +46,7 @@ export async function DELETE(req: Request) {
     .eq("user_id", user_id)
     .eq("team_id", team_id);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return apiErrors.server("멤버 제거에 실패했습니다", error.message);
   revalidatePath("/admin");
   return NextResponse.json({ success: true });
 }

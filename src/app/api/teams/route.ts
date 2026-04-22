@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { apiError, apiErrors, parseJsonBody } from "@/lib/api-error";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -8,21 +9,14 @@ export async function POST(request: Request) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!user) return apiErrors.unauthorized();
 
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-  }
-
-  const { name } = body;
+  const parsed = await parseJsonBody<{ name?: unknown }>(request);
+  if (!parsed.ok) return parsed.response;
+  const { name } = parsed.body;
 
   if (!name || typeof name !== "string" || name.trim().length === 0) {
-    return NextResponse.json({ error: "Team name is required" }, { status: 400 });
+    return apiErrors.badRequest("Team name is required");
   }
 
   const { data: team, error: teamError } = await supabase
@@ -31,11 +25,8 @@ export async function POST(request: Request) {
     .select()
     .single();
 
-  if (teamError) {
-    return NextResponse.json({ error: teamError.message }, { status: 500 });
-  }
+  if (teamError) return apiError(500, teamError.message);
 
-  // Add creator as member
   await supabase
     .from("team_members")
     .insert({ team_id: team.id, user_id: user.id });

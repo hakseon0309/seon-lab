@@ -112,6 +112,24 @@ style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-card)" }
   - `--error`
   - `--success`
 
+## Calendar Today Highlight
+
+- Today's cell is emphasized with a **1.5px outline on top of the cell, drawn on the inside** so it does not overlap adjacent cell borders or grid gaps.
+- Use `var(--today-border)` as the color.
+
+```tsx
+style={{
+  outline: "1.5px solid var(--today-border)",
+  outlineOffset: "-1.5px",
+  position: "relative",
+  zIndex: 1,
+}}
+```
+
+- Do **not** use `boxShadow: "inset ..."` for today highlight — it stacks on top of existing cell borders and looks like a doubled line.
+- Do not use a circular background around the day number; keep the full-cell outline pattern so both calendar views look consistent.
+- Number text inside today's cell uses `font-bold`.
+
 ## Loading States
 
 - Loading should preserve app chrome when possible.

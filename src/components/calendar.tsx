@@ -2,6 +2,7 @@
 
 import { CalendarEvent } from "@/lib/types";
 import { formatSeoulTime, getSeoulDateKey } from "@/lib/time";
+import { weekendOverlay, cellBackground } from "@/lib/calendar-style";
 import {
   format,
   startOfMonth,
@@ -18,30 +19,6 @@ import { useState } from "react";
 interface CalendarProps {
   events: CalendarEvent[];
   partnerEvents?: CalendarEvent[];
-}
-
-function weekendOverlay(day: Date, inMonth: boolean) {
-  const dow = day.getDay();
-  if (dow === 6) return {
-    text: inMonth ? "var(--weekend-sat-text)" : "var(--text-out-of-month)",
-    overlay: inMonth ? "var(--overlay-weekend-sat)" : "var(--overlay-weekend-sat-dim)",
-  };
-  if (dow === 0) return {
-    text: inMonth ? "var(--weekend-sun-text)" : "var(--text-out-of-month)",
-    overlay: inMonth ? "var(--overlay-weekend-sun)" : "var(--overlay-weekend-sun-dim)",
-  };
-  return null;
-}
-
-function cellBackground(day: Date, inMonth: boolean) {
-  const weekend = weekendOverlay(day, inMonth);
-  const base = inMonth ? "var(--bg-card)" : "var(--bg-out-of-month)";
-  const overlays: string[] = [];
-  if (weekend) overlays.push(`linear-gradient(${weekend.overlay},${weekend.overlay})`);
-  return {
-    backgroundColor: base,
-    ...(overlays.length > 0 && { backgroundImage: overlays.join(",") }),
-  };
 }
 
 export default function Calendar({ events, partnerEvents = [] }: CalendarProps) {
@@ -70,10 +47,11 @@ export default function Calendar({ events, partnerEvents = [] }: CalendarProps) 
       <div className="mb-3 flex items-center justify-between px-4 lg:px-0">
         <button
           onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-base font-medium"
+          aria-label="이전 달"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-medium"
           style={{ color: "var(--text-muted)", backgroundColor: "var(--bg-card)" }}
         >
-          &lt;
+          ‹
         </button>
 
         <h2
@@ -85,10 +63,11 @@ export default function Calendar({ events, partnerEvents = [] }: CalendarProps) 
 
         <button
           onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-base font-medium"
+          aria-label="다음 달"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-medium"
           style={{ color: "var(--text-muted)", backgroundColor: "var(--bg-card)" }}
         >
-          &gt;
+          ›
         </button>
       </div>
 
@@ -138,7 +117,7 @@ export default function Calendar({ events, partnerEvents = [] }: CalendarProps) 
               ? "var(--text-secondary)"
               : "var(--text-out-of-month)";
           const todayStyle = isToday(day)
-            ? { ...bg, boxShadow: "inset 0 0 0 1.5px var(--today-border)" }
+            ? { ...bg, outline: "1.5px solid var(--today-border)", outlineOffset: "-1.5px", position: "relative" as const, zIndex: 1 }
             : bg;
           return (
             <div

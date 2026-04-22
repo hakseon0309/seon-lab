@@ -1,27 +1,20 @@
 "use client";
 
-import { formatSeoulTime, getSeoulDateKey } from "@/lib/time";
 import { Team, CalendarEvent, UserProfile } from "@/lib/types";
 import PageHeader from "@/components/page-header";
-import { useEffect, useState, Fragment } from "react";
+import TeamCalendar from "@/components/team-calendar";
+import InviteModal from "@/components/invite-modal";
+import MembersListModal from "@/components/members-list-modal";
+import MemberDetailModal from "@/components/member-detail-modal";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  format,
-  startOfMonth,
-  endOfMonth,
-  startOfWeek,
-  endOfWeek,
-  addDays,
-  eachDayOfInterval,
-  eachWeekOfInterval,
-  isSameDay,
-  isSameMonth,
-} from "date-fns";
+import { format } from "date-fns";
 import { ko } from "date-fns/locale";
-import QRCode from "qrcode";
+import { useToast } from "@/components/toast-provider";
 
 export interface MemberWithEvents {
   profile: UserProfile;
+  joinedAt: string | null;
   events: CalendarEvent[];
 }
 
@@ -37,17 +30,17 @@ export default function TeamView({ team: initialTeam, initialMembers, currentUse
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showInvite, setShowInvite] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState(initialTeam.name);
-  const [qrUrl, setQrUrl] = useState("");
   const [renameError, setRenameError] = useState("");
   const router = useRouter();
+  const toast = useToast();
 
   const isLeader = team.created_by === currentUserId;
-
-  useEffect(() => {
-    QRCode.toDataURL(team.invite_code, { width: 200, margin: 2 }).then(setQrUrl);
-  }, [team.invite_code]);
+  const selectedMember = selectedMemberId
+    ? members.find((m) => m.profile.id === selectedMemberId) ?? null
+    : null;
 
   async function handleRename() {
     if (!newName.trim() || newName.trim() === team.name) {
@@ -64,6 +57,7 @@ export default function TeamView({ team: initialTeam, initialMembers, currentUse
       const updated = await res.json();
       setTeam(updated);
       setEditingName(false);
+      toast.success("팀 이름을 변경했습니다");
       router.refresh();
     } else {
       const data = await res.json().catch(() => ({}));
@@ -77,56 +71,39 @@ export default function TeamView({ team: initialTeam, initialMembers, currentUse
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId }),
     });
-    if (res.ok) {
-      setMembers((prev) => prev.filter((m) => m.profile.id !== userId));
-      router.refresh();
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || "멤버 제거에 실패했습니다");
     }
+    setMembers((prev) => prev.filter((m) => m.profile.id !== userId));
+    setSelectedMemberId(null);
+    toast.success("멤버를 제거했습니다");
+    router.refresh();
   }
 
-  const today = new Date();
-  const monthStart = startOfMonth(currentDate);
-  const monthEnd = endOfMonth(currentDate);
-  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
-  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
-  const weekStarts = eachWeekOfInterval(
-    { start: calendarStart, end: calendarEnd },
-    { weekStartsOn: 1 }
-  );
-
-  function weekendOverlay(day: Date, inMonth: boolean) {
-    const dow = day.getDay();
-    if (dow === 6) return {
-      text: inMonth ? "var(--weekend-sat-text)" : "var(--text-out-of-month)",
-      overlay: inMonth ? "var(--overlay-weekend-sat)" : "var(--overlay-weekend-sat-dim)",
-    };
-    if (dow === 0) return {
-      text: inMonth ? "var(--weekend-sun-text)" : "var(--text-out-of-month)",
-      overlay: inMonth ? "var(--overlay-weekend-sun)" : "var(--overlay-weekend-sun-dim)",
-    };
-    return null;
-  }
-
-  function cellBackground(day: Date, inMonth: boolean) {
-    const weekend = weekendOverlay(day, inMonth);
-    const base = inMonth ? "var(--bg-card)" : "var(--bg-out-of-month)";
-    const overlays: string[] = [];
-    if (weekend) overlays.push(`linear-gradient(${weekend.overlay},${weekend.overlay})`);
-    return {
-      backgroundColor: base,
-      ...(overlays.length > 0 && { backgroundImage: overlays.join(",") }),
-    };
+  async function handleTransferOwnership(userId: string) {
+    const res = await fetch(`/api/teams/${team.id}/transfer`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ new_owner_id: userId }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || "팀장 위임에 실패했습니다");
+    }
+    setTeam((prev) => ({ ...prev, created_by: userId }));
+    setSelectedMemberId(null);
+    setShowMembers(false);
+    toast.success("팀장을 위임했습니다");
+    router.refresh();
   }
 
   function prevMonth() {
-    setCurrentDate(
-      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
-    );
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   }
 
   function nextMonth() {
-    setCurrentDate(
-      new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1)
-    );
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   }
 
   return (
@@ -201,7 +178,7 @@ export default function TeamView({ team: initialTeam, initialMembers, currentUse
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button
-            onClick={() => { setShowMembers(!showMembers); setShowInvite(false); }}
+            onClick={() => setShowMembers(true)}
             className="rounded-lg border px-3 py-1.5 text-xs font-medium"
             style={{
               borderColor: "var(--border)",
@@ -211,7 +188,7 @@ export default function TeamView({ team: initialTeam, initialMembers, currentUse
             멤버
           </button>
           <button
-            onClick={() => { setShowInvite(!showInvite); setShowMembers(false); }}
+            onClick={() => setShowInvite(true)}
             className="rounded-lg px-3 py-1.5 text-xs font-medium"
             style={{
               backgroundColor: "var(--primary)",
@@ -222,261 +199,58 @@ export default function TeamView({ team: initialTeam, initialMembers, currentUse
           </button>
         </div>
       </PageHeader>
+
+      {showInvite && (
+        <InviteModal inviteCode={team.invite_code} onClose={() => setShowInvite(false)} />
+      )}
+
+      {showMembers && !selectedMember && (
+        <MembersListModal
+          members={members.map((m) => ({ profile: m.profile, joinedAt: m.joinedAt }))}
+          leaderId={team.created_by}
+          onClose={() => setShowMembers(false)}
+          onSelectMember={(m) => setSelectedMemberId(m.profile.id)}
+        />
+      )}
+
+      {selectedMember && (
+        <MemberDetailModal
+          member={{ profile: selectedMember.profile, joinedAt: selectedMember.joinedAt }}
+          isLeader={isLeader}
+          isCurrentUser={selectedMember.profile.id === currentUserId}
+          onClose={() => setSelectedMemberId(null)}
+          onTransferOwnership={handleTransferOwnership}
+          onRemoveMember={handleRemoveMember}
+        />
+      )}
+
       <main className="mx-auto max-w-5xl px-0 lg:px-4 py-4 lg:py-6 pb-24 lg:pb-6">
-        {showMembers && (
-          <div
-            className="mb-4 mx-4 lg:mx-0 rounded-lg border p-4"
-            style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-card)" }}
-          >
-            <h3
-              className="mb-3 text-sm font-semibold"
-              style={{ color: "var(--text-primary)" }}
-            >
-              팀원 목록
-            </h3>
-            <div className="space-y-2">
-              {members.map(({ profile }) => (
-                <div
-                  key={profile.id}
-                  className="flex items-center justify-between rounded-lg px-3 py-2"
-                  style={{ backgroundColor: "var(--bg-surface)" }}
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="text-sm font-medium"
-                      style={{ color: "var(--text-primary)" }}
-                    >
-                      {profile.display_name}
-                    </span>
-                    {profile.id === team.created_by && (
-                      <span
-                        className="rounded-full px-2 py-0.5 text-[10px] font-medium"
-                        style={{
-                          backgroundColor: "var(--primary)",
-                          color: "var(--text-on-primary)",
-                        }}
-                      >
-                        팀장
-                      </span>
-                    )}
-                  </div>
-                  {isLeader && profile.id !== currentUserId && (
-                    <button
-                      onClick={() => {
-                        if (confirm(`${profile.display_name}님을 팀에서 제거할까요?`)) {
-                          handleRemoveMember(profile.id);
-                        }
-                      }}
-                      className="text-xs"
-                      style={{ color: "var(--error)" }}
-                    >
-                      제거
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {showInvite && (
-          <div
-            className="mb-4 mx-4 lg:mx-0 rounded-lg border p-4"
-            style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-card)" }}
-          >
-            <div className="flex flex-col items-center gap-6">
-              <div className="text-center">
-                <p className="mb-2 text-xs" style={{ color: "var(--text-muted)" }}>
-                  초대 코드
-                </p>
-                <div className="flex items-center gap-3">
-                  <span
-                    className="font-mono text-3xl font-bold tracking-[0.3em]"
-                    style={{ color: "var(--primary)" }}
-                  >
-                    {team.invite_code}
-                  </span>
-                  <button
-                    onClick={() => navigator.clipboard.writeText(team.invite_code)}
-                    className="rounded-lg border px-3 py-1.5 text-xs font-medium"
-                    style={{
-                      borderColor: "var(--border)",
-                      color: "var(--text-secondary)",
-                    }}
-                  >
-                    복사
-                  </button>
-                </div>
-                <p
-                  className="mt-2 text-xs"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  팀원에게 이 코드를 알려주세요
-                </p>
-              </div>
-
-              {qrUrl && (
-                <div className="text-center">
-                  <p
-                    className="mb-2 text-xs"
-                    style={{ color: "var(--text-muted)" }}
-                  >
-                    또는 QR 코드를 보여주세요
-                  </p>
-                  <img
-                    src={qrUrl}
-                    alt="QR Code"
-                    className="mx-auto h-[180px] w-[180px] rounded-lg"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
         <div className="mb-3 flex items-center justify-between px-4 lg:px-0">
           <button
             onClick={prevMonth}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-base font-medium"
+            aria-label="이전 달"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-medium"
             style={{ color: "var(--text-muted)", backgroundColor: "var(--bg-card)" }}
           >
-            &lt;
+            ‹
           </button>
           <h2
-            className="text-lg font-semibold"
+            className="text-xl font-semibold sm:text-2xl"
             style={{ color: "var(--text-primary)" }}
           >
             {format(currentDate, "yyyy년 M월", { locale: ko })}
           </h2>
           <button
             onClick={nextMonth}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-base font-medium"
+            aria-label="다음 달"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-medium"
             style={{ color: "var(--text-muted)", backgroundColor: "var(--bg-card)" }}
           >
-            &gt;
+            ›
           </button>
         </div>
 
-        <div
-          className="overflow-x-hidden lg:rounded-lg border-y lg:border"
-          style={{ borderColor: "var(--border-light)" }}
-        >
-          <table
-            className="w-full table-fixed text-sm"
-            style={{
-              backgroundColor: "var(--bg-card)",
-              borderCollapse: "collapse",
-            }}
-          >
-            <tbody>
-              {weekStarts.map((weekStart, weekIdx) => {
-                const weekDays = eachDayOfInterval({
-                  start: weekStart,
-                  end: addDays(weekStart, 6),
-                });
-
-                return (
-                  <Fragment key={weekStart.toISOString()}>
-                    <tr style={{ backgroundColor: "var(--bg-surface)" }}>
-                      <td
-                        className="sticky left-0 z-10 w-14 lg:w-24"
-                        style={{
-                          backgroundColor: "var(--bg-surface)",
-                          borderRight: "1px solid var(--border-light)",
-                          borderTop: weekIdx > 0 ? "1px solid var(--border)" : undefined,
-                        }}
-                      />
-                      {weekDays.map((day) => {
-                        const inMonth = isSameMonth(day, currentDate);
-                        const ws = weekendOverlay(day, inMonth);
-                        const headerColor = ws
-                          ? ws.text
-                          : inMonth
-                            ? "var(--text-secondary)"
-                            : "var(--text-out-of-month)";
-                        const headerBg = cellBackground(day, inMonth);
-                        const isToday = isSameDay(day, today);
-                        return (
-                          <td
-                            key={day.toISOString()}
-                            className="px-0.5 lg:px-3 py-1.5 lg:py-2 text-center text-xs font-medium"
-                            style={{
-                              color: headerColor,
-                              ...headerBg,
-                              borderTop: weekIdx > 0 ? "1px solid var(--border)" : undefined,
-                              borderLeft: "1px solid var(--border-light)",
-                              ...(isToday && { boxShadow: "inset 0 0 0 1.5px var(--today-border)" }),
-                            }}
-                          >
-                            <div className="text-[10px]" style={{ color: "inherit" }}>
-                              {format(day, "EEE", { locale: ko })}
-                            </div>
-                            <span
-                              className={`inline-flex items-center justify-center text-[11px] ${isToday ? "font-bold" : ""}`}
-                            >
-                              {format(day, "d")}
-                            </span>
-                          </td>
-                        );
-                      })}
-                    </tr>
-
-                    {members.map(({ profile, events }) => (
-                      <tr
-                        key={`${weekStart.toISOString()}-${profile.id}`}
-                      >
-                        <td
-                          className="sticky left-0 z-10 w-14 lg:w-24 px-1.5 lg:px-4 py-2 lg:py-2.5 text-xs lg:text-sm font-medium"
-                          style={{
-                            backgroundColor: "var(--bg-card)",
-                            borderRight: "1px solid var(--border-light)",
-                            borderTop: "1px solid var(--border-light)",
-                            color: "var(--text-primary)",
-                          }}
-                        >
-                          <span className="block truncate">{profile.display_name}</span>
-                        </td>
-                        {weekDays.map((day) => {
-                          const dayKey = getSeoulDateKey(day);
-                          const dayEvents = events.filter(
-                            (e) => getSeoulDateKey(e.start_at) === dayKey
-                          );
-                          const inMonth = isSameMonth(day, currentDate);
-                          const bg = cellBackground(day, inMonth);
-                          return (
-                            <td
-                              key={day.toISOString()}
-                              className="px-0.5 lg:px-2 py-1 lg:py-2 text-center align-top"
-                              style={{
-                                ...bg,
-                                borderTop: "1px solid var(--border-light)",
-                                borderLeft: "1px solid var(--border-light)",
-                              }}
-                            >
-                              {dayEvents.map((event) => (
-                                <div
-                                  key={event.id}
-                                  className="mb-0.5 rounded px-0.5 lg:px-1.5 py-0.5 lg:py-1 text-[11px] lg:text-[13px] leading-tight"
-                                  style={{
-                                    backgroundColor: "var(--event-bg)",
-                                    color: "var(--event-sub)",
-                                  }}
-                                >
-                                  <div>{formatSeoulTime(event.start_at)}</div>
-                                  <div>{formatSeoulTime(event.end_at)}</div>
-                                </div>
-                              ))}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <TeamCalendar members={members} currentDate={currentDate} />
       </main>
     </>
   );

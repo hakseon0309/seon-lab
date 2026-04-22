@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { createAdminClient, requireAdmin } from "@/lib/supabase/admin";
 import { fetchAndParseICS } from "@/lib/ics-parser";
 import { syncEventsSnapshot } from "@/lib/event-sync";
+import { apiError, apiErrors } from "@/lib/api-error";
 
 export async function POST() {
   const guard = await requireAdmin();
-  if ("error" in guard) {
-    return NextResponse.json({ error: guard.error }, { status: guard.status });
+  if (guard.error) {
+    return apiError(guard.status, guard.error, "forbidden");
   }
 
   const admin = createAdminClient();
@@ -16,7 +17,7 @@ export async function POST() {
     .not("ics_url", "is", null);
 
   if (profilesError) {
-    return NextResponse.json({ error: profilesError.message }, { status: 500 });
+    return apiErrors.server("프로필 조회에 실패했습니다", profilesError.message);
   }
 
   if (!profiles || profiles.length === 0) {

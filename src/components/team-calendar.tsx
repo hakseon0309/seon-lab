@@ -1,0 +1,159 @@
+"use client";
+
+import { memo, Fragment } from "react";
+import { formatSeoulTime, getSeoulDateKey } from "@/lib/time";
+import { CalendarEvent, UserProfile } from "@/lib/types";
+import { weekendOverlay, cellBackground } from "@/lib/calendar-style";
+import {
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  addDays,
+  eachDayOfInterval,
+  eachWeekOfInterval,
+  isSameDay,
+  isSameMonth,
+  format,
+} from "date-fns";
+import { ko } from "date-fns/locale";
+
+interface Props {
+  members: { profile: UserProfile; events: CalendarEvent[] }[];
+  currentDate: Date;
+}
+
+function TeamCalendar({ members, currentDate }: Props) {
+  const today = new Date();
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(currentDate);
+  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+  const weekStarts = eachWeekOfInterval(
+    { start: calendarStart, end: calendarEnd },
+    { weekStartsOn: 1 }
+  );
+
+  return (
+    <div
+      className="overflow-x-hidden lg:rounded-lg border-y lg:border"
+      style={{ borderColor: "var(--border-light)" }}
+    >
+      <table
+        className="w-full table-fixed text-sm"
+        style={{
+          backgroundColor: "var(--bg-card)",
+          borderCollapse: "collapse",
+        }}
+      >
+        <tbody>
+          {weekStarts.map((weekStart, weekIdx) => {
+            const weekDays = eachDayOfInterval({
+              start: weekStart,
+              end: addDays(weekStart, 6),
+            });
+
+            return (
+              <Fragment key={weekStart.toISOString()}>
+                <tr style={{ backgroundColor: "var(--bg-surface)" }}>
+                  <td
+                    className="sticky left-0 z-10 w-14 lg:w-24"
+                    style={{
+                      backgroundColor: "var(--bg-surface)",
+                      borderRight: "1px solid var(--border-light)",
+                      borderTop: weekIdx > 0 ? "1px solid var(--border)" : undefined,
+                    }}
+                  />
+                  {weekDays.map((day) => {
+                    const inMonth = isSameMonth(day, currentDate);
+                    const ws = weekendOverlay(day, inMonth);
+                    const headerColor = ws
+                      ? ws.text
+                      : inMonth
+                        ? "var(--text-secondary)"
+                        : "var(--text-out-of-month)";
+                    const headerBg = cellBackground(day, inMonth);
+                    const isToday = isSameDay(day, today);
+                    return (
+                      <td
+                        key={day.toISOString()}
+                        className="px-0.5 lg:px-3 py-1.5 lg:py-2 text-center text-xs font-medium relative"
+                        style={{
+                          color: headerColor,
+                          ...headerBg,
+                          borderTop: weekIdx > 0 ? "1px solid var(--border)" : undefined,
+                          borderLeft: "1px solid var(--border-light)",
+                          ...(isToday && { outline: "1.5px solid var(--today-border)", outlineOffset: "-1.5px", zIndex: 1 }),
+                        }}
+                      >
+                        <div className="text-[10px]" style={{ color: "inherit" }}>
+                          {format(day, "EEE", { locale: ko })}
+                        </div>
+                        <span
+                          className={`inline-flex items-center justify-center text-[11px] ${isToday ? "font-bold" : ""}`}
+                        >
+                          {format(day, "d")}
+                        </span>
+                      </td>
+                    );
+                  })}
+                </tr>
+
+                {members.map(({ profile, events }) => (
+                  <tr key={`${weekStart.toISOString()}-${profile.id}`}>
+                    <td
+                      className="sticky left-0 z-10 w-14 lg:w-24 px-1.5 lg:px-4 py-2 lg:py-2.5 text-xs lg:text-sm font-medium"
+                      style={{
+                        backgroundColor: "var(--bg-card)",
+                        borderRight: "1px solid var(--border-light)",
+                        borderTop: "1px solid var(--border-light)",
+                        color: "var(--text-primary)",
+                      }}
+                    >
+                      <span className="block truncate">{profile.display_name}</span>
+                    </td>
+                    {weekDays.map((day) => {
+                      const dayKey = getSeoulDateKey(day);
+                      const dayEvents = events.filter(
+                        (e) => getSeoulDateKey(e.start_at) === dayKey
+                      );
+                      const inMonth = isSameMonth(day, currentDate);
+                      const bg = cellBackground(day, inMonth);
+                      return (
+                        <td
+                          key={day.toISOString()}
+                          className="px-0.5 lg:px-2 py-1 lg:py-2 text-center align-top"
+                          style={{
+                            ...bg,
+                            borderTop: "1px solid var(--border-light)",
+                            borderLeft: "1px solid var(--border-light)",
+                          }}
+                        >
+                          {dayEvents.map((event) => (
+                            <div
+                              key={event.id}
+                              className="mb-0.5 rounded px-0.5 lg:px-1.5 py-0.5 lg:py-1 text-[11px] lg:text-[13px] leading-tight"
+                              style={{
+                                backgroundColor: "var(--event-bg)",
+                                color: "var(--event-sub)",
+                              }}
+                            >
+                              <div>{formatSeoulTime(event.start_at)}</div>
+                              <div>{formatSeoulTime(event.end_at)}</div>
+                            </div>
+                          ))}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export default memo(TeamCalendar);

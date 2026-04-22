@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { apiError, apiErrors } from "@/lib/api-error";
 
-// 수락
 export async function PATCH(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -12,7 +12,7 @@ export async function PATCH(
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return apiErrors.unauthorized();
 
   const { error } = await supabase
     .from("couple_requests")
@@ -20,12 +20,11 @@ export async function PATCH(
     .eq("id", id)
     .eq("partner_id", user.id);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return apiError(500, error.message);
 
   return NextResponse.json({ success: true });
 }
 
-// 거절 또는 연결 해제
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -36,7 +35,7 @@ export async function DELETE(
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return apiErrors.unauthorized();
 
   const { error } = await supabase
     .from("couple_requests")
@@ -44,7 +43,7 @@ export async function DELETE(
     .eq("id", id)
     .or(`requester_id.eq.${user.id},partner_id.eq.${user.id}`);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return apiError(500, error.message);
 
   return NextResponse.json({ success: true });
 }

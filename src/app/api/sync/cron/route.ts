@@ -1,13 +1,13 @@
 import { createClient as createServerClient } from "@supabase/supabase-js";
 import { syncEventsSnapshot } from "@/lib/event-sync";
 import { fetchAndParseICS } from "@/lib/ics-parser";
+import { apiErrors } from "@/lib/api-error";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
-  // Verify cron secret
   const authHeader = request.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return apiErrors.unauthorized("invalid cron secret");
   }
 
   // Use service role to bypass RLS

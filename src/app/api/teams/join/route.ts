@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { apiError, apiErrors, parseJsonBody } from "@/lib/api-error";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -8,29 +9,28 @@ export async function POST(request: Request) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user) return apiErrors.unauthorized();
+
+  const parsed = await parseJsonBody<{ invite_code?: unknown }>(request);
+  if (!parsed.ok) return parsed.response;
+  const { invite_code } = parsed.body;
+  if (!invite_code || typeof invite_code !== "string") {
+    return apiErrors.badRequest("invite_code is required");
   }
+  const code = invite_code.trim().toUpperCase();
 
-  const { invite_code } = await request.json();
-  const code = (invite_code as string).trim().toUpperCase();
-
-  // Find team by invite code
   const { data: team } = await supabase
     .from("teams")
     .select("id, name, invite_expires_at")
     .eq("invite_code", code)
     .single();
 
-  if (!team) {
-    return NextResponse.json({ error: "Invalid invite code" }, { status: 404 });
-  }
+  if (!team) return apiErrors.notFound("Invalid invite code");
 
   if (team.invite_expires_at && new Date(team.invite_expires_at) < new Date()) {
-    return NextResponse.json({ error: "Invite code expired" }, { status: 410 });
+    return apiError(410, "Invite code expired");
   }
 
-  // Check if already a member
   const { data: existing } = await supabase
     .from("team_members")
     .select("id")
@@ -46,9 +46,7 @@ export async function POST(request: Request) {
     .from("team_members")
     .insert({ team_id: team.id, user_id: user.id });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) return apiError(500, error.message);
 
   revalidatePath("/teams");
 

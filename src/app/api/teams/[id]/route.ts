@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { apiError, apiErrors, parseJsonBody } from "@/lib/api-error";
+import { requireTeamOwner } from "@/lib/team-auth";
 
 export async function PATCH(
   request: Request,
@@ -12,31 +14,17 @@ export async function PATCH(
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!user) return apiErrors.unauthorized();
 
-  const { data: team } = await supabase
-    .from("teams")
-    .select("created_by")
-    .eq("id", id)
-    .single();
+  const ownerCheck = await requireTeamOwner(supabase, id, user.id);
+  if (!ownerCheck.ok) return ownerCheck.response;
 
-  if (!team || team.created_by !== user.id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-  }
-
-  const { name } = body;
+  const parsed = await parseJsonBody<{ name?: unknown }>(request);
+  if (!parsed.ok) return parsed.response;
+  const { name } = parsed.body;
 
   if (!name || typeof name !== "string" || name.trim().length === 0) {
-    return NextResponse.json({ error: "Team name is required" }, { status: 400 });
+    return apiErrors.badRequest("Team name is required");
   }
 
   const { data, error } = await supabase
@@ -46,9 +34,7 @@ export async function PATCH(
     .select()
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) return apiError(500, error.message);
 
   revalidatePath(`/teams/${id}`);
   revalidatePath("/teams");

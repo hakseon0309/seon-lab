@@ -71,7 +71,15 @@ export default async function DashboardPage() {
       <>
         <RouteTransitionDone />
         <Nav />
-        <div className="mx-auto max-w-5xl px-4 py-16 text-center">
+        <PageHeader>
+          <h1
+            className="text-xl font-bold"
+            style={{ color: "var(--text-primary)" }}
+          >
+            내 시프트
+          </h1>
+        </PageHeader>
+        <main className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center px-4 pb-24 lg:pb-8 text-center">
           <h2
             className="text-xl font-semibold"
             style={{ color: "var(--text-primary)" }}
@@ -79,7 +87,7 @@ export default async function DashboardPage() {
             캘린더 구독 URL을 등록해주세요
           </h2>
           <p
-            className="mx-auto mt-3 max-w-xl text-sm leading-7"
+            className="mt-3 max-w-sm text-sm leading-7"
             style={{ color: "var(--text-muted)" }}
           >
             설정에서 캘린더 구독 URL을 입력하면
@@ -89,7 +97,7 @@ export default async function DashboardPage() {
           </p>
           <Link
             href="/settings"
-            className="mt-8 inline-flex rounded-lg px-6 py-2.5 text-sm font-medium"
+            className="interactive-press mt-8 inline-flex rounded-lg px-6 py-2.5 text-sm font-medium"
             style={{
               backgroundColor: "var(--primary)",
               color: "var(--text-on-primary)",
@@ -97,7 +105,7 @@ export default async function DashboardPage() {
           >
             설정으로 이동
           </Link>
-        </div>
+        </main>
       </>
     );
   }

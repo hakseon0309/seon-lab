@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { apiError, apiErrors, parseJsonBody } from "@/lib/api-error";
+import { requireTeamOwner } from "@/lib/team-auth";
 
 export async function DELETE(
   request: Request,
@@ -12,31 +14,17 @@ export async function DELETE(
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!user) return apiErrors.unauthorized();
 
-  const { data: team } = await supabase
-    .from("teams")
-    .select("created_by")
-    .eq("id", id)
-    .single();
+  const ownerCheck = await requireTeamOwner(supabase, id, user.id);
+  if (!ownerCheck.ok) return ownerCheck.response;
 
-  if (!team || team.created_by !== user.id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const parsed = await parseJsonBody<{ userId?: unknown }>(request);
+  if (!parsed.ok) return parsed.response;
+  const { userId } = parsed.body;
 
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-  }
-
-  const { userId } = body;
-
-  if (!userId || userId === user.id) {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  if (!userId || typeof userId !== "string" || userId === user.id) {
+    return apiErrors.badRequest("Invalid request");
   }
 
   const { error } = await supabase
@@ -45,9 +33,7 @@ export async function DELETE(
     .eq("team_id", id)
     .eq("user_id", userId);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+  if (error) return apiError(500, error.message);
 
   revalidatePath(`/teams/${id}`);
 

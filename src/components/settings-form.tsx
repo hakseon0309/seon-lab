@@ -1,8 +1,10 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
+import DeleteAccountModal from "@/components/delete-account-modal";
 import { useRouteTransition } from "@/components/route-transition-provider";
 import { useTheme } from "@/lib/theme";
+import { APP_VERSION } from "@/lib/version";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -10,13 +12,16 @@ interface Props {
   initialDisplayName: string;
   initialIcsUrl: string;
   isAdmin: boolean;
+  ownedTeams: { id: string; name: string }[];
 }
 
 export default function SettingsForm({
   initialDisplayName,
   initialIcsUrl,
   isAdmin,
+  ownedTeams,
 }: Props) {
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [icsUrl, setIcsUrl] = useState(initialIcsUrl);
   const [savingName, setSavingName] = useState(false);
@@ -96,6 +101,18 @@ export default function SettingsForm({
     await supabase.auth.signOut();
     startNavigation();
     router.push("/login");
+    router.refresh();
+  }
+
+  async function handleDeleteAccount() {
+    const res = await fetch("/api/account", { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || "탈퇴 처리에 실패했습니다");
+    }
+    await supabase.auth.signOut();
+    startNavigation();
+    router.push("/");
     router.refresh();
   }
 
@@ -278,7 +295,30 @@ export default function SettingsForm({
             로그아웃
           </button>
         </div>
+
+        <button
+          onClick={() => setShowDeleteModal(true)}
+          className="w-full text-center text-xs"
+          style={{ color: "var(--text-muted)" }}
+        >
+          회원 탈퇴
+        </button>
+
+        <p
+          className="pt-2 text-center text-xs"
+          style={{ color: "var(--text-muted)" }}
+        >
+          v{APP_VERSION}
+        </p>
       </div>
+
+      {showDeleteModal && (
+        <DeleteAccountModal
+          ownedTeams={ownedTeams}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={handleDeleteAccount}
+        />
+      )}
     </div>
   );
 }

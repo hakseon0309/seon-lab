@@ -12,11 +12,20 @@ export default async function SettingsPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("user_profiles")
-    .select("display_name, ics_url, is_admin")
-    .eq("id", user.id)
-    .single();
+  const [profileRes, ownedTeamsRes] = await Promise.all([
+    supabase
+      .from("user_profiles")
+      .select("display_name, ics_url, is_admin")
+      .eq("id", user.id)
+      .single(),
+    supabase
+      .from("teams")
+      .select("id, name")
+      .eq("created_by", user.id),
+  ]);
+
+  const profile = profileRes.data;
+  const ownedTeams = (ownedTeamsRes.data ?? []) as { id: string; name: string }[];
 
   return (
     <>
@@ -32,6 +41,7 @@ export default async function SettingsPage() {
           initialDisplayName={profile?.display_name ?? ""}
           initialIcsUrl={profile?.ics_url ?? ""}
           isAdmin={!!profile?.is_admin}
+          ownedTeams={ownedTeams}
         />
       </main>
     </>

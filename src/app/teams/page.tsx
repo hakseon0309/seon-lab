@@ -59,15 +59,25 @@ export default async function TeamsPage() {
 
           {myTeams.length === 0 ? (
             <div
-              className="mx-4 lg:mx-0 rounded-lg border p-6 text-center"
+              className="mx-4 lg:mx-0 flex flex-col items-center gap-3 rounded-lg border px-6 py-10 text-center"
               style={{
                 borderColor: "var(--border-light)",
                 backgroundColor: "var(--bg-card)",
               }}
             >
-              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                아직 참여한 팀이 없습니다. 팀을 생성하거나 초대 코드로 참여하세요.
+              <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+                아직 참여한 팀이 없어요
               </p>
+              <p className="text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>
+                아래 버튼으로 팀을 만들거나 초대 코드로 참여해보세요
+              </p>
+              <span
+                aria-hidden="true"
+                className="mt-1 text-xl"
+                style={{ color: "var(--text-muted)" }}
+              >
+                ↓
+              </span>
             </div>
           ) : (
             <div className="space-y-4 px-4 lg:px-0">

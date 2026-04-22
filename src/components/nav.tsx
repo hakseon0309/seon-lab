@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import AppSidebar from "@/components/app-sidebar";
 
 export default function Nav() {
   const pathname = usePathname();
@@ -44,6 +45,7 @@ export default function Nav() {
               ))}
             </div>
           </div>
+          <AppSidebar />
         </div>
       </nav>
 
@@ -59,6 +61,7 @@ export default function Nav() {
         >
           SEON LAB
         </Link>
+        <AppSidebar />
       </header>
       <div className="h-14 lg:hidden" />
 
