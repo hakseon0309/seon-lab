@@ -15,7 +15,7 @@ export default async function SettingsPage() {
   const [profileRes, ownedTeamsRes] = await Promise.all([
     supabase
       .from("user_profiles")
-      .select("display_name, ics_url, is_admin")
+      .select("display_name, ics_url, is_admin, avatar_url")
       .eq("id", user.id)
       .single(),
     supabase
@@ -36,10 +36,11 @@ export default async function SettingsPage() {
           설정
         </h1>
       </PageHeader>
-      <main className="mx-auto w-full max-w-lg py-6 pb-24 lg:py-8 lg:pb-8">
+      <main className="mx-auto w-full max-w-lg pb-tabbar lg:pb-8">
         <SettingsForm
           initialDisplayName={profile?.display_name ?? ""}
           initialIcsUrl={profile?.ics_url ?? ""}
+          initialAvatarUrl={profile?.avatar_url ?? null}
           isAdmin={!!profile?.is_admin}
           ownedTeams={ownedTeams}
         />

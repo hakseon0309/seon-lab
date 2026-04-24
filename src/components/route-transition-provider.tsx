@@ -12,6 +12,9 @@ import {
 } from "react";
 
 const ROUTE_OVERLAY_TIMEOUT_MS = 10000;
+// 네비게이션 클릭 즉시 어둡게 + 스피너가 보이도록 delay 0. 서버 응답이 매우 빠른
+// 경우에도 플래시가 생기더라도 "즉시 반응" 이 더 중요하다.
+const ROUTE_OVERLAY_DELAY_MS = 0;
 
 type RouteTransitionContextValue = {
   startNavigation: () => void;
@@ -21,11 +24,16 @@ type RouteTransitionContextValue = {
 const RouteTransitionContext = createContext<RouteTransitionContextValue | null>(null);
 
 export function RouteTransitionProvider({ children }: { children: ReactNode }) {
+  const delayRef = useRef<number | null>(null);
   const timeoutRef = useRef<number | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
 
   const stopNavigation = useCallback(() => {
     setIsNavigating(false);
+    if (delayRef.current) {
+      window.clearTimeout(delayRef.current);
+      delayRef.current = null;
+    }
     if (timeoutRef.current) {
       window.clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
@@ -33,12 +41,24 @@ export function RouteTransitionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const startNavigation = useCallback(() => {
-    setIsNavigating(true);
+    if (delayRef.current) {
+      window.clearTimeout(delayRef.current);
+    }
     if (timeoutRef.current) {
       window.clearTimeout(timeoutRef.current);
     }
+
+    delayRef.current = window.setTimeout(() => {
+      setIsNavigating(true);
+      delayRef.current = null;
+    }, ROUTE_OVERLAY_DELAY_MS);
+
     timeoutRef.current = window.setTimeout(() => {
       setIsNavigating(false);
+      if (delayRef.current) {
+        window.clearTimeout(delayRef.current);
+        delayRef.current = null;
+      }
       timeoutRef.current = null;
     }, ROUTE_OVERLAY_TIMEOUT_MS);
   }, []);
@@ -85,6 +105,9 @@ export function RouteTransitionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     return () => {
+      if (delayRef.current) {
+        window.clearTimeout(delayRef.current);
+      }
       if (timeoutRef.current) {
         window.clearTimeout(timeoutRef.current);
       }
@@ -104,7 +127,8 @@ export function RouteTransitionProvider({ children }: { children: ReactNode }) {
       {children}
       {isNavigating && (
         <div
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/28 px-4"
+          className="fixed inset-0 flex items-center justify-center bg-black/40 px-4"
+          style={{ zIndex: 1500 }}
           aria-live="polite"
           aria-busy="true"
         >

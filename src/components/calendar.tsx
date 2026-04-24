@@ -44,12 +44,15 @@ export default function Calendar({ events, partnerEvents = [] }: CalendarProps) 
 
   return (
     <section className="w-full min-w-0">
-      <div className="mb-3 flex items-center justify-between px-4 lg:px-0">
+      <div
+        className="sticky top-28 z-20 flex items-center justify-between px-4 py-3 lg:top-0 lg:px-0"
+        style={{ backgroundColor: "var(--bg-base)" }}
+      >
         <button
           onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}
           aria-label="이전 달"
           className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-medium"
-          style={{ color: "var(--text-muted)", backgroundColor: "var(--bg-card)" }}
+          style={{ color: "var(--text-primary)", backgroundColor: "var(--button-surface)" }}
         >
           ‹
         </button>
@@ -65,7 +68,7 @@ export default function Calendar({ events, partnerEvents = [] }: CalendarProps) 
           onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))}
           aria-label="다음 달"
           className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-medium"
-          style={{ color: "var(--text-muted)", backgroundColor: "var(--bg-card)" }}
+          style={{ color: "var(--text-primary)", backgroundColor: "var(--button-surface)" }}
         >
           ›
         </button>

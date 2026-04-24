@@ -5,6 +5,7 @@ import PageHeader from "@/components/page-header";
 import RouteTransitionDone from "@/components/route-transition-done";
 import TeamsFooterActions from "@/components/teams-footer-actions";
 import CorpTeamSection from "@/components/corp-team-section";
+import TeamAvatarControl from "@/components/team-avatar-control";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -53,7 +54,7 @@ export default async function TeamsPage() {
           팀
         </h1>
       </PageHeader>
-      <main className="mx-auto w-full max-w-lg py-6 lg:py-8 pb-36 lg:pb-20">
+      <main className="mx-auto w-full max-w-lg pb-36 lg:pb-20">
         <div className="page-stack">
           {showCorp && <CorpTeamSection teams={corpTeams} />}
 
@@ -91,19 +92,14 @@ export default async function TeamsPage() {
                     backgroundColor: "var(--bg-card)",
                   }}
                 >
-                  <span
-                    className="text-sm font-medium"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    {team.name}
-                    {team.is_corp_team && (
-                      <span
-                        className="ml-2 text-xs"
-                        style={{ color: "var(--text-muted)" }}
-                      >
-                        🏢
-                      </span>
-                    )}
+                  <span className="flex min-w-0 items-center gap-3">
+                    <TeamAvatarControl team={team} />
+                    <span
+                      className="truncate text-sm font-medium"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {team.name}
+                    </span>
                   </span>
                 </Link>
               ))}

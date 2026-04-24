@@ -38,7 +38,7 @@ export default function DeleteAccountModal({ ownedTeams, onClose, onConfirm }: P
       {hasOwnedTeams ? (
           <div className="space-y-3">
             <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-              아래 팀의 팀장으로 있어 탈퇴할 수 없습니다. 팀장을 다른 멤버에게 위임한 뒤 다시 시도해주세요.
+              아래 팀의 팀장으로 있어 탈퇴할 수 없습니다. 팀장을 다른 팀원에게 위임한 뒤 다시 시도해주세요.
             </p>
             <ul className="space-y-2">
               {ownedTeams.map((team) => (

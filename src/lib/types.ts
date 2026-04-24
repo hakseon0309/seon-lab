@@ -4,6 +4,8 @@ export interface UserProfile {
   ics_url: string | null;
   last_synced: string | null;
   is_admin?: boolean;
+  avatar_url?: string | null;
+  avatar_path?: string | null;
   created_at: string;
 }
 
@@ -31,6 +33,8 @@ export interface Team {
   invite_code: string;
   invite_expires_at: string | null;
   is_corp_team: boolean;
+  image_url?: string | null;
+  image_path?: string | null;
   created_by: string;
   created_at: string;
 }
@@ -78,4 +82,99 @@ export interface CafeteriaMenuItem {
   is_featured: boolean;
   sort_order: number;
   created_at: string;
+}
+
+export type BoardKind = "post" | "chat";
+
+export interface Board {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  write_role: "admin" | "leader" | "member";
+  allow_comments: boolean;
+  allow_anonymous: boolean;
+  has_status: boolean;
+  kind: BoardKind;
+  team_scoped: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface TeamLite {
+  id: string;
+  name: string;
+}
+
+export interface SwapEvent {
+  summary: string;
+  start_at: string;
+  end_at: string;
+}
+
+export interface SwapPost extends BoardPost {
+  team_id: string;
+  team_name: string;
+  swap_date: string | null;
+  swap_status: "open" | "done";
+  completed_at: string | null;
+  // swap_date 에 해당하는 작성자의 시프트. null 이면 휴무.
+  swap_event: SwapEvent | null;
+}
+
+export interface BoardMessage {
+  id: string;
+  post_id: string;
+  author_id: string;
+  body: string;
+  created_at: string;
+  author_name?: string;
+  author_avatar_url?: string | null;
+}
+
+export interface NotificationRow {
+  id: string;
+  kind: "message" | "comment";
+  post_id: string;
+  post_title: string;
+  board_slug: string;
+  board_kind: BoardKind;
+  last_actor_name: string | null;
+  preview: string | null;
+  unread_count: number;
+  read_at: string | null;
+  updated_at: string;
+}
+
+export interface BoardPost {
+  id: string;
+  board_id: string;
+  author_id: string | null;
+  is_anonymous: boolean;
+  title: string;
+  body: string;
+  is_pinned: boolean;
+  status: "requested" | "accepted" | "resolved" | null;
+  created_at: string;
+  updated_at: string;
+  author_name?: string;
+  author_avatar_url?: string | null;
+}
+
+export interface BoardComment {
+  id: string;
+  post_id: string;
+  author_id: string | null;
+  is_anonymous: boolean;
+  body: string;
+  created_at: string;
+  updated_at: string;
+  author_name?: string;
+  author_avatar_url?: string | null;
+}
+
+export interface BoardManager {
+  user_id: string;
+  display_name: string;
+  avatar_url: string | null;
 }

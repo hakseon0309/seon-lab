@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Html5Qrcode } from "html5-qrcode";
 
 interface QrScannerProps {
@@ -10,13 +11,23 @@ interface QrScannerProps {
 
 export default function QrScanner({ onScan, onClose }: QrScannerProps) {
   const [error, setError] = useState("");
+  const [mounted, setMounted] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
-  const containerRef = useRef<string>(
-    "qr-reader-" + Math.random().toString(36).slice(2)
-  );
+  const containerId = `qr-reader-${useId().replace(/:/g, "")}`;
 
   useEffect(() => {
-    const scanner = new Html5Qrcode(containerRef.current);
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      scannerRef.current?.stop().catch(() => {});
+      onClose();
+    };
+    document.addEventListener("keydown", handleEscape);
+
+    const scanner = new Html5Qrcode(containerId);
     scannerRef.current = scanner;
 
     scanner
@@ -37,34 +48,38 @@ export default function QrScanner({ onScan, onClose }: QrScannerProps) {
       });
 
     return () => {
+      document.removeEventListener("keydown", handleEscape);
       scanner.stop().catch(() => {});
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [containerId, onClose, onScan]);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+  if (!mounted) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 flex items-center justify-center"
+      style={{ zIndex: 1000 }}
+      onClick={() => {
+        scannerRef.current?.stop().catch(() => {});
+        onClose();
+      }}
+    >
       <div
-        className="w-full max-w-sm rounded-2xl p-6"
+        className="absolute inset-0"
+        style={{ backgroundColor: "rgb(0 0 0 / 0.6)" }}
+      />
+      <div
+        className="relative mx-4 w-full max-w-sm rounded-2xl p-6"
         style={{ backgroundColor: "var(--bg-card)" }}
+        onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4">
           <h3
             className="text-base font-semibold"
             style={{ color: "var(--text-primary)" }}
           >
             QR 코드 스캔
           </h3>
-          <button
-            onClick={() => {
-              scannerRef.current?.stop().catch(() => {});
-              onClose();
-            }}
-            className="text-sm"
-            style={{ color: "var(--text-muted)" }}
-          >
-            닫기
-          </button>
         </div>
 
         {error ? (
@@ -77,7 +92,7 @@ export default function QrScanner({ onScan, onClose }: QrScannerProps) {
         ) : (
           <>
             <div
-              id={containerRef.current}
+              id={containerId}
               className="overflow-hidden rounded-lg"
             />
             <p
@@ -89,6 +104,7 @@ export default function QrScanner({ onScan, onClose }: QrScannerProps) {
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -26,6 +26,13 @@ export default async function TeamDetailPage({
   if (!teamData) redirect("/teams");
   const team = teamData as Team;
 
+  const { data: favorite } = await supabase
+    .from("team_favorites")
+    .select("id")
+    .eq("team_id", id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
   const { data: memberRows } = await supabase
     .from("team_members")
     .select("user_id, joined_at")
@@ -62,7 +69,12 @@ export default async function TeamDetailPage({
     <>
       <RouteTransitionDone />
       <Nav />
-      <TeamView team={team} initialMembers={members} currentUserId={user.id} />
+      <TeamView
+        team={team}
+        initialMembers={members}
+        currentUserId={user.id}
+        initialIsFavorite={Boolean(favorite)}
+      />
     </>
   );
 }

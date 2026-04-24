@@ -49,7 +49,7 @@ export default async function AdminPage() {
     <>
       <RouteTransitionDone />
       <Nav />
-      <main className="mx-auto w-full max-w-3xl py-6 pb-24 lg:py-8 lg:pb-8">
+      <main className="mx-auto w-full max-w-3xl pb-tabbar lg:pb-8">
         <div className="px-4 lg:px-0">
           <div className="page-title-block">
             <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>

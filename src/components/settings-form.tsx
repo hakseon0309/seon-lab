@@ -2,6 +2,8 @@
 
 import { createClient } from "@/lib/supabase/client";
 import DeleteAccountModal from "@/components/delete-account-modal";
+import Modal from "@/components/modal";
+import ProfileAvatarControl from "@/components/profile-avatar-control";
 import { useRouteTransition } from "@/components/route-transition-provider";
 import { useTheme } from "@/lib/theme";
 import { APP_VERSION } from "@/lib/version";
@@ -11,6 +13,7 @@ import { useRouter } from "next/navigation";
 interface Props {
   initialDisplayName: string;
   initialIcsUrl: string;
+  initialAvatarUrl: string | null;
   isAdmin: boolean;
   ownedTeams: { id: string; name: string }[];
 }
@@ -18,6 +21,7 @@ interface Props {
 export default function SettingsForm({
   initialDisplayName,
   initialIcsUrl,
+  initialAvatarUrl,
   isAdmin,
   ownedTeams,
 }: Props) {
@@ -126,6 +130,11 @@ export default function SettingsForm({
   return (
     <div className="px-4 lg:px-0">
       <div className="page-stack">
+        <ProfileAvatarControl
+          initialAvatarUrl={initialAvatarUrl}
+          displayName={displayName}
+        />
+
         <div className="space-y-4">
           <form onSubmit={handleSaveName}>
             <label className="block text-sm font-medium mb-1" style={{ color: "var(--text-secondary)" }}>
@@ -195,10 +204,7 @@ export default function SettingsForm({
           style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-card)" }}
         >
           <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
-            {theme === "light" ? "라이트 모드" : "다크 모드"}
-          </span>
-          <span className="text-sm" style={{ color: "var(--text-muted)" }}>
-            {theme === "light" ? "🌙" : "☀️"}
+            {theme === "light" ? "다크 모드" : "라이트 모드"}
           </span>
         </button>
 
@@ -232,53 +238,35 @@ export default function SettingsForm({
             </button>
 
             {showInstallGuide && (
-              <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
-                onClick={() => setShowInstallGuide(false)}
+              <Modal
+                title="홈 화면에 추가"
+                onClose={() => setShowInstallGuide(false)}
+                maxWidth="max-w-sm"
               >
-                <div
-                  className="w-full max-w-sm rounded-2xl border p-5"
-                  style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-card)" }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="mb-4 flex items-center justify-between">
-                    <h2 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                      홈 화면에 추가
-                    </h2>
-                    <button
-                      onClick={() => setShowInstallGuide(false)}
-                      className="text-sm"
-                      style={{ color: "var(--text-muted)" }}
-                    >
-                      닫기
-                    </button>
-                  </div>
-
-                  <ol className="space-y-2.5">
-                    {[
-                      { step: "1", text: "아이폰 Safari에서 이 페이지를 열어주세요" },
-                      { step: "2", text: "하단 공유 버튼을 탭하세요" },
-                      { step: "3", text: "스크롤을 내려 홈 화면에 추가를 탭하세요" },
-                      { step: "4", text: "오른쪽 상단 추가를 탭하면 완료입니다" },
-                    ].map(({ step, text }) => (
-                      <li key={step} className="flex items-start gap-3">
-                        <span
-                          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
-                          style={{ backgroundColor: "var(--event-bg)", color: "var(--event-text)" }}
-                        >
-                          {step}
-                        </span>
-                        <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
-                          {text}
-                        </span>
-                      </li>
-                    ))}
-                  </ol>
-                  <p className="mt-4 text-xs" style={{ color: "var(--text-muted)" }}>
-                    홈 화면에 추가하면 앱처럼 전체 화면으로 사용할 수 있어요
-                  </p>
-                </div>
-              </div>
+                <ol className="space-y-2.5">
+                  {[
+                    { step: "1", text: "아이폰 Safari에서 이 페이지를 열어주세요" },
+                    { step: "2", text: "하단 공유 버튼을 탭하세요" },
+                    { step: "3", text: "스크롤을 내려 홈 화면에 추가를 탭하세요" },
+                    { step: "4", text: "오른쪽 상단 추가를 탭하면 완료입니다" },
+                  ].map(({ step, text }) => (
+                    <li key={step} className="flex items-start gap-3">
+                      <span
+                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+                        style={{ backgroundColor: "var(--event-bg)", color: "var(--event-text)" }}
+                      >
+                        {step}
+                      </span>
+                      <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
+                        {text}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+                <p className="mt-4 text-xs" style={{ color: "var(--text-muted)" }}>
+                  홈 화면에 추가하면 앱처럼 전체 화면으로 사용할 수 있어요
+                </p>
+              </Modal>
             )}
           </div>
         )}

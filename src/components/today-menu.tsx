@@ -65,7 +65,7 @@ export default async function TodayMenu() {
   }).format(new Date());
 
   return (
-    <div className="mt-4 px-4 lg:px-0">
+    <div className="mt-4 px-4 pb-4 lg:px-0">
       <div className="mb-1 flex items-baseline justify-between">
         <h2
           className="text-base font-bold"

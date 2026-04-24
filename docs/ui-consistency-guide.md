@@ -8,14 +8,16 @@ Seon Lab UI changes should follow these rules unless there is a strong product r
 - Top-level page shell:
 
 ```tsx
-<main className="mx-auto w-full max-w-lg py-6 pb-24 lg:py-8 lg:pb-8">
+<main className="mx-auto w-full max-w-lg pb-tabbar lg:pb-8">
   <div className="px-4 lg:px-0">{/* page content */}</div>
 </main>
 ```
 
 - For wider pages like calendars or admin tables, keep the same pattern and only change `max-w-*`.
 - Do not put `px-4` directly on `main` for standard pages if sibling pages use the inner wrapper pattern.
-- Mobile bottom nav is fixed, so keep `pb-24` on mobile page content.
+- Page content should start flush under the shared `PageHeader`; add spacing inside the first section only when the design needs it.
+- Mobile bottom nav is fixed (`h-14` + iOS home-indicator safe-area). Use the shared `pb-tabbar` utility on mobile page content so the last element always has breathing room (1.5rem) above the tab bar and doesn't feel cramped. Desktop `lg:pb-*` still overrides.
+- Every top-level page must end with at least `1.5rem` of padding below its last element. The `pb-tabbar` utility bakes this in on mobile; on desktop, use `lg:pb-6` or larger. This rule exists so version markers / action buttons / last cards never sit flush against the viewport or tab bar.
 - Mobile top nav is fixed, so rely on the shared `Nav` spacer instead of adding ad hoc top padding.
 
 ## Navigation
@@ -39,10 +41,12 @@ Every page must render `<PageHeader>` between `<Nav />` and `<main>`. This creat
   <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>페이지 제목</h1>
 </PageHeader>
 
-// Sub-page with back navigation
+// Sub-page with back navigation — use the shared BackButton (circular ‹ icon,
+// same shape as calendar prev-month button) so every back affordance in the
+// app looks identical. Do not hand-roll text-based "← label" back links.
 <PageHeader maxWidth="max-w-lg">
   <div className="flex items-center gap-3">
-    <Link href="/parent" className="text-sm" style={{ color: "var(--text-muted)" }}>← 상위 페이지</Link>
+    <BackButton href="/parent" label="상위 페이지로" />
     <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>페이지 제목</h1>
   </div>
 </PageHeader>
@@ -132,9 +136,10 @@ style={{
 
 ## Loading States
 
-- Loading should preserve app chrome when possible.
-- Prefer skeletons or in-place loading for local sections.
-- If a full-page loading state is necessary, use the shared `LoadingScreen`.
+- **Never use skeleton placeholders.** No gray rectangles standing in for text/avatars, no `loading.tsx` route-segment skeletons, no animated pulse blocks. Skeletons are banned everywhere in this app.
+- **Never use loading text** ("불러오는 중…", "Loading…", "잠시만요"). Text-based loading states are also banned.
+- The single approved loading indicator is: **dimmed backdrop + centered spinner**. Apply it regardless of whether the wait is page-level, section-level, or form-level. Keep the same visual language everywhere so the user always recognizes "앱이 뭔가 하는 중"이다.
+- Loading should preserve app chrome (`Nav`, `PageHeader`). The spinner sits over the content area (or over the full viewport for route transitions via `RouteTransitionProvider`).
 
 ## Before Merging UI Changes
 

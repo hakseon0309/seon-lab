@@ -1,15 +1,17 @@
 import Link from "next/link";
 import Nav from "@/components/nav";
 import PageHeader from "@/components/page-header";
+import RouteTransitionDone from "@/components/route-transition-done";
 
 export default function NotFound() {
   return (
     <>
+      <RouteTransitionDone />
       <Nav />
       <PageHeader>
         <div />
       </PageHeader>
-      <main className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center px-4 pb-24 lg:pb-8 text-center">
+      <main className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center px-4 pb-tabbar lg:pb-8 text-center">
         <h1
           className="text-lg font-semibold"
           style={{ color: "var(--text-primary)" }}

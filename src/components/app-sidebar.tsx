@@ -1,55 +1,116 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import AvatarImage from "@/components/avatar-image";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase/client";
+import {
+  broadcastOverlayOpen,
+  onOtherOverlayOpen,
+} from "@/lib/overlay-bus";
 
 interface BoardLink {
   slug: string;
   name: string;
 }
 
-export default function AppSidebar() {
-  const [open, setOpen] = useState(false);
-  const [avatar, setAvatar] = useState<string | null>(null);
-  const [name, setName] = useState("");
-  const [boards, setBoards] = useState<BoardLink[]>([]);
-  const [loaded, setLoaded] = useState(false);
+interface SidebarData {
+  avatar: string | null;
+  name: string;
+  boards: BoardLink[];
+}
 
-  useEffect(() => {
+const emptySidebarData: SidebarData = {
+  avatar: null,
+  name: "",
+  boards: [],
+};
+
+let sidebarDataCache: SidebarData | null = null;
+let sidebarDataPromise: Promise<SidebarData> | null = null;
+
+function loadSidebarData() {
+  if (sidebarDataCache) return Promise.resolve(sidebarDataCache);
+  if (sidebarDataPromise) return sidebarDataPromise;
+
+  sidebarDataPromise = (async () => {
     const supabase = createClient();
-    (async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      if (userData.user) {
-        const meta = userData.user.user_metadata as Record<string, unknown>;
-        const av =
-          (meta.avatar_url as string | undefined) ??
-          (meta.picture as string | undefined) ??
-          null;
-        setAvatar(av);
-        const { data: profile } = await supabase
-          .from("user_profiles")
-          .select("display_name")
-          .eq("id", userData.user.id)
-          .maybeSingle();
-        setName(
-          profile?.display_name ||
-            (meta.full_name as string | undefined) ||
-            (meta.name as string | undefined) ||
-            ""
-        );
-      }
-
-      const { data: boardData } = await supabase
+    const [userResult, boardResult] = await Promise.all([
+      supabase.auth.getUser(),
+      supabase
         .from("boards")
         .select("slug, name, sort_order")
-        .order("sort_order", { ascending: true });
-      if (boardData) {
-        setBoards(boardData.map((b) => ({ slug: b.slug, name: b.name })));
-      }
-      setLoaded(true);
-    })();
+        .order("sort_order", { ascending: true }),
+    ]);
+
+    const user = userResult.data.user;
+    const meta = (user?.user_metadata ?? {}) as Record<string, unknown>;
+    let avatar =
+      (meta.avatar_url as string | undefined) ??
+      (meta.picture as string | undefined) ??
+      null;
+
+    let name =
+      (meta.full_name as string | undefined) ??
+      (meta.name as string | undefined) ??
+      "";
+
+    if (user) {
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("display_name, avatar_url")
+        .eq("id", user.id)
+        .maybeSingle();
+      name = profile?.display_name || name;
+      avatar = profile?.avatar_url || avatar;
+    }
+
+    const boards =
+      boardResult.data?.map((board) => ({
+        slug: board.slug,
+        name: board.name,
+      })) ?? [];
+
+    sidebarDataCache = { avatar, name, boards };
+    return sidebarDataCache;
+  })().finally(() => {
+    sidebarDataPromise = null;
+  });
+
+  return sidebarDataPromise;
+}
+
+export default function AppSidebar() {
+  const [open, setOpen] = useState(false);
+  const [data, setData] = useState<SidebarData>(
+    sidebarDataCache ?? emptySidebarData
+  );
+  const [loaded, setLoaded] = useState(Boolean(sidebarDataCache));
+
+  useEffect(() => {
+    let cancelled = false;
+
+    function sync() {
+      loadSidebarData().then((sidebarData) => {
+        if (cancelled) return;
+        setData(sidebarData);
+        setLoaded(true);
+      });
+    }
+
+    sync();
+    function handleProfileUpdated() {
+      sidebarDataCache = null;
+      sync();
+    }
+
+    window.addEventListener("seonlab:profile-updated", handleProfileUpdated);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("seonlab:profile-updated", handleProfileUpdated);
+    };
   }, []);
 
   useEffect(() => {
@@ -58,13 +119,15 @@ export default function AppSidebar() {
       if (e.key === "Escape") setOpen(false);
     };
     document.addEventListener("keydown", handleEscape);
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", handleEscape);
-      document.body.style.overflow = prevOverflow;
     };
   }, [open]);
+
+  // 다른 오버레이(알림)가 열리면 자신을 닫는다.
+  useEffect(() => {
+    return onOtherOverlayOpen("sidebar", () => setOpen(false));
+  }, []);
 
   return (
     <>
@@ -72,7 +135,10 @@ export default function AppSidebar() {
         type="button"
         aria-label="메뉴 열기"
         aria-expanded={open}
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          broadcastOverlayOpen("sidebar");
+          setOpen(true);
+        }}
         className="interactive-press flex h-9 w-9 items-center justify-center rounded-md"
         style={{ color: "var(--text-primary)" }}
       >
@@ -92,9 +158,10 @@ export default function AppSidebar() {
         </span>
       </button>
 
-      {open && (
+      {open && createPortal(
         <div
-          className="fixed inset-0 z-[100]"
+          className="fixed inset-0"
+          style={{ zIndex: 900 }}
           role="dialog"
           aria-modal="true"
           aria-label="사이드바"
@@ -109,54 +176,27 @@ export default function AppSidebar() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-end px-4 pt-3">
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                aria-label="닫기"
-                className="text-sm"
-                style={{ color: "var(--text-muted)" }}
-              >
-                닫기
-              </button>
-            </div>
-
+            {/* 프로필 영역: 상하좌우 여백 동일(p-6), 아바타 64px → 200% 확대(h-48 w-48 = 192px) */}
             <div
-              className="flex flex-col items-center gap-2 border-b px-4 pb-5 pt-2"
+              className="flex flex-col items-center gap-3 border-b p-6"
               style={{ borderColor: "var(--border-light)" }}
             >
-              <div
-                className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full"
-                style={{
-                  backgroundColor: "var(--bg-surface)",
-                  color: "var(--text-muted)",
-                }}
-              >
-                {avatar ? (
-                  <Image
-                    src={avatar}
-                    alt=""
-                    fill
-                    sizes="64px"
-                    className="object-cover"
-                    unoptimized
-                  />
-                ) : (
-                  <span className="text-lg font-semibold">
-                    {name ? name.slice(0, 1) : "?"}
-                  </span>
-                )}
-              </div>
+              <AvatarImage
+                src={data.avatar}
+                name={data.name}
+                sizeClass="h-[128px] w-[128px]"
+                textClass="text-4xl"
+              />
               <p
                 className="text-sm font-semibold"
                 style={{ color: "var(--text-primary)" }}
               >
-                {name || " "}
+                {data.name || " "}
               </p>
             </div>
 
             <nav className="flex-1 py-2">
-              {loaded && boards.length === 0 && (
+              {loaded && data.boards.length === 0 && (
                 <p
                   className="px-4 py-3 text-xs"
                   style={{ color: "var(--text-muted)" }}
@@ -164,11 +204,13 @@ export default function AppSidebar() {
                   게시판이 준비 중이에요
                 </p>
               )}
-              {boards.map((b) => (
+              {/* 링크 클릭 시 사이드바를 먼저 닫지 않는다.
+                  RouteTransitionProvider 가 클릭과 동시에 오버레이+스피너를 사이드바 위까지 덮고,
+                  네비게이션 완료 후 새 페이지가 mount 되면 사이드바 컴포넌트가 자연히 unmount 된다. */}
+              {data.boards.map((b) => (
                 <Link
                   key={b.slug}
                   href={`/boards/${b.slug}`}
-                  onClick={() => setOpen(false)}
                   className="interactive-press block px-4 py-3 text-sm"
                   style={{ color: "var(--text-primary)" }}
                 >
@@ -177,7 +219,8 @@ export default function AppSidebar() {
               ))}
             </nav>
           </aside>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

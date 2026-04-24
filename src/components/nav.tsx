@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import AppSidebar from "@/components/app-sidebar";
+import NotificationBell from "@/components/notification-bell";
 
 export default function Nav() {
   const pathname = usePathname();
@@ -45,7 +46,10 @@ export default function Nav() {
               ))}
             </div>
           </div>
-          <AppSidebar />
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+            <AppSidebar />
+          </div>
         </div>
       </nav>
 
@@ -61,31 +65,41 @@ export default function Nav() {
         >
           SEON LAB
         </Link>
-        <AppSidebar />
+        <div className="flex items-center gap-1">
+          <NotificationBell />
+          <AppSidebar />
+        </div>
       </header>
       <div className="h-14 lg:hidden" />
 
       {/* ── 모바일: 하단 탭바 ── */}
       <nav
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 flex h-14 border-t"
-        style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-light)" }}
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t"
+        style={{
+          backgroundColor: "var(--bg-card)",
+          borderColor: "var(--border-light)",
+          height: "calc(3.5rem + env(safe-area-inset-bottom))",
+          paddingBottom: "env(safe-area-inset-bottom)",
+        }}
       >
-        {links.map((link) => {
-          const active = pathname.startsWith(link.href);
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="interactive-press flex flex-1 items-center justify-center text-sm font-medium"
-              style={{
-                color: active ? "var(--primary)" : "var(--text-muted)",
-                backgroundColor: active ? "var(--primary-light)" : "transparent",
-              }}
-            >
-              {link.label}
-            </Link>
-          );
-        })}
+        <div className="flex h-14 w-full">
+          {links.map((link) => {
+            const active = pathname.startsWith(link.href);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="interactive-press flex flex-1 items-center justify-center text-sm font-medium"
+                style={{
+                  color: active ? "var(--primary)" : "var(--text-muted)",
+                  backgroundColor: active ? "var(--primary-light)" : "transparent",
+                }}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
+        </div>
       </nav>
     </>
   );

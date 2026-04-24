@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     .single();
 
   if (error && !error.message.includes("duplicate")) {
-    return apiErrors.server("멤버 추가에 실패했습니다", error.message);
+    return apiErrors.server("팀원 추가에 실패했습니다", error.message);
   }
   revalidatePath("/admin");
   return NextResponse.json({ success: true });
@@ -46,7 +46,7 @@ export async function DELETE(req: Request) {
     .eq("user_id", user_id)
     .eq("team_id", team_id);
 
-  if (error) return apiErrors.server("멤버 제거에 실패했습니다", error.message);
+  if (error) return apiErrors.server("팀원 제거에 실패했습니다", error.message);
   revalidatePath("/admin");
   return NextResponse.json({ success: true });
 }

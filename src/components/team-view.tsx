@@ -2,15 +2,16 @@
 
 import { Team, CalendarEvent, UserProfile } from "@/lib/types";
 import PageHeader from "@/components/page-header";
+import TeamAvatarControl from "@/components/team-avatar-control";
 import TeamCalendar from "@/components/team-calendar";
 import InviteModal from "@/components/invite-modal";
 import MembersListModal from "@/components/members-list-modal";
-import MemberDetailModal from "@/components/member-detail-modal";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { useToast } from "@/components/toast-provider";
+import { LABEL } from "@/lib/labels";
 
 export interface MemberWithEvents {
   profile: UserProfile;
@@ -22,25 +23,29 @@ interface Props {
   team: Team;
   initialMembers: MemberWithEvents[];
   currentUserId: string;
+  initialIsFavorite: boolean;
 }
 
-export default function TeamView({ team: initialTeam, initialMembers, currentUserId }: Props) {
+export default function TeamView({
+  team: initialTeam,
+  initialMembers,
+  currentUserId,
+  initialIsFavorite,
+}: Props) {
   const [team, setTeam] = useState(initialTeam);
   const [members, setMembers] = useState(initialMembers);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showInvite, setShowInvite] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
-  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState(initialTeam.name);
   const [renameError, setRenameError] = useState("");
+  const [isFavorite, setIsFavorite] = useState(initialIsFavorite);
+  const [savingFavorite, setSavingFavorite] = useState(false);
   const router = useRouter();
   const toast = useToast();
 
   const isLeader = team.created_by === currentUserId;
-  const selectedMember = selectedMemberId
-    ? members.find((m) => m.profile.id === selectedMemberId) ?? null
-    : null;
 
   async function handleRename() {
     if (!newName.trim() || newName.trim() === team.name) {
@@ -73,11 +78,10 @@ export default function TeamView({ team: initialTeam, initialMembers, currentUse
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || "멤버 제거에 실패했습니다");
+      throw new Error(data.error || `${LABEL.member} 제거에 실패했습니다`);
     }
     setMembers((prev) => prev.filter((m) => m.profile.id !== userId));
-    setSelectedMemberId(null);
-    toast.success("멤버를 제거했습니다");
+    toast.success(`${LABEL.member}을 제거했습니다`);
     router.refresh();
   }
 
@@ -92,9 +96,27 @@ export default function TeamView({ team: initialTeam, initialMembers, currentUse
       throw new Error(data.error || "팀장 위임에 실패했습니다");
     }
     setTeam((prev) => ({ ...prev, created_by: userId }));
-    setSelectedMemberId(null);
     setShowMembers(false);
     toast.success("팀장을 위임했습니다");
+    router.refresh();
+  }
+
+  async function toggleFavorite() {
+    setSavingFavorite(true);
+    const next = !isFavorite;
+    const res = await fetch(`/api/teams/${team.id}/favorite`, {
+      method: next ? "POST" : "DELETE",
+    });
+    const data = await res.json().catch(() => ({}));
+    setSavingFavorite(false);
+
+    if (!res.ok) {
+      toast.error(data.error || "즐겨찾기 변경에 실패했습니다");
+      return;
+    }
+
+    setIsFavorite(next);
+    toast.success(next ? "즐겨찾기에 추가했습니다" : "즐겨찾기에서 제거했습니다");
     router.refresh();
   }
 
@@ -109,7 +131,14 @@ export default function TeamView({ team: initialTeam, initialMembers, currentUse
   return (
     <>
       <PageHeader>
-        <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <TeamAvatarControl
+            team={team}
+            editable={isLeader}
+            onUpdated={(updated) => setTeam(updated)}
+            sizeClass="h-10 w-10"
+          />
+          <div className="min-w-0 flex-1">
           {editingName ? (
             <div>
               <form
@@ -173,10 +202,24 @@ export default function TeamView({ team: initialTeam, initialMembers, currentUse
             </div>
           )}
           <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-            {members.length}명의 멤버
+            {members.length}명의 {LABEL.member}
           </p>
+          </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={toggleFavorite}
+            disabled={savingFavorite}
+            aria-label={isFavorite ? "즐겨찾기 해제" : "즐겨찾기 추가"}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border text-base disabled:opacity-50"
+            style={{
+              borderColor: "var(--border)",
+              color: isFavorite ? "var(--primary)" : "var(--text-muted)",
+              backgroundColor: isFavorite ? "var(--primary-light)" : "transparent",
+            }}
+          >
+            ★
+          </button>
           <button
             onClick={() => setShowMembers(true)}
             className="rounded-lg border px-3 py-1.5 text-xs font-medium"
@@ -185,7 +228,7 @@ export default function TeamView({ team: initialTeam, initialMembers, currentUse
               color: "var(--text-secondary)",
             }}
           >
-            멤버
+            {LABEL.member}
           </button>
           <button
             onClick={() => setShowInvite(true)}
@@ -204,33 +247,31 @@ export default function TeamView({ team: initialTeam, initialMembers, currentUse
         <InviteModal inviteCode={team.invite_code} onClose={() => setShowInvite(false)} />
       )}
 
-      {showMembers && !selectedMember && (
+      {showMembers && (
         <MembersListModal
           members={members.map((m) => ({ profile: m.profile, joinedAt: m.joinedAt }))}
           leaderId={team.created_by}
-          onClose={() => setShowMembers(false)}
-          onSelectMember={(m) => setSelectedMemberId(m.profile.id)}
-        />
-      )}
-
-      {selectedMember && (
-        <MemberDetailModal
-          member={{ profile: selectedMember.profile, joinedAt: selectedMember.joinedAt }}
           isLeader={isLeader}
-          isCurrentUser={selectedMember.profile.id === currentUserId}
-          onClose={() => setSelectedMemberId(null)}
+          currentUserId={currentUserId}
+          onClose={() => setShowMembers(false)}
           onTransferOwnership={handleTransferOwnership}
           onRemoveMember={handleRemoveMember}
         />
       )}
 
-      <main className="mx-auto max-w-5xl px-0 lg:px-4 py-4 lg:py-6 pb-24 lg:pb-6">
-        <div className="mb-3 flex items-center justify-between px-4 lg:px-0">
+      <main className="mx-auto max-w-5xl px-0 lg:px-4 pb-tabbar lg:pb-6">
+        <div
+          className="sticky top-28 z-20 -mt-px flex items-center justify-between px-4 py-3 lg:top-0 lg:px-0"
+          style={{
+            backgroundColor: "var(--bg-base)",
+            boxShadow: "0 -1px 0 var(--bg-base)",
+          }}
+        >
           <button
             onClick={prevMonth}
             aria-label="이전 달"
             className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-medium"
-            style={{ color: "var(--text-muted)", backgroundColor: "var(--bg-card)" }}
+            style={{ color: "var(--text-primary)", backgroundColor: "var(--button-surface)" }}
           >
             ‹
           </button>
@@ -244,7 +285,7 @@ export default function TeamView({ team: initialTeam, initialMembers, currentUse
             onClick={nextMonth}
             aria-label="다음 달"
             className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-medium"
-            style={{ color: "var(--text-muted)", backgroundColor: "var(--bg-card)" }}
+            style={{ color: "var(--text-primary)", backgroundColor: "var(--button-surface)" }}
           >
             ›
           </button>

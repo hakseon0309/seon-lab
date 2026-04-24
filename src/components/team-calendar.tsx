@@ -1,6 +1,7 @@
 "use client";
 
-import { memo, Fragment } from "react";
+import { memo, Fragment, useEffect, useMemo, useRef } from "react";
+import AvatarImage from "@/components/avatar-image";
 import { formatSeoulTime, getSeoulDateKey } from "@/lib/time";
 import { CalendarEvent, UserProfile } from "@/lib/types";
 import { weekendOverlay, cellBackground } from "@/lib/calendar-style";
@@ -24,7 +25,8 @@ interface Props {
 }
 
 function TeamCalendar({ members, currentDate }: Props) {
-  const today = new Date();
+  const today = useMemo(() => new Date(), []);
+  const todayWeekRef = useRef<HTMLTableRowElement | null>(null);
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
@@ -33,6 +35,38 @@ function TeamCalendar({ members, currentDate }: Props) {
     { start: calendarStart, end: calendarEnd },
     { weekStartsOn: 1 }
   );
+  const todayKey = getSeoulDateKey(today);
+  const sortedMembers = useMemo(() => {
+    return [...members].sort((a, b) => {
+      const aStart = getEarliestStartForDay(a.events, todayKey);
+      const bStart = getEarliestStartForDay(b.events, todayKey);
+
+      if (aStart !== bStart) {
+        if (aStart === null) return 1;
+        if (bStart === null) return -1;
+        return aStart - bStart;
+      }
+
+      return a.profile.display_name.localeCompare(
+        b.profile.display_name,
+        ["ko", "en"],
+        { sensitivity: "base" }
+      );
+    });
+  }, [members, todayKey]);
+
+  useEffect(() => {
+    if (!isSameMonth(today, currentDate)) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      todayWeekRef.current?.scrollIntoView({
+        block: "start",
+        behavior: "auto",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [currentDate, today]);
 
   return (
     <div
@@ -53,11 +87,17 @@ function TeamCalendar({ members, currentDate }: Props) {
               end: addDays(weekStart, 6),
             });
 
+            const hasTodayInWeek = weekDays.some((day) => isSameDay(day, today));
+
             return (
               <Fragment key={weekStart.toISOString()}>
-                <tr style={{ backgroundColor: "var(--bg-surface)" }}>
+                <tr
+                  ref={hasTodayInWeek ? todayWeekRef : undefined}
+                  className="scroll-mt-32"
+                  style={{ backgroundColor: "var(--bg-surface)" }}
+                >
                   <td
-                    className="sticky left-0 z-10 w-14 lg:w-24"
+                    className="sticky left-0 z-10 w-20 lg:w-32"
                     style={{
                       backgroundColor: "var(--bg-surface)",
                       borderRight: "1px solid var(--border-light)",
@@ -99,10 +139,10 @@ function TeamCalendar({ members, currentDate }: Props) {
                   })}
                 </tr>
 
-                {members.map(({ profile, events }) => (
+                {sortedMembers.map(({ profile, events }) => (
                   <tr key={`${weekStart.toISOString()}-${profile.id}`}>
                     <td
-                      className="sticky left-0 z-10 w-14 lg:w-24 px-1.5 lg:px-4 py-2 lg:py-2.5 text-xs lg:text-sm font-medium"
+                      className="sticky left-0 z-10 w-20 lg:w-32 px-1 lg:px-2 py-1.5 lg:py-2 text-xs lg:text-sm font-medium"
                       style={{
                         backgroundColor: "var(--bg-card)",
                         borderRight: "1px solid var(--border-light)",
@@ -110,7 +150,17 @@ function TeamCalendar({ members, currentDate }: Props) {
                         color: "var(--text-primary)",
                       }}
                     >
-                      <span className="block truncate">{profile.display_name}</span>
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <AvatarImage
+                          src={profile.avatar_url}
+                          name={profile.display_name}
+                          sizeClass="h-6 w-6 lg:h-7 lg:w-7"
+                          textClass="text-[10px]"
+                        />
+                        <span className="block min-w-0 truncate">
+                          {profile.display_name}
+                        </span>
+                      </span>
                     </td>
                     {weekDays.map((day) => {
                       const dayKey = getSeoulDateKey(day);
@@ -122,7 +172,7 @@ function TeamCalendar({ members, currentDate }: Props) {
                       return (
                         <td
                           key={day.toISOString()}
-                          className="px-0.5 lg:px-2 py-1 lg:py-2 text-center align-top"
+                          className="px-0.5 lg:px-1.5 py-1 lg:py-2 text-center align-top"
                           style={{
                             ...bg,
                             borderTop: "1px solid var(--border-light)",
@@ -157,3 +207,15 @@ function TeamCalendar({ members, currentDate }: Props) {
 }
 
 export default memo(TeamCalendar);
+
+function getEarliestStartForDay(events: CalendarEvent[], dayKey: string) {
+  let earliest: number | null = null;
+
+  for (const event of events) {
+    if (getSeoulDateKey(event.start_at) !== dayKey) continue;
+    const start = new Date(event.start_at).getTime();
+    if (earliest === null || start < earliest) earliest = start;
+  }
+
+  return earliest;
+}

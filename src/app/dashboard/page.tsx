@@ -1,9 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { formatSeoulDateTime } from "@/lib/time";
-import { CalendarEvent, UserProfile } from "@/lib/types";
+import { CalendarEvent, Team, UserProfile } from "@/lib/types";
 import Calendar from "@/components/calendar";
 import SyncButton from "@/components/sync-button";
 import TodayMenu from "@/components/today-menu";
+import FavoriteTeams from "@/components/favorite-teams";
 import Nav from "@/components/nav";
 import PageHeader from "@/components/page-header";
 import RouteTransitionDone from "@/components/route-transition-done";
@@ -66,6 +67,32 @@ export default async function DashboardPage() {
     partnerEvents = (data as CalendarEvent[] | null) ?? [];
   }
 
+  const { data: favoriteRows } = await supabase
+    .from("team_favorites")
+    .select("team_id")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  const favoriteTeamIds = (favoriteRows ?? []).map(
+    (row: { team_id: string }) => row.team_id
+  );
+  let favoriteTeams: Team[] = [];
+  if (favoriteTeamIds.length > 0) {
+    const { data } = await supabase
+      .from("teams")
+      .select("*")
+      .in("id", favoriteTeamIds);
+    const teamById = new Map(
+      ((data as Team[] | null) ?? []).map((team) => [
+        team.id,
+        team,
+      ])
+    );
+    favoriteTeams = favoriteTeamIds
+      .map((teamId) => teamById.get(teamId))
+      .filter((team): team is Team => Boolean(team));
+  }
+
   if (!profile?.ics_url) {
     return (
       <>
@@ -79,7 +106,7 @@ export default async function DashboardPage() {
             내 시프트
           </h1>
         </PageHeader>
-        <main className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center px-4 pb-24 lg:pb-8 text-center">
+        <main className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center px-4 pb-tabbar lg:pb-8 text-center">
           <h2
             className="text-xl font-semibold"
             style={{ color: "var(--text-primary)" }}
@@ -130,13 +157,15 @@ export default async function DashboardPage() {
         </div>
         <SyncButton lastSynced={profile.last_synced} />
       </PageHeader>
-      <main className="mx-auto w-full max-w-5xl px-0 lg:px-4 py-4 pb-24 lg:py-6 lg:pb-6">
+      <main className="mx-auto w-full max-w-5xl px-0 lg:px-4 pb-tabbar lg:pb-6">
         <div className="w-full">
           <Calendar
             events={events}
             partnerEvents={partnerEvents}
           />
         </div>
+
+        <FavoriteTeams teams={favoriteTeams} />
 
         <TodayMenu />
       </main>

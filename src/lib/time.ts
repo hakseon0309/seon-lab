@@ -68,3 +68,75 @@ export function formatSeoulDateTime(value: string | Date) {
     hour12: false,
   }).format(date);
 }
+
+/**
+ * 시프트 교환 게시판용 짧은 날짜 포맷.
+ * 예) "26. 04. 25 (토)" — YY. MM. DD (요일), 달력 아이콘은 사용하지 않음.
+ */
+export function formatSwapDateShort(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  if (!y || !m || !d) return "";
+  const weekday = new Intl.DateTimeFormat("ko-KR", {
+    timeZone: SEOUL_TIME_ZONE,
+    weekday: "short",
+  }).format(new Date(`${iso}T00:00:00+09:00`));
+  return `${y.slice(2)}. ${m}. ${d} (${weekday})`;
+}
+
+/**
+ * 시프트 시작~종료 시각 포맷. 예) "09:45 – 18:45".
+ * 이벤트가 없으면 "휴무".
+ */
+export function formatShiftRange(event: {
+  start_at: string;
+  end_at: string;
+} | null | undefined): string {
+  if (!event) return "휴무";
+  const fmt = new Intl.DateTimeFormat("ko-KR", {
+    timeZone: SEOUL_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  return `${fmt.format(new Date(event.start_at))} – ${fmt.format(new Date(event.end_at))}`;
+}
+
+/**
+ * 시프트 시작 시각만. 예) "09:45". 미니 달력 셀용.
+ */
+export function formatShiftStart(
+  event: { start_at: string } | null | undefined
+): string {
+  if (!event) return "";
+  return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: SEOUL_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(event.start_at));
+}
+
+/**
+ * 작성 일자 표시 포맷.
+ * - 1일 이내: "방금 전" / "n분 전" / "n시간 전" (formatRelativeTime 규칙)
+ * - 1 ~ 30일 전: "n일 전"
+ * - 30일 초과: "YYYY.MM.DD" (시간 없음, 서울 기준)
+ */
+export function formatPostedAt(value: string | Date): string {
+  const date = value instanceof Date ? value : new Date(value);
+  const days = Math.floor((Date.now() - date.getTime()) / (24 * 60 * 60 * 1000));
+  if (days <= 30) {
+    return formatRelativeTime(date);
+  }
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: SEOUL_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const y = parts.find((p) => p.type === "year")?.value ?? "";
+  const m = parts.find((p) => p.type === "month")?.value ?? "";
+  const d = parts.find((p) => p.type === "day")?.value ?? "";
+  return `${y}.${m}.${d}`;
+}
