@@ -1,14 +1,17 @@
 "use client";
 
+import BoardPostEditorModal from "@/components/board-post-editor-modal";
 import Link from "next/link";
-import Modal from "@/components/modal";
 import AvatarImage from "@/components/avatar-image";
 import PostStatusBadge from "@/components/post-status-badge";
+import { createBoardPost } from "@/lib/board-api-client";
 import { Board, BoardPost } from "@/lib/types";
+import { usePortalTarget } from "@/lib/client-dom";
 import { formatPostedAt } from "@/lib/time";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useToast } from "@/components/toast-provider";
+import { createPortal } from "react-dom";
 
 interface BoardViewProps {
   board: Board;
@@ -23,20 +26,34 @@ export default function BoardView({ board, initialPosts }: BoardViewProps) {
   const [saving, setSaving] = useState(false);
   const router = useRouter();
   const toast = useToast();
+  const headerSlot = usePortalTarget("board-header-actions");
+
+  const writeButton = (
+    <button
+      type="button"
+      onClick={() => setWriting(true)}
+      className="interactive-press shrink-0 rounded-lg px-3 py-2 text-sm font-medium"
+      style={{
+        backgroundColor: "var(--primary)",
+        color: "var(--text-on-primary)",
+      }}
+    >
+      글쓰기
+    </button>
+  );
 
   async function submitPost(event: React.FormEvent) {
     event.preventDefault();
     setSaving(true);
-    const res = await fetch(`/api/boards/${board.slug}/posts`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, body, isAnonymous }),
+    const result = await createBoardPost(board.slug, {
+      title,
+      body,
+      isAnonymous,
     });
-    const data = await res.json().catch(() => ({}));
     setSaving(false);
 
-    if (!res.ok) {
-      toast.error(data.error || "글 작성에 실패했습니다");
+    if (!result.ok) {
+      toast.error(result.error || "글 작성에 실패했습니다");
       return;
     }
 
@@ -50,19 +67,7 @@ export default function BoardView({ board, initialPosts }: BoardViewProps) {
 
   return (
     <div className="px-4 lg:px-0">
-      <div className="mb-4 flex justify-end">
-        <button
-          type="button"
-          onClick={() => setWriting(true)}
-          className="interactive-press shrink-0 rounded-lg px-3 py-2 text-sm font-medium"
-          style={{
-            backgroundColor: "var(--primary)",
-            color: "var(--text-on-primary)",
-          }}
-        >
-          글쓰기
-        </button>
-      </div>
+      {headerSlot ? createPortal(writeButton, headerSlot) : null}
 
       {initialPosts.length === 0 ? (
         <div
@@ -131,70 +136,26 @@ export default function BoardView({ board, initialPosts }: BoardViewProps) {
         </ul>
       )}
 
-      {writing && (
-        <Modal
-          title={`${board.name} 글쓰기`}
-          onClose={() => setWriting(false)}
-          maxWidth="max-w-lg"
-        >
-          <form onSubmit={submitPost} className="space-y-3">
-            <input
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              placeholder="제목"
-              maxLength={120}
-              className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2"
-              style={
-                {
-                  backgroundColor: "var(--input-bg)",
-                  borderColor: "var(--input-border)",
-                  color: "var(--input-text)",
-                  "--tw-ring-color": "var(--primary)",
-                } as React.CSSProperties
+      <BoardPostEditorModal
+        open={writing}
+        modalTitle={`${board.name} 글쓰기`}
+        titleValue={title}
+        bodyValue={body}
+        saving={saving}
+        submitLabel="등록"
+        anonymousOption={
+          board.allow_anonymous
+            ? {
+                checked: isAnonymous,
+                onChange: setIsAnonymous,
               }
-            />
-            <textarea
-              value={body}
-              onChange={(event) => setBody(event.target.value)}
-              placeholder="내용"
-              rows={8}
-              className="w-full resize-none rounded-lg border px-3 py-2 text-sm leading-6 focus:outline-none focus:ring-2"
-              style={
-                {
-                  backgroundColor: "var(--input-bg)",
-                  borderColor: "var(--input-border)",
-                  color: "var(--input-text)",
-                  "--tw-ring-color": "var(--primary)",
-                } as React.CSSProperties
-              }
-            />
-            {board.allow_anonymous && (
-              <label
-                className="flex items-center gap-2 text-sm"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                <input
-                  type="checkbox"
-                  checked={isAnonymous}
-                  onChange={(event) => setIsAnonymous(event.target.checked)}
-                />
-                익명으로 작성
-              </label>
-            )}
-            <button
-              type="submit"
-              disabled={saving}
-              className="interactive-press w-full rounded-lg px-4 py-3 text-sm font-medium disabled:opacity-50"
-              style={{
-                backgroundColor: "var(--primary)",
-                color: "var(--text-on-primary)",
-              }}
-            >
-              {saving ? "등록 중..." : "등록"}
-            </button>
-          </form>
-        </Modal>
-      )}
+            : undefined
+        }
+        onClose={() => setWriting(false)}
+        onChangeTitle={setTitle}
+        onChangeBody={setBody}
+        onSubmit={submitPost}
+      />
     </div>
   );
 }

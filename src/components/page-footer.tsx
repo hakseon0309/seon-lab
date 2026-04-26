@@ -8,10 +8,10 @@ interface PageFooterProps {
 export default function PageFooter({ children, maxWidth = "max-w-lg" }: PageFooterProps) {
   return (
     <>
-      {/* 모바일: 하단 탭바 위 고정, 투명 배경, 탭바와 동일한 여백 */}
+      {/* 모바일: 하단 탭바 + iOS safe-area 위에 CTA 를 띄운다. */}
       <div
         className="lg:hidden fixed left-0 right-0 z-30 flex items-center gap-4 px-4"
-        style={{ bottom: "calc(3.5rem + 1rem)" }}
+        style={{ bottom: "calc(3.5rem + env(safe-area-inset-bottom) + 1rem)" }}
       >
         {children}
       </div>

@@ -75,17 +75,21 @@ const I18nContext = createContext<{
 
 const STORAGE_KEY = "seon-lab-locale";
 
+function getInitialLocale(): Locale {
+  if (typeof window === "undefined") return "ko";
+  const stored = window.localStorage.getItem(STORAGE_KEY);
+  return stored === "en" ? "en" : "ko";
+}
+
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>("ko");
+  const [locale, setLocaleState] = useState<Locale>(getInitialLocale);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY) as Locale | null;
-    if (stored === "ko" || stored === "en") setLocaleState(stored);
-  }, []);
+    window.localStorage.setItem(STORAGE_KEY, locale);
+  }, [locale]);
 
   function setLocale(l: Locale) {
     setLocaleState(l);
-    localStorage.setItem(STORAGE_KEY, l);
   }
 
   return (

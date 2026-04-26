@@ -2,18 +2,58 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { apiError, apiErrors, parseJsonBody } from "@/lib/api-error";
-import { BoardMessage } from "@/lib/types";
+import { isShiftSwapBoard } from "@/lib/boards";
+import { Board, BoardMessage } from "@/lib/types";
 
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ postId: string }> }
+type RouteBoard = Pick<Board, "id" | "slug" | "kind">;
+
+async function loadBoardAndPost(
+  slug: string,
+  postId: string
 ) {
-  const { postId } = await params;
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) return { supabase, user: null, board: null, postExists: false as const };
+
+  const { data: boardData } = await supabase
+    .from("boards")
+    .select("id, slug, kind")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  const board = isShiftSwapBoard(boardData as Board | null)
+    ? (boardData as RouteBoard)
+    : null;
+
+  if (!board) {
+    return { supabase, user, board: null, postExists: false as const };
+  }
+
+  const { data: post } = await supabase
+    .from("board_posts")
+    .select("id")
+    .eq("id", postId)
+    .eq("board_id", board.id)
+    .maybeSingle();
+
+  return {
+    supabase,
+    user,
+    board,
+    postExists: Boolean(post),
+  };
+}
+
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ slug: string; postId: string }> }
+) {
+  const { slug, postId } = await params;
+  const { supabase, user, board, postExists } = await loadBoardAndPost(slug, postId);
   if (!user) return apiErrors.unauthorized();
+  if (!board || !postExists) return apiErrors.notFound();
 
   const { data: messages, error } = await supabase
     .from("board_messages")
@@ -28,17 +68,22 @@ export async function GET(
     string,
     { display_name: string | null; avatar_url: string | null }
   >();
+
   if (authorIds.length > 0) {
     const { data: profiles } = await supabase
       .from("user_profiles")
       .select("id, display_name, avatar_url")
       .in("id", authorIds);
+
     for (const p of (profiles ?? []) as {
       id: string;
       display_name: string | null;
       avatar_url: string | null;
     }[]) {
-      profileMap.set(p.id, { display_name: p.display_name, avatar_url: p.avatar_url });
+      profileMap.set(p.id, {
+        display_name: p.display_name,
+        avatar_url: p.avatar_url,
+      });
     }
   }
 
@@ -58,21 +103,21 @@ type CreateBody = { body?: unknown };
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ postId: string }> }
+  { params }: { params: Promise<{ slug: string; postId: string }> }
 ) {
-  const { postId } = await params;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { slug, postId } = await params;
+  const { supabase, user, board, postExists } = await loadBoardAndPost(slug, postId);
   if (!user) return apiErrors.unauthorized();
+  if (!board || !postExists) return apiErrors.notFound();
 
   const parsed = await parseJsonBody<CreateBody>(request);
   if (!parsed.ok) return parsed.response;
 
   const body = typeof parsed.body.body === "string" ? parsed.body.body.trim() : "";
   if (body.length < 1) return apiErrors.badRequest("메시지를 입력해주세요");
-  if (body.length > 4000) return apiErrors.badRequest("메시지는 4000자 이하로 입력해주세요");
+  if (body.length > 4000) {
+    return apiErrors.badRequest("메시지는 4000자 이하로 입력해주세요");
+  }
 
   const { data, error } = await supabase
     .from("board_messages")
@@ -80,7 +125,6 @@ export async function POST(
     .select()
     .single();
   if (error) {
-    // RLS 에 의해 거부되면 "완료된 글" 또는 "팀 멤버 아님" 으로 해석
     return apiError(403, "메시지를 보낼 수 없습니다", "forbidden", error.message);
   }
 
@@ -90,7 +134,7 @@ export async function POST(
     .eq("id", user.id)
     .maybeSingle();
 
-  revalidatePath(`/boards/shift-swap/${postId}`);
+  revalidatePath(`/boards/${slug}/${postId}`);
   return NextResponse.json({
     message: {
       ...data,

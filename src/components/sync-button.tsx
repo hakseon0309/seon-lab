@@ -1,5 +1,7 @@
 "use client";
 
+import { useToast } from "@/components/toast-provider";
+import { requestCalendarSync } from "@/lib/calendar-sync-client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
@@ -12,6 +14,7 @@ export default function SyncButton({ lastSynced }: SyncButtonProps) {
   const [remaining, setRemaining] = useState(0);
   const [error, setError] = useState("");
   const router = useRouter();
+  const toast = useToast();
 
   useEffect(() => {
     if (!lastSynced) return;
@@ -32,21 +35,26 @@ export default function SyncButton({ lastSynced }: SyncButtonProps) {
     setLoading(true);
     setError("");
 
-    try {
-      const res = await fetch("/api/sync", { method: "POST" });
-      const data = await res.json();
-
-      if (!res.ok) {
-        if (res.status === 429) {
-          setRemaining(data.remaining_minutes);
-        }
-        setError(data.error);
-        return;
+    const result = await requestCalendarSync();
+    if (!result.ok) {
+      if (result.code === "cooldown" && result.remainingMinutes) {
+        setRemaining(result.remainingMinutes);
       }
+      setError(result.error || "동기화에 실패했습니다");
+      toast[result.code === "cooldown" ? "info" : "error"](
+        result.error || "동기화에 실패했습니다"
+      );
+      setLoading(false);
+      return;
+    }
 
+    toast.success(
+      typeof result.synced === "number"
+        ? `${result.synced}개의 시프트를 불러왔어요`
+        : "동기화가 완료됐어요"
+    );
+    try {
       router.refresh();
-    } catch {
-      setError("동기화에 실패했습니다");
     } finally {
       setLoading(false);
     }

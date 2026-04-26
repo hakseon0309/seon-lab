@@ -4,14 +4,11 @@ import RouteTransitionDone from "@/components/route-transition-done";
 import PostDetailView from "@/components/post-detail-view";
 import ChatPostView from "@/components/chat-post-view";
 import BackButton from "@/components/back-button";
+import { isShiftSwapBoard } from "@/lib/boards";
+import { loadBoardPostDetailData } from "@/lib/board-server";
+import { loadShiftSwapPostDetailData } from "@/lib/shift-swap-server";
 import { createClient } from "@/lib/supabase/server";
-import {
-  Board,
-  BoardComment,
-  BoardMessage,
-  BoardPost,
-  SwapEvent,
-} from "@/lib/types";
+import { Board } from "@/lib/types";
 import { notFound, redirect } from "next/navigation";
 
 type PostPageProps = {
@@ -42,94 +39,21 @@ export default async function PostPage({ params }: PostPageProps) {
   // ============================================================
   // 시프트 교환 (chat) 전용 경로
   // ============================================================
-  if (currentBoard.kind === "chat") {
-    const { data: postData } = await supabase
-      .from("board_posts")
-      .select(
-        "id, board_id, author_id, is_anonymous, title, body, is_pinned, status, created_at, updated_at, team_id, swap_date, swap_status, completed_at"
-      )
-      .eq("id", postId)
-      .eq("board_id", currentBoard.id)
-      .maybeSingle();
-    if (!postData) notFound();
-    const chatPost = postData as BoardPost & {
-      team_id: string;
-      swap_date: string | null;
-      swap_status: "open" | "done";
-      completed_at: string | null;
-    };
-
-    const { data: messageRows } = await supabase
-      .from("board_messages")
-      .select("id, post_id, author_id, body, created_at")
-      .eq("post_id", chatPost.id)
-      .order("created_at", { ascending: true });
-    const messages = (messageRows as BoardMessage[] | null) ?? [];
-
-    const authorIds = [
-      ...new Set(
-        [chatPost.author_id, ...messages.map((m) => m.author_id)].filter(
-          Boolean
-        ) as string[]
-      ),
-    ];
-
-    const [{ data: profiles }, { data: teamRow }] = await Promise.all([
-      authorIds.length > 0
-        ? supabase
-            .from("user_profiles")
-            .select("id, display_name, avatar_url")
-            .in("id", authorIds)
-        : Promise.resolve({
-            data: [] as {
-              id: string;
-              display_name: string | null;
-              avatar_url: string | null;
-            }[],
-          }),
-      supabase.from("teams").select("id, name").eq("id", chatPost.team_id).maybeSingle(),
-    ]);
-
-    const profileMap = new Map(
-      ((profiles ?? []) as {
-        id: string;
-        display_name: string | null;
-        avatar_url: string | null;
-      }[]).map((p) => [p.id, p])
-    );
-
-    // 작성자의 swap_date 해당 시프트 조회
-    let swapEvent: SwapEvent | null = null;
-    if (chatPost.author_id && chatPost.swap_date) {
-      const startISO = new Date(
-        `${chatPost.swap_date}T00:00:00+09:00`
-      ).toISOString();
-      const endISO = new Date(
-        new Date(`${chatPost.swap_date}T00:00:00+09:00`).getTime() +
-          24 * 60 * 60 * 1000
-      ).toISOString();
-      const { data: evs } = await supabase
-        .from("events")
-        .select("summary, start_at, end_at")
-        .eq("user_id", chatPost.author_id)
-        .gte("start_at", startISO)
-        .lt("start_at", endISO)
-        .limit(1);
-      swapEvent = (evs?.[0] as SwapEvent | undefined) ?? null;
-    }
-
-    const postAuthor = chatPost.author_id
-      ? profileMap.get(chatPost.author_id) ?? null
-      : null;
-
-    const enrichedMessages = messages.map((m) => {
-      const a = profileMap.get(m.author_id);
-      return {
-        ...m,
-        author_name: a?.display_name || "이름 없음",
-        author_avatar_url: a?.avatar_url ?? null,
-      };
+  if (isShiftSwapBoard(currentBoard)) {
+    const detail = await loadShiftSwapPostDetailData({
+      supabase,
+      boardId: currentBoard.id,
+      postId,
     });
+    if (!detail) notFound();
+    const {
+      chatPost,
+      enrichedMessages,
+      postAuthorName,
+      postAuthorAvatar,
+      teamNames,
+      swapEvent,
+    } = detail;
 
     const canEdit = chatPost.author_id === user.id;
     const canDelete = canEdit || isAdmin;
@@ -155,9 +79,9 @@ export default async function PostPage({ params }: PostPageProps) {
             board={currentBoard}
             initialPost={chatPost}
             initialMessages={enrichedMessages}
-            postAuthorName={postAuthor?.display_name || "이름 없음"}
-            postAuthorAvatar={postAuthor?.avatar_url ?? null}
-            teamName={teamRow?.name || "알 수 없는 팀"}
+            postAuthorName={postAuthorName}
+            postAuthorAvatar={postAuthorAvatar}
+            teamName={teamNames.join(", ")}
             swapEvent={swapEvent}
             currentUserId={user.id}
             canEdit={canEdit}
@@ -168,102 +92,28 @@ export default async function PostPage({ params }: PostPageProps) {
     );
   }
 
-  // ============================================================
-  // 기존 post 타입
-  // ============================================================
-  const { data: postData } = await supabase
-    .from("board_posts")
-    .select(
-      "id, board_id, author_id, is_anonymous, title, body, is_pinned, status, created_at, updated_at"
-    )
-    .eq("id", postId)
-    .eq("board_id", currentBoard.id)
-    .maybeSingle();
-
-  if (!postData) notFound();
-  const post = postData as BoardPost;
-
-  // 현재 사용자가 해당 게시판 관리자인지(전역 admin 포함)
-  let isManager = isAdmin;
-  if (!isManager) {
-    const { data: mgr } = await supabase
-      .from("board_managers")
-      .select("user_id")
-      .eq("board_id", currentBoard.id)
-      .eq("user_id", user.id)
-      .maybeSingle();
-    isManager = Boolean(mgr);
+  if (currentBoard.kind === "chat") {
+    notFound();
   }
 
-  const { data: commentData } = await supabase
-    .from("board_comments")
-    .select("id, post_id, author_id, is_anonymous, body, created_at, updated_at")
-    .eq("post_id", post.id)
-    .order("created_at", { ascending: true });
-
-  const comments = (commentData as BoardComment[] | null) ?? [];
-
-  // 모든 작성자 아이디 수집 — 익명이어도 admin 에게는 실명을 보여줘야 하므로
-  // is_anonymous 와 관계 없이 author_id 를 전부 조회한다.
-  const relatedAuthorIds = [
-    ...new Set(
-      [post.author_id, ...comments.map((c) => c.author_id)].filter(
-        Boolean
-      ) as string[]
-    ),
-  ];
-
-  const authorMap = new Map<
-    string,
-    { display_name: string | null; avatar_url: string | null }
-  >();
-  if (relatedAuthorIds.length > 0) {
-    const { data: profiles } = await supabase
-      .from("user_profiles")
-      .select("id, display_name, avatar_url")
-      .in("id", relatedAuthorIds);
-    for (const p of (profiles ?? []) as {
-      id: string;
-      display_name: string | null;
-      avatar_url: string | null;
-    }[]) {
-      authorMap.set(p.id, { display_name: p.display_name, avatar_url: p.avatar_url });
-    }
-  }
-
-  // 익명 글/댓글은 일반 사용자에게는 "익명" 으로만 보이고, 어드민에게는
-  // "익명 (실명)" 형태로 보인다. 아바타는 익명이면 노출하지 않는다.
-  const formatName = (
-    isAnonymous: boolean,
-    authorId: string | null
-  ): string => {
-    const real =
-      authorId && authorMap.get(authorId)?.display_name
-        ? authorMap.get(authorId)!.display_name!
-        : "";
-    if (isAnonymous) {
-      if (isAdmin && real) return `익명 (${real})`;
-      return "익명";
-    }
-    return real || "이름 없음";
-  };
-
-  const postAuthorName = formatName(post.is_anonymous, post.author_id);
-  const postAuthorAvatar = post.is_anonymous
-    ? null
-    : (post.author_id && authorMap.get(post.author_id)?.avatar_url) || null;
-
-  const enrichedComments = comments.map((c) => ({
-    ...c,
-    author_name: formatName(c.is_anonymous, c.author_id),
-    author_avatar_url: c.is_anonymous
-      ? null
-      : (c.author_id && authorMap.get(c.author_id)?.avatar_url) || null,
-  }));
-
-  const canEdit = post.author_id === user.id;
-  const canDelete = canEdit || isAdmin;
-  const canChangeStatus = isManager && currentBoard.has_status;
+  const detail = await loadBoardPostDetailData({
+    supabase,
+    boardId: currentBoard.id,
+    postId,
+    viewerUserId: user.id,
+    isAdmin,
+    hasStatus: currentBoard.has_status,
+  });
+  if (!detail) notFound();
+  const {
+    post,
+    enrichedComments,
+    postAuthorName,
+    postAuthorAvatar,
+    canEdit,
+    canDelete,
+    canChangeStatus,
+  } = detail;
 
   return (
     <>

@@ -65,7 +65,7 @@ export default async function TodayMenu() {
   }).format(new Date());
 
   return (
-    <div className="mt-4 px-4 pb-4 lg:px-0">
+    <div className="mt-4 px-4 pb-6 lg:px-0 lg:pb-0">
       <div className="mb-1 flex items-baseline justify-between">
         <h2
           className="text-base font-bold"
@@ -95,9 +95,16 @@ export default async function TodayMenu() {
       </div>
 
       {meals.length === 0 ? (
-        <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+        <div
+          className="rounded-lg border px-4 py-4 text-sm"
+          style={{
+            borderColor: "var(--border-light)",
+            backgroundColor: "var(--bg-card)",
+            color: "var(--text-muted)",
+          }}
+        >
           오늘 등록된 메뉴가 없습니다.
-        </p>
+        </div>
       ) : (
         <div className="space-y-3">
           {meals.map((meal) => (

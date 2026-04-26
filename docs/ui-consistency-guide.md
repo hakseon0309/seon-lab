@@ -99,6 +99,11 @@ style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-card)" }
 - Global button double-click prevention is handled by `src/components/button-guard.tsx`.
 - New clickable buttons should still use local loading/disabled state when the action is async or destructive.
 
+## Overlays
+
+- Dismissible side panels and drawers should close via outside click and `Escape`.
+- Do not add dedicated `닫기`, `X`, or close-icon buttons to those overlays unless there is a strong accessibility reason and outside click is not available.
+
 ## Theme Tokens
 
 - Reuse the existing tokens in `src/app/globals.css`.

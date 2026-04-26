@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { apiErrors } from "@/lib/api-error";
+import {
+  getSeoulIsoDayRange,
+  getSeoulIsoInclusiveDateRange,
+} from "@/lib/time";
 
 // GET /api/shifts/me?date=YYYY-MM-DD
 //   → 해당 하루의 내 시프트 1건 (없으면 null).
@@ -21,10 +25,7 @@ export async function GET(request: Request) {
   if (date) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date))
       return apiErrors.badRequest("date(YYYY-MM-DD)가 필요합니다");
-    const startISO = new Date(`${date}T00:00:00+09:00`).toISOString();
-    const endISO = new Date(
-      new Date(`${date}T00:00:00+09:00`).getTime() + 24 * 60 * 60 * 1000
-    ).toISOString();
+    const { startISO, endISO } = getSeoulIsoDayRange(date);
     const { data } = await supabase
       .from("events")
       .select("summary, start_at, end_at")
@@ -39,10 +40,7 @@ export async function GET(request: Request) {
   if (from && to) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to))
       return apiErrors.badRequest("from/to(YYYY-MM-DD)가 필요합니다");
-    const startISO = new Date(`${from}T00:00:00+09:00`).toISOString();
-    const endISO = new Date(
-      new Date(`${to}T00:00:00+09:00`).getTime() + 24 * 60 * 60 * 1000
-    ).toISOString();
+    const { startISO, endISO } = getSeoulIsoInclusiveDateRange(from, to);
     const { data } = await supabase
       .from("events")
       .select("summary, start_at, end_at")

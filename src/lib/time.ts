@@ -1,4 +1,5 @@
 const SEOUL_TIME_ZONE = "Asia/Seoul";
+const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
 
 function getDateParts(date: Date) {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -19,6 +20,24 @@ export function getSeoulDateKey(value: string | Date) {
   const date = value instanceof Date ? value : new Date(value);
   const { year, month, day } = getDateParts(date);
   return `${year}-${month}-${day}`;
+}
+
+export function getSeoulIsoDayRange(date: string) {
+  const startISO = new Date(`${date}T00:00:00+09:00`).toISOString();
+  const endISO = new Date(
+    new Date(`${date}T00:00:00+09:00`).getTime() + DAY_IN_MILLISECONDS
+  ).toISOString();
+
+  return { startISO, endISO };
+}
+
+export function getSeoulIsoInclusiveDateRange(from: string, to: string) {
+  const startISO = new Date(`${from}T00:00:00+09:00`).toISOString();
+  const endISO = new Date(
+    new Date(`${to}T00:00:00+09:00`).getTime() + DAY_IN_MILLISECONDS
+  ).toISOString();
+
+  return { startISO, endISO };
 }
 
 export function formatSeoulTime(value: string | Date) {

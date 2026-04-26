@@ -1,6 +1,7 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect } from "react";
+import { useClientReady } from "@/lib/client-dom";
 import { createPortal } from "react-dom";
 
 interface ModalProps {
@@ -9,6 +10,16 @@ interface ModalProps {
   children: ReactNode;
   maxWidth?: string;
 }
+
+let openModalCount = 0;
+let savedScrollY = 0;
+let savedHtmlOverflow = "";
+let savedBodyOverflow = "";
+let savedBodyPosition = "";
+let savedBodyTop = "";
+let savedBodyLeft = "";
+let savedBodyRight = "";
+let savedBodyWidth = "";
 
 /**
  * 공용 Modal.
@@ -29,11 +40,7 @@ export default function Modal({
   children,
   maxWidth = "max-w-sm",
 }: ModalProps) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useClientReady();
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -43,12 +50,50 @@ export default function Modal({
     return () => document.removeEventListener("keydown", handleEscape);
   }, [onClose]);
 
+  useEffect(() => {
+    if (openModalCount === 0) {
+      savedScrollY = window.scrollY;
+      savedHtmlOverflow = document.documentElement.style.overflow;
+      savedBodyOverflow = document.body.style.overflow;
+      savedBodyPosition = document.body.style.position;
+      savedBodyTop = document.body.style.top;
+      savedBodyLeft = document.body.style.left;
+      savedBodyRight = document.body.style.right;
+      savedBodyWidth = document.body.style.width;
+
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${savedScrollY}px`;
+      document.body.style.left = "0";
+      document.body.style.right = "0";
+      document.body.style.width = "100%";
+    }
+
+    openModalCount += 1;
+
+    return () => {
+      openModalCount = Math.max(0, openModalCount - 1);
+
+      if (openModalCount === 0) {
+        document.documentElement.style.overflow = savedHtmlOverflow;
+        document.body.style.overflow = savedBodyOverflow;
+        document.body.style.position = savedBodyPosition;
+        document.body.style.top = savedBodyTop;
+        document.body.style.left = savedBodyLeft;
+        document.body.style.right = savedBodyRight;
+        document.body.style.width = savedBodyWidth;
+        window.scrollTo(0, savedScrollY);
+      }
+    };
+  }, []);
+
   if (!mounted) return null;
 
   return createPortal(
     <div
       className="fixed inset-0 flex items-center justify-center"
-      style={{ zIndex: 1000 }}
+      style={{ zIndex: 1000, overscrollBehavior: "contain" }}
       role="dialog"
       aria-modal="true"
       aria-label={title}

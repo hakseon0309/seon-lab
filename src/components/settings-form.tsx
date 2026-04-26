@@ -1,6 +1,8 @@
 "use client";
 
+import { useToast } from "@/components/toast-provider";
 import { createClient } from "@/lib/supabase/client";
+import { requestCalendarSync } from "@/lib/calendar-sync-client";
 import DeleteAccountModal from "@/components/delete-account-modal";
 import Modal from "@/components/modal";
 import ProfileAvatarControl from "@/components/profile-avatar-control";
@@ -30,6 +32,7 @@ export default function SettingsForm({
   const [icsUrl, setIcsUrl] = useState(initialIcsUrl);
   const [savingName, setSavingName] = useState(false);
   const [savingUrl, setSavingUrl] = useState(false);
+  const [syncingUrl, setSyncingUrl] = useState(false);
   const [nameSaved, setNameSaved] = useState(false);
   const [urlSaved, setUrlSaved] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
@@ -39,6 +42,7 @@ export default function SettingsForm({
   const router = useRouter();
   const { startNavigation } = useRouteTransition();
   const { theme, toggle } = useTheme();
+  const toast = useToast();
 
   useEffect(() => {
     const mql = window.matchMedia("(display-mode: standalone)");
@@ -69,8 +73,10 @@ export default function SettingsForm({
       await supabase.auth.updateUser({ data: { display_name: updated.display_name } });
       setNameSaved(true);
       setTimeout(() => setNameSaved(false), 2000);
+      toast.success("이름을 저장했어요");
       router.refresh();
     }
+    if (error) toast.error("이름 저장에 실패했습니다");
     setSavingName(false);
   }
 
@@ -91,21 +97,43 @@ export default function SettingsForm({
 
     if (!error && updated) {
       setIcsUrl(updated.ics_url || "");
-      if (updated.ics_url) {
-        await fetch("/api/sync", { method: "POST" });
-      }
       setUrlSaved(true);
       setTimeout(() => setUrlSaved(false), 2000);
+      toast.success(updated.ics_url ? "캘린더 URL을 저장했어요" : "캘린더 URL을 삭제했어요");
       router.refresh();
+      if (updated.ics_url) {
+        setSyncingUrl(true);
+        toast.info("캘린더를 불러오는 중입니다");
+        void syncCalendarAfterSave();
+      }
     }
+    if (error) toast.error("캘린더 URL 저장에 실패했습니다");
     setSavingUrl(false);
+  }
+
+  async function syncCalendarAfterSave() {
+    const result = await requestCalendarSync();
+    setSyncingUrl(false);
+
+    if (!result.ok) {
+      toast[result.code === "cooldown" ? "info" : "error"](
+        result.error || "캘린더 동기화에 실패했습니다"
+      );
+      return;
+    }
+
+    toast.success(
+      typeof result.synced === "number"
+        ? `${result.synced}개의 시프트를 불러왔어요`
+        : "캘린더 동기화가 완료됐어요"
+    );
+    router.refresh();
   }
 
   async function handleLogout() {
     await supabase.auth.signOut();
     startNavigation();
     router.push("/login");
-    router.refresh();
   }
 
   async function handleDeleteAccount() {
@@ -117,7 +145,6 @@ export default function SettingsForm({
     await supabase.auth.signOut();
     startNavigation();
     router.push("/");
-    router.refresh();
   }
 
   const inputStyle = {
@@ -182,6 +209,14 @@ export default function SettingsForm({
                 {savingUrl ? "···" : urlSaved ? "완료" : "저장"}
               </button>
             </div>
+            {syncingUrl && (
+              <p
+                className="mt-2 text-xs"
+                style={{ color: "var(--text-muted)" }}
+              >
+                저장은 완료됐고, 캘린더는 백그라운드에서 불러오는 중이에요.
+              </p>
+            )}
           </form>
         </div>
 

@@ -1,43 +1,99 @@
 "use client";
 
-import Link from "next/link";
-import AvatarImage from "@/components/avatar-image";
+import NotificationPanel from "@/components/notification-panel";
+import { useClientReady } from "@/lib/client-dom";
+import {
+  hasFreshNotificationSnapshot,
+  loadNotificationSnapshot,
+  markAllNotificationsRead,
+  markNotificationRead,
+  mutateCachedNotificationSnapshot,
+  readCachedNotificationSnapshot,
+} from "@/lib/notification-client";
 import { createClient } from "@/lib/supabase/client";
-import { formatPostedAt } from "@/lib/time";
 import { NotificationRow } from "@/lib/types";
 import {
   broadcastOverlayOpen,
   onOtherOverlayOpen,
 } from "@/lib/overlay-bus";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
 export default function NotificationBell() {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useClientReady();
+  const initialSnapshot = readCachedNotificationSnapshot();
   const [open, setOpen] = useState(false);
-  const [count, setCount] = useState(0);
-  const [items, setItems] = useState<NotificationRow[]>([]);
+  const [count, setCount] = useState(initialSnapshot?.unreadCount ?? 0);
+  const [items, setItems] = useState<NotificationRow[]>(
+    initialSnapshot?.notifications ?? []
+  );
   const [loading, setLoading] = useState(false);
-  const userIdRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    setMounted(true);
+  function applySnapshot(snapshot: {
+    notifications: NotificationRow[];
+    unreadCount: number;
+  }) {
+    setItems(snapshot.notifications ?? []);
+    setCount(Number(snapshot.unreadCount) || 0);
+  }
+
+  const loadNotifications = useCallback(async (options?: {
+    preferCache?: boolean;
+    force?: boolean;
+  }) => {
+    setLoading(true);
+    const result = await loadNotificationSnapshot(options);
+    if (result.ok) {
+      applySnapshot(result.data);
+    }
+    setLoading(false);
   }, []);
 
-  // 내 unread-count 로드 + Realtime 구독
   useEffect(() => {
-    let cancelled = false;
     const supabase = createClient();
+    let cancelled = false;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let idleCallbackId: number | null = null;
+    let warmupTimeoutId: ReturnType<typeof globalThis.setTimeout> | null = null;
 
     async function init() {
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user || cancelled) return;
-      userIdRef.current = auth.user.id;
 
-      await refreshCount();
+      const cached = readCachedNotificationSnapshot();
+      if (cached) {
+        applySnapshot(cached);
+      }
 
-      const channel = supabase
-        .channel(`notifications:${auth.user.id}`)
+      await loadNotifications({ preferCache: true });
+      if (cancelled) return;
+
+      const scheduleWarmup = () => {
+        if (cancelled || hasFreshNotificationSnapshot()) return;
+        void loadNotifications({ force: true });
+      };
+
+      if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+        idleCallbackId = window.requestIdleCallback(scheduleWarmup, {
+          timeout: 1500,
+        });
+      } else {
+        warmupTimeoutId = globalThis.setTimeout(scheduleWarmup, 250);
+      }
+
+      const topic = `notifications:${auth.user.id}`;
+      const realtimeTopic = `realtime:${topic}`;
+      const existingChannel = supabase
+        .getChannels()
+        .find((candidate) => candidate.topic === realtimeTopic);
+
+      if (existingChannel) {
+        await supabase.removeChannel(existingChannel);
+        if (cancelled) return;
+      }
+
+      channel = supabase.channel(topic);
+      channel
         .on(
           "postgres_changes",
           {
@@ -47,89 +103,88 @@ export default function NotificationBell() {
             filter: `user_id=eq.${auth.user.id}`,
           },
           () => {
-            refreshCount();
-            // 드롭다운이 열려 있다면 목록도 갱신
-            if (openRef.current) loadList();
+            void loadNotifications({ force: true });
           }
         )
         .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
     }
 
-    const cleanup = init();
+    void init();
+
     return () => {
       cancelled = true;
-      cleanup.then((fn) => fn?.());
+      if (
+        idleCallbackId !== null &&
+        typeof window !== "undefined" &&
+        "cancelIdleCallback" in window
+      ) {
+        window.cancelIdleCallback(idleCallbackId);
+      }
+      if (warmupTimeoutId !== null) {
+        clearTimeout(warmupTimeoutId);
+      }
+      if (channel) {
+        void supabase.removeChannel(channel);
+      }
     };
-  }, []);
-
-  const openRef = useRef(open);
-  useEffect(() => {
-    openRef.current = open;
-  }, [open]);
+  }, [loadNotifications]);
 
   useEffect(() => {
     if (!open) return;
-    loadList();
-    const onEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+    const onEsc = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
     };
     document.addEventListener("keydown", onEsc);
     return () => document.removeEventListener("keydown", onEsc);
   }, [open]);
 
-  // 다른 오버레이(사이드바)가 열리면 자신을 닫는다.
   useEffect(() => {
     return onOtherOverlayOpen("notifications", () => setOpen(false));
   }, []);
 
-  async function refreshCount() {
-    try {
-      const res = await fetch("/api/notifications/unread-count", {
-        cache: "no-store",
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      setCount(Number(data.count) || 0);
-    } catch {
-      // ignore
-    }
-  }
+  async function handleMarkAllRead() {
+    const result = await markAllNotificationsRead();
+    if (!result.ok) return;
 
-  async function loadList() {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/notifications", { cache: "no-store" });
-      if (!res.ok) return;
-      const data = await res.json();
-      setItems((data.notifications ?? []) as NotificationRow[]);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function markAllRead() {
-    await fetch("/api/notifications/read-all", { method: "PATCH" });
-    setItems((prev) =>
-      prev.map((n) => ({
-        ...n,
-        read_at: n.read_at ?? new Date().toISOString(),
+    const readAt = new Date().toISOString();
+    setItems((prev) => {
+      const next = prev.map((notification) => ({
+        ...notification,
+        read_at: notification.read_at ?? readAt,
         unread_count: 0,
-      }))
-    );
+      }));
+      mutateCachedNotificationSnapshot((snapshot) => ({
+        ...snapshot,
+        notifications: next,
+        unreadCount: 0,
+      }));
+      return next;
+    });
     setCount(0);
   }
 
-  async function markOneRead(id: string) {
-    await fetch(`/api/notifications/${id}/read`, { method: "PATCH" });
-  }
+  function handleNotificationOpen(notification: NotificationRow) {
+    if (notification.read_at) return;
 
-  function targetHref(n: NotificationRow): string {
-    if (!n.board_slug || !n.post_id) return "#";
-    return `/boards/${n.board_slug}/${n.post_id}`;
+    void markNotificationRead(notification.id);
+    setItems((prev) => {
+      const next = prev.map((item) =>
+        item.id === notification.id
+          ? {
+              ...item,
+              read_at: new Date().toISOString(),
+              unread_count: 0,
+            }
+          : item
+      );
+      mutateCachedNotificationSnapshot((snapshot) => ({
+        ...snapshot,
+        notifications: next,
+        unreadCount: Math.max(0, snapshot.unreadCount - 1),
+      }));
+      return next;
+    });
+    setCount((prev) => Math.max(0, prev - 1));
   }
 
   return (
@@ -140,6 +195,11 @@ export default function NotificationBell() {
         onClick={() => {
           broadcastOverlayOpen("notifications");
           setOpen(true);
+          if (items.length === 0) {
+            void loadNotifications({ preferCache: true });
+          } else if (!hasFreshNotificationSnapshot()) {
+            void loadNotifications({ force: true });
+          }
         }}
         className="interactive-press relative flex h-9 w-9 items-center justify-center rounded-md"
         style={{ color: "var(--text-primary)" }}
@@ -170,153 +230,19 @@ export default function NotificationBell() {
         )}
       </button>
 
-      {mounted && open && createPortal(
-        <div
-          className="fixed inset-0"
-          style={{ zIndex: 900 }}
-          role="dialog"
-          aria-modal="true"
-          aria-label="알림"
-          onClick={() => setOpen(false)}
-        >
-          <div
-            className="absolute inset-0"
-            style={{ backgroundColor: "rgb(0 0 0 / 0.5)" }}
-          />
-          <aside
-            className="absolute right-0 top-0 flex h-full w-1/2 flex-col overflow-y-auto border-l lg:w-80"
-            style={{
-              backgroundColor: "var(--bg-card)",
-              borderColor: "var(--border-light)",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              className="flex items-center justify-between border-b px-4 py-3"
-              style={{ borderColor: "var(--border-light)" }}
-            >
-              <h2
-                className="text-sm font-semibold"
-                style={{ color: "var(--text-primary)" }}
-              >
-                알림
-              </h2>
-              <div className="flex items-center gap-2">
-                {count > 0 && (
-                  <button
-                    type="button"
-                    onClick={markAllRead}
-                    className="interactive-press text-xs"
-                    style={{ color: "var(--text-muted)" }}
-                  >
-                    모두 읽음
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setOpen(false)}
-                  className="text-sm"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  닫기
-                </button>
-              </div>
-            </div>
-
-            <div className="flex-1">
-              {loading && items.length === 0 ? null : items.length === 0 ? (
-                <p
-                  className="px-4 py-8 text-center text-xs"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  알림이 없습니다
-                </p>
-              ) : (
-                <ul>
-                  {items.map((n) => {
-                    const unread = !n.read_at;
-                    return (
-                      <li key={n.id}>
-                        <Link
-                          href={targetHref(n)}
-                          onClick={() => {
-                            if (unread) {
-                              markOneRead(n.id);
-                              setItems((prev) =>
-                                prev.map((x) =>
-                                  x.id === n.id
-                                    ? {
-                                        ...x,
-                                        read_at: new Date().toISOString(),
-                                        unread_count: 0,
-                                      }
-                                    : x
-                                )
-                              );
-                              setCount((c) => Math.max(0, c - 1));
-                            }
-                          }}
-                          className="interactive-press flex items-start gap-3 border-b px-4 py-3"
-                          style={{
-                            borderColor: "var(--border-light)",
-                            backgroundColor: unread
-                              ? "var(--primary-light)"
-                              : "transparent",
-                          }}
-                        >
-                          <AvatarImage
-                            src={null}
-                            name={n.last_actor_name || "?"}
-                            sizeClass="h-8 w-8"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <p
-                              className="truncate text-sm"
-                              style={{ color: "var(--text-primary)" }}
-                            >
-                              {n.last_actor_name || "익명"} ·{" "}
-                              <span
-                                className="font-medium"
-                                style={{ color: "var(--text-secondary)" }}
-                              >
-                                {n.post_title}
-                              </span>
-                            </p>
-                            {n.preview && (
-                              <p
-                                className="mt-0.5 truncate text-xs"
-                                style={{ color: "var(--text-muted)" }}
-                              >
-                                {labelForKind(n.kind)} · {n.preview}
-                              </p>
-                            )}
-                            <p
-                              className="mt-0.5 text-[11px]"
-                              style={{ color: "var(--text-muted)" }}
-                            >
-                              {formatPostedAt(n.updated_at)}
-                              {n.unread_count > 1 && (
-                                <span className="ml-1">
-                                  ({n.unread_count}건)
-                                </span>
-                              )}
-                            </p>
-                          </div>
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-          </aside>
-        </div>,
-        document.body
-      )}
+      {mounted &&
+        open &&
+        createPortal(
+          <NotificationPanel
+            count={count}
+            items={items}
+            loading={loading}
+            onClose={() => setOpen(false)}
+            onMarkAllRead={handleMarkAllRead}
+            onNotificationOpen={handleNotificationOpen}
+          />,
+          document.body
+        )}
     </>
   );
-}
-
-function labelForKind(kind: NotificationRow["kind"]): string {
-  return kind === "message" ? "메시지" : "댓글";
 }

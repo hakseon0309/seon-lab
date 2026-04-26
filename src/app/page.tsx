@@ -7,21 +7,16 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 
 function HomeContent() {
-  const [error, setError] = useState("");
-  const [errorCode, setErrorCode] = useState("");
+  const [authError, setAuthError] = useState("");
   const [loading, setLoading] = useState(false);
   const supabase = createClient();
   const searchParams = useSearchParams();
   const router = useRouter();
   const toast = useToast();
   const handledReasonRef = useRef(false);
-
-  useEffect(() => {
-    const urlError = searchParams.get("error");
-    const urlCode = searchParams.get("code");
-    if (urlError) setError(decodeURIComponent(urlError));
-    if (urlCode) setErrorCode(urlCode);
-  }, [searchParams]);
+  const urlError = searchParams.get("error");
+  const error = authError || (urlError ? decodeURIComponent(urlError) : "");
+  const errorCode = searchParams.get("code") ?? "";
 
   useEffect(() => {
     if (handledReasonRef.current) return;
@@ -44,7 +39,7 @@ function HomeContent() {
   }, []);
 
   async function handleGoogleLogin() {
-    setError("");
+    setAuthError("");
     setLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -53,7 +48,7 @@ function HomeContent() {
       },
     });
     if (error) {
-      setError(error.message);
+      setAuthError(error.message);
       setLoading(false);
     }
   }
@@ -69,7 +64,7 @@ function HomeContent() {
           >
             SEON LAB
           </h1>
-          <p className="mt-3 text-base" style={{ color: "var(--text-secondary)" }}>
+          <p className="text-base font-medium" style={{ color: "var(--text-secondary)" }}>
             팀원들의 근무 시프트를 한눈에 확인하세요
           </p>
           <p className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>

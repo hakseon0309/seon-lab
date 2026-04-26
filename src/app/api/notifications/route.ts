@@ -10,18 +10,28 @@ export async function GET() {
   } = await supabase.auth.getUser();
   if (!user) return apiErrors.unauthorized();
 
-  const { data: rows, error } = await supabase
-    .from("notifications")
-    .select(
-      "id, kind, post_id, last_actor_id, preview, unread_count, read_at, updated_at"
-    )
-    .eq("user_id", user.id)
-    .order("updated_at", { ascending: false })
-    .limit(30);
+  const [{ data: rows, error }, { count, error: countError }] = await Promise.all([
+    supabase
+      .from("notifications")
+      .select(
+        "id, kind, post_id, last_actor_id, preview, unread_count, read_at, updated_at"
+      )
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false })
+      .limit(30),
+    supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .is("read_at", null),
+  ]);
   if (error) return apiError(500, error.message);
+  if (countError) return apiError(500, countError.message);
 
   const list = rows ?? [];
-  if (list.length === 0) return NextResponse.json({ notifications: [] });
+  if (list.length === 0) {
+    return NextResponse.json({ notifications: [], unreadCount: count ?? 0 });
+  }
 
   const postIds = [...new Set(list.map((n) => n.post_id))];
   const actorIds = [
@@ -36,9 +46,15 @@ export async function GET() {
     actorIds.length > 0
       ? supabase
           .from("user_profiles")
-          .select("id, display_name")
+          .select("id, display_name, avatar_url")
           .in("id", actorIds)
-      : Promise.resolve({ data: [] as { id: string; display_name: string | null }[] }),
+      : Promise.resolve({
+          data: [] as {
+            id: string;
+            display_name: string | null;
+            avatar_url: string | null;
+          }[],
+        }),
     supabase.from("boards").select("id, slug, kind"),
   ]);
 
@@ -48,10 +64,13 @@ export async function GET() {
     )
   );
   const actorMap = new Map(
-    ((profiles ?? []) as { id: string; display_name: string | null }[]).map((p) => [
-      p.id,
-      p.display_name,
-    ])
+    (
+      (profiles ?? []) as {
+        id: string;
+        display_name: string | null;
+        avatar_url: string | null;
+      }[]
+    ).map((profile) => [profile.id, profile])
   );
   const boardMap = new Map(
     ((boards ?? []) as { id: string; slug: string; kind: string }[]).map((b) => [
@@ -70,7 +89,12 @@ export async function GET() {
       post_title: post?.title ?? "삭제된 글",
       board_slug: board?.slug ?? "",
       board_kind: board?.kind ?? "post",
-      last_actor_name: n.last_actor_id ? actorMap.get(n.last_actor_id) ?? null : null,
+      last_actor_name: n.last_actor_id
+        ? actorMap.get(n.last_actor_id)?.display_name ?? null
+        : null,
+      last_actor_avatar_url: n.last_actor_id
+        ? actorMap.get(n.last_actor_id)?.avatar_url ?? null
+        : null,
       preview: n.preview,
       unread_count: n.unread_count,
       read_at: n.read_at,
@@ -78,5 +102,5 @@ export async function GET() {
     };
   });
 
-  return NextResponse.json({ notifications });
+  return NextResponse.json({ notifications, unreadCount: count ?? 0 });
 }

@@ -35,8 +35,9 @@ export async function updateSession(request: NextRequest) {
   const publicRoutes = ["/login", "/api/auth/callback", "/api/sync/cron"];
   const isPublicRoute = publicRoutes.some((route) => path.startsWith(route));
   const isJoinRoute = path.startsWith("/join/");
+  const isMetadataAsset = path.endsWith(".webmanifest");
 
-  if (!user && !isPublicRoute && !isJoinRoute && path !== "/") {
+  if (!user && !isPublicRoute && !isJoinRoute && !isMetadataAsset && path !== "/") {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     const hadAuthCookie = request.cookies

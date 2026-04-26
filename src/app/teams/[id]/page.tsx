@@ -1,8 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
-import { Team, CalendarEvent, UserProfile } from "@/lib/types";
 import Nav from "@/components/nav";
 import RouteTransitionDone from "@/components/route-transition-done";
-import TeamView, { MemberWithEvents } from "@/components/team-view";
+import TeamView from "@/components/team-view";
+import { loadTeamDetailData } from "@/lib/team-server";
 import { redirect } from "next/navigation";
 
 export default async function TeamDetailPage({
@@ -17,53 +17,13 @@ export default async function TeamDetailPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: teamData } = await supabase
-    .from("teams")
-    .select("*")
-    .eq("id", id)
-    .single();
+  const { team, isFavorite, members, calendarWindow } = await loadTeamDetailData({
+    supabase,
+    teamId: id,
+    userId: user.id,
+  });
 
-  if (!teamData) redirect("/teams");
-  const team = teamData as Team;
-
-  const { data: favorite } = await supabase
-    .from("team_favorites")
-    .select("id")
-    .eq("team_id", id)
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  const { data: memberRows } = await supabase
-    .from("team_members")
-    .select("user_id, joined_at")
-    .eq("team_id", id);
-
-  const joinedAtByUser = new Map(
-    (memberRows ?? []).map((m: { user_id: string; joined_at: string }) => [m.user_id, m.joined_at])
-  );
-  const userIds = (memberRows ?? []).map((m: { user_id: string }) => m.user_id);
-
-  const members: MemberWithEvents[] = [];
-  if (userIds.length > 0) {
-    const [{ data: profiles }, { data: allEvents }] = await Promise.all([
-      supabase.from("user_profiles").select("*").in("id", userIds),
-      supabase
-        .from("events")
-        .select("*")
-        .in("user_id", userIds)
-        .order("start_at", { ascending: true }),
-    ]);
-
-    for (const userId of userIds) {
-      const profile = (profiles as UserProfile[] | null)?.find((p) => p.id === userId);
-      if (!profile) continue;
-      members.push({
-        profile,
-        joinedAt: joinedAtByUser.get(userId) ?? null,
-        events: ((allEvents as CalendarEvent[] | null) ?? []).filter((e) => e.user_id === userId),
-      });
-    }
-  }
+  if (!team) redirect("/teams");
 
   return (
     <>
@@ -73,7 +33,8 @@ export default async function TeamDetailPage({
         team={team}
         initialMembers={members}
         currentUserId={user.id}
-        initialIsFavorite={Boolean(favorite)}
+        initialIsFavorite={isFavorite}
+        calendarWindow={calendarWindow}
       />
     </>
   );

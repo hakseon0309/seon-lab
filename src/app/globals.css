@@ -8,6 +8,12 @@
  */
 
 :root {
+  --font-geist-sans: "Pretendard Variable", "Pretendard", "SF Pro Display",
+    "SF Pro Text", "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI",
+    system-ui, sans-serif;
+  --font-geist-mono: "SFMono-Regular", "SF Mono", ui-monospace,
+    "Cascadia Code", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+
   /* ── 배경 (Background) ─────────────────────────────── */
   --bg-base: oklch(1 0 0);              /* 페이지 기본 배경 */
   --bg-card: oklch(1 0 0);              /* 카드·셀 등 주요 표면 */
@@ -170,7 +176,15 @@ body::-webkit-scrollbar {
 body {
   background: var(--bg-base);
   color: var(--text-primary);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans);
+}
+
+@media (max-width: 1023px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
 
 /* 모든 인터랙션 요소 공통 누름 피드백 */
@@ -207,7 +221,7 @@ nextjs-portal {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans);
   font-weight: 700;
   font-size: 1.875rem;
   letter-spacing: 0.02em;
@@ -229,12 +243,15 @@ body.app-ready .splash-screen {
   visibility: hidden;
 }
 
-/* 모바일 하단 탭바(h-14) + iOS safe-area 홈 인디케이터 높이 + 답답해 보이지 않도록 기본
-   breathing room 1.5rem 을 합친 하단 패딩. 탭바는 fixed 라서 레이아웃을 밀지 않으므로,
-   본문 main 하단에 이 패딩을 사용해 콘텐츠가 탭바/홈 인디케이터 바로 위에 붙지 않도록 한다.
-   데스크탑에서는 탭바가 없으니 breathing room 만 남기고 각 페이지가 lg:pb-* 로 덮어쓸 수 있다. */
+/* 모바일 하단 탭바(h-14) + iOS safe-area 홈 인디케이터 + 가이드 기본 breathing room. */
 .pb-tabbar {
-  padding-bottom: calc(3.5rem + 1.5rem + env(safe-area-inset-bottom));
+  padding-bottom: calc(3.5rem + env(safe-area-inset-bottom) + 1.5rem);
+}
+
+/* 하단 고정 CTA 푸터가 있는 페이지 전용 여백.
+   탭바 + safe-area + CTA 높이 + 카드와 푸터 사이 여유를 함께 확보한다. */
+.pb-floating-footer {
+  padding-bottom: calc(3.5rem + env(safe-area-inset-bottom) + 6rem);
 }
 
 .page-title-block {

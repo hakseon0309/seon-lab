@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import Modal from "@/components/modal";
@@ -51,9 +52,12 @@ export default function InviteModal({ inviteCode, onClose }: Props) {
             <p className="mb-2 text-xs" style={{ color: "var(--text-muted)" }}>
               또는 QR 코드를 보여주세요
             </p>
-            <img
+            <Image
               src={qrUrl}
-              alt="QR Code"
+              alt="QR code"
+              width={180}
+              height={180}
+              unoptimized
               className="mx-auto h-[180px] w-[180px] rounded-lg"
             />
           </div>

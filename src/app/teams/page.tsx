@@ -54,13 +54,13 @@ export default async function TeamsPage() {
           팀
         </h1>
       </PageHeader>
-      <main className="mx-auto w-full max-w-lg pb-36 lg:pb-20">
-        <div className="page-stack">
+      <main className="mx-auto w-full max-w-lg pb-floating-footer lg:pb-20">
+        <div className="page-stack px-4 lg:px-0">
           {showCorp && <CorpTeamSection teams={corpTeams} />}
 
           {myTeams.length === 0 ? (
             <div
-              className="mx-4 lg:mx-0 flex flex-col items-center gap-3 rounded-lg border px-6 py-10 text-center"
+              className="flex flex-col items-center gap-3 rounded-lg border px-6 py-10 text-center"
               style={{
                 borderColor: "var(--border-light)",
                 backgroundColor: "var(--bg-card)",
@@ -81,7 +81,7 @@ export default async function TeamsPage() {
               </span>
             </div>
           ) : (
-            <div className="space-y-4 px-4 lg:px-0">
+            <div className="space-y-4">
               {myTeams.map((team) => (
                 <Link
                   key={team.id}

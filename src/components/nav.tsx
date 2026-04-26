@@ -22,11 +22,11 @@ export default function Nav() {
         style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-light)" }}
       >
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4">
             <Link
               href="/dashboard"
-              className="interactive-press rounded-md px-1 py-1 text-xl font-bold"
-              style={{ color: "var(--primary)" }}
+              className="interactive-press text-[17px] font-bold tracking-[0.02em]"
+              style={{ color: "var(--text-primary)" }}
             >
               SEON LAB
             </Link>
@@ -60,8 +60,8 @@ export default function Nav() {
       >
         <Link
           href="/dashboard"
-          className="interactive-press rounded-md px-1 py-1 text-lg font-bold"
-          style={{ color: "var(--primary)" }}
+          className="interactive-press text-[21px] font-bold tracking-[0.02em]"
+          style={{ color: "var(--text-primary)" }}
         >
           SEON LAB
         </Link>

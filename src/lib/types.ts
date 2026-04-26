@@ -16,6 +16,12 @@ export interface AdminUserRow {
   teams: { id: string; name: string }[];
 }
 
+export interface AdminTeamRow {
+  id: string;
+  name: string;
+  is_corp_team: boolean;
+}
+
 export interface CalendarEvent {
   id: string;
   user_id: string;
@@ -115,6 +121,10 @@ export interface SwapEvent {
 export interface SwapPost extends BoardPost {
   team_id: string;
   team_name: string;
+  team_image_url?: string | null;
+  team_ids?: string[];
+  team_names?: string[];
+  team_image_urls?: (string | null)[];
   swap_date: string | null;
   swap_status: "open" | "done";
   completed_at: string | null;
@@ -140,6 +150,7 @@ export interface NotificationRow {
   board_slug: string;
   board_kind: BoardKind;
   last_actor_name: string | null;
+  last_actor_avatar_url?: string | null;
   preview: string | null;
   unread_count: number;
   read_at: string | null;

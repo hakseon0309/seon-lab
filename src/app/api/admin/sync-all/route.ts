@@ -4,6 +4,8 @@ import { fetchAndParseICS } from "@/lib/ics-parser";
 import { syncEventsSnapshot } from "@/lib/event-sync";
 import { apiError, apiErrors } from "@/lib/api-error";
 
+const SYNC_ALL_CONCURRENCY = 4;
+
 export async function POST() {
   const guard = await requireAdmin();
   if (guard.error) {
@@ -27,19 +29,23 @@ export async function POST() {
   let synced = 0;
   let failed = 0;
 
-  for (const profile of profiles) {
-    try {
-      const events = await fetchAndParseICS(profile.ics_url!);
-      await syncEventsSnapshot(admin, profile.id, events);
+  for (let start = 0; start < profiles.length; start += SYNC_ALL_CONCURRENCY) {
+    const batch = profiles.slice(start, start + SYNC_ALL_CONCURRENCY);
+    const results = await Promise.allSettled(
+      batch.map(async (profile) => {
+        const events = await fetchAndParseICS(profile.ics_url!);
+        await syncEventsSnapshot(admin, profile.id, events);
 
-      await admin
-        .from("user_profiles")
-        .update({ last_synced: new Date().toISOString() })
-        .eq("id", profile.id);
+        await admin
+          .from("user_profiles")
+          .update({ last_synced: new Date().toISOString() })
+          .eq("id", profile.id);
+      })
+    );
 
-      synced++;
-    } catch {
-      failed++;
+    for (const result of results) {
+      if (result.status === "fulfilled") synced++;
+      else failed++;
     }
   }
 

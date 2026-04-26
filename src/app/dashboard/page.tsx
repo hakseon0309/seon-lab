@@ -1,3 +1,7 @@
+import {
+  createThreeMonthWindow,
+  getCalendarWindowEventRange,
+} from "@/lib/calendar-window";
 import { createClient } from "@/lib/supabase/server";
 import { formatSeoulDateTime } from "@/lib/time";
 import { CalendarEvent, Team, UserProfile } from "@/lib/types";
@@ -10,7 +14,6 @@ import PageHeader from "@/components/page-header";
 import RouteTransitionDone from "@/components/route-transition-done";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { addMonths, startOfMonth, subMonths } from "date-fns";
 
 const EVENT_COLUMNS =
   "id, user_id, uid, summary, start_at, end_at, location, created_at";
@@ -25,8 +28,8 @@ export default async function DashboardPage() {
     redirect("/");
   }
 
-  const rangeStart = startOfMonth(subMonths(new Date(), 1)).toISOString();
-  const rangeEnd = startOfMonth(addMonths(new Date(), 6)).toISOString();
+  const calendarWindow = createThreeMonthWindow(new Date());
+  const { startISO, endISO } = getCalendarWindowEventRange(calendarWindow);
 
   const [profileRes, eventsRes, coupleRes] = await Promise.all([
     supabase
@@ -38,8 +41,8 @@ export default async function DashboardPage() {
       .from("events")
       .select(EVENT_COLUMNS)
       .eq("user_id", user.id)
-      .gte("start_at", rangeStart)
-      .lt("start_at", rangeEnd)
+      .gte("start_at", startISO)
+      .lt("start_at", endISO)
       .order("start_at", { ascending: true }),
     supabase
       .from("couple_requests")
@@ -61,8 +64,8 @@ export default async function DashboardPage() {
       .from("events")
       .select(EVENT_COLUMNS)
       .eq("user_id", partnerId)
-      .gte("start_at", rangeStart)
-      .lt("start_at", rangeEnd)
+      .gte("start_at", startISO)
+      .lt("start_at", endISO)
       .order("start_at", { ascending: true });
     partnerEvents = (data as CalendarEvent[] | null) ?? [];
   }
@@ -162,6 +165,7 @@ export default async function DashboardPage() {
           <Calendar
             events={events}
             partnerEvents={partnerEvents}
+            calendarWindow={calendarWindow}
           />
         </div>
 

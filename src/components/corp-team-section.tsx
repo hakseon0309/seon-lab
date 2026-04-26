@@ -33,7 +33,7 @@ export default function CorpTeamSection({ teams }: { teams: Team[] }) {
   return (
     <div>
       <p
-        className="mb-2 px-4 lg:px-0 text-xs font-medium"
+        className="mb-2 text-xs font-medium"
         style={{ color: "var(--text-muted)" }}
       >
         🏢 회사 팀
@@ -42,7 +42,7 @@ export default function CorpTeamSection({ teams }: { teams: Team[] }) {
         {teams.map((team) => (
           <div
             key={team.id}
-            className="flex items-center justify-between border-y px-4 py-4 lg:mx-0 lg:rounded-lg lg:border lg:mb-2"
+            className="flex items-center justify-between rounded-lg border px-4 py-4"
             style={{
               borderColor: "var(--primary)",
               backgroundColor: "var(--primary-light)",
@@ -67,7 +67,7 @@ export default function CorpTeamSection({ teams }: { teams: Team[] }) {
       </div>
       {error && (
         <p
-          className="mt-1 px-4 lg:px-0 text-xs"
+          className="mt-1 text-xs"
           style={{ color: "var(--error)" }}
         >
           {error}

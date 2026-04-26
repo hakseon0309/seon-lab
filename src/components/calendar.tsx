@@ -1,5 +1,13 @@
 "use client";
 
+import CalendarMonthNavigator from "@/components/calendar-month-navigator";
+import {
+  CalendarWindow,
+  createThreeMonthWindow,
+  isWindowEndMonth,
+  isWindowStartMonth,
+  parseMonthKey,
+} from "@/lib/calendar-window";
 import { CalendarEvent } from "@/lib/types";
 import { formatSeoulTime, getSeoulDateKey } from "@/lib/time";
 import { weekendOverlay, cellBackground } from "@/lib/calendar-style";
@@ -13,66 +21,63 @@ import {
   isSameMonth,
   isToday,
 } from "date-fns";
-import { ko } from "date-fns/locale";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 interface CalendarProps {
   events: CalendarEvent[];
   partnerEvents?: CalendarEvent[];
+  calendarWindow?: CalendarWindow;
 }
 
-export default function Calendar({ events, partnerEvents = [] }: CalendarProps) {
-  const [currentDate, setCurrentDate] = useState(new Date());
+export default function Calendar({
+  events,
+  partnerEvents = [],
+  calendarWindow,
+}: CalendarProps) {
+  const resolvedWindow = useMemo(
+    () => calendarWindow ?? createThreeMonthWindow(new Date()),
+    [calendarWindow]
+  );
+  const [currentDate, setCurrentDate] = useState(() =>
+    parseMonthKey(resolvedWindow.initialMonth)
+  );
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
   const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
-
-  function getMyEventsForDay(day: Date) {
-    const dayKey = getSeoulDateKey(day);
-    return events.filter((e) => getSeoulDateKey(e.start_at) === dayKey);
-  }
-
-  function getPartnerEventsForDay(day: Date) {
-    const dayKey = getSeoulDateKey(day);
-    return partnerEvents.filter((e) => getSeoulDateKey(e.start_at) === dayKey);
-  }
+  const previousDisabled = isWindowStartMonth(currentDate, resolvedWindow);
+  const nextDisabled = isWindowEndMonth(currentDate, resolvedWindow);
+  const myEventsByDayKey = useMemo(() => groupEventsByDayKey(events), [events]);
+  const partnerEventsByDayKey = useMemo(
+    () => groupEventsByDayKey(partnerEvents),
+    [partnerEvents]
+  );
 
   const weekDays = ["월", "화", "수", "목", "금", "토", "일"];
 
   return (
     <section className="w-full min-w-0">
-      <div
-        className="sticky top-28 z-20 flex items-center justify-between px-4 py-3 lg:top-0 lg:px-0"
-        style={{ backgroundColor: "var(--bg-base)" }}
-      >
-        <button
-          onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}
-          aria-label="이전 달"
-          className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-medium"
-          style={{ color: "var(--text-primary)", backgroundColor: "var(--button-surface)" }}
-        >
-          ‹
-        </button>
-
-        <h2
-          className="text-xl font-semibold sm:text-2xl"
-          style={{ color: "var(--text-primary)" }}
-        >
-          {format(currentDate, "yyyy년 M월", { locale: ko })}
-        </h2>
-
-        <button
-          onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))}
-          aria-label="다음 달"
-          className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-medium"
-          style={{ color: "var(--text-primary)", backgroundColor: "var(--button-surface)" }}
-        >
-          ›
-        </button>
-      </div>
+      <CalendarMonthNavigator
+        currentDate={currentDate}
+        previousDisabled={previousDisabled}
+        nextDisabled={nextDisabled}
+        onPrevious={() =>
+          setCurrentDate(
+            previousDisabled
+              ? currentDate
+              : new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
+          )
+        }
+        onNext={() =>
+          setCurrentDate(
+            nextDisabled
+              ? currentDate
+              : new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1)
+          )
+        }
+      />
 
       <div
         className="grid w-full min-w-0 grid-cols-7 gap-px overflow-hidden border-y lg:rounded-lg lg:border"
@@ -109,8 +114,9 @@ export default function Calendar({ events, partnerEvents = [] }: CalendarProps) 
           );
         })}
         {days.map((day) => {
-          const myDayEvents = getMyEventsForDay(day);
-          const partnerDayEvents = getPartnerEventsForDay(day);
+          const dayKey = getSeoulDateKey(day);
+          const myDayEvents = myEventsByDayKey.get(dayKey) ?? [];
+          const partnerDayEvents = partnerEventsByDayKey.get(dayKey) ?? [];
           const inMonth = isSameMonth(day, currentDate);
           const weekend = weekendOverlay(day, inMonth);
           const bg = cellBackground(day, inMonth);
@@ -177,4 +183,20 @@ export default function Calendar({ events, partnerEvents = [] }: CalendarProps) 
       </div>
     </section>
   );
+}
+
+function groupEventsByDayKey(events: CalendarEvent[]) {
+  const eventsByDayKey = new Map<string, CalendarEvent[]>();
+
+  for (const event of events) {
+    const dayKey = getSeoulDateKey(event.start_at);
+    const bucket = eventsByDayKey.get(dayKey);
+    if (bucket) {
+      bucket.push(event);
+    } else {
+      eventsByDayKey.set(dayKey, [event]);
+    }
+  }
+
+  return eventsByDayKey;
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useClientReady } from "@/lib/client-dom";
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Html5Qrcode } from "html5-qrcode";
@@ -11,13 +12,9 @@ interface QrScannerProps {
 
 export default function QrScanner({ onScan, onClose }: QrScannerProps) {
   const [error, setError] = useState("");
-  const [mounted, setMounted] = useState(false);
+  const mounted = useClientReady();
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerId = `qr-reader-${useId().replace(/:/g, "")}`;
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {

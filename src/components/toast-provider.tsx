@@ -46,8 +46,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const show = useCallback(
     (message: string, variant: ToastVariant = "info") => {
+      timeoutsRef.current.forEach((timer) => clearTimeout(timer));
+      timeoutsRef.current.clear();
       const id = nextIdRef.current++;
-      setToasts((prev) => [...prev, { id, message, variant }]);
+      setToasts([{ id, message, variant }]);
       const timer = setTimeout(() => dismiss(id), DEFAULT_DURATION_MS);
       timeoutsRef.current.set(id, timer);
     },
@@ -81,8 +83,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div
         aria-live="polite"
         aria-atomic="true"
-        className="pointer-events-none fixed inset-x-0 z-[80] flex flex-col items-center gap-2 px-4"
-        style={{ top: "max(1rem, env(safe-area-inset-top))" }}
+        className="pointer-events-none fixed inset-x-0 flex flex-col items-center gap-2 px-4"
+        style={{
+          top: "max(1rem, env(safe-area-inset-top))",
+          zIndex: 1100,
+        }}
       >
         {toasts.map((toast) => (
           <ToastItem key={toast.id} toast={toast} onDismiss={() => dismiss(toast.id)} />
@@ -110,7 +115,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
     <div
       role="status"
       onClick={onDismiss}
-      className="pointer-events-auto w-full max-w-sm rounded-lg border px-4 py-3 text-center text-sm shadow-lg"
+      className="pointer-events-auto w-full max-w-md rounded-xl border px-5 py-4 text-center text-base font-medium shadow-lg"
       style={{
         backgroundColor: bg,
         color,

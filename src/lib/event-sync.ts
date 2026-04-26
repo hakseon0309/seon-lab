@@ -4,8 +4,28 @@ type EventRow = {
   uid: string;
 };
 
+type EventInsertRow = {
+  user_id: string;
+  uid: string;
+  summary: string;
+  start_at: string;
+  end_at: string;
+  location: string | null;
+};
+
+type QueryChain<Result> = PromiseLike<Result> & {
+  eq: (column: string, value: string) => QueryChain<Result>;
+  in: (column: string, values: string[]) => QueryChain<Result>;
+};
+
+type EventsTableClient = {
+  select: (columns: string) => unknown;
+  delete: () => unknown;
+  upsert: (rows: EventInsertRow[], options: { onConflict: string }) => unknown;
+};
+
 type SupabaseLikeClient = {
-  from: (table: string) => any;
+  from: (table: "events") => EventsTableClient;
 };
 
 type ExistingEventsResult = {
@@ -33,10 +53,13 @@ export async function syncEventsSnapshot(
 ) {
   const deduplicatedEvents = deduplicateByDate(events);
 
-  const { data: existingEvents, error: existingError } = (await supabase
-    .from("events")
-    .select("uid")
-    .eq("user_id", userId)) as ExistingEventsResult;
+  const { data: existingEvents, error: existingError } =
+    (await (supabase
+      .from("events")
+      .select("uid") as QueryChain<ExistingEventsResult>).eq(
+      "user_id",
+      userId
+    )) as ExistingEventsResult;
 
   if (existingError) {
     throw new Error(existingError.message);
@@ -47,11 +70,10 @@ export async function syncEventsSnapshot(
     existingEvents?.filter((event) => !nextUids.has(event.uid)).map((event) => event.uid) ?? [];
 
   if (staleUids.length > 0) {
-    const { error: deleteError } = (await supabase
-      .from("events")
-      .delete()
-      .eq("user_id", userId)
-      .in("uid", staleUids)) as MutationResult;
+    const { error: deleteError } =
+      (await ((supabase.from("events").delete() as QueryChain<MutationResult>)
+        .eq("user_id", userId)
+        .in("uid", staleUids))) as MutationResult;
 
     if (deleteError) {
       throw new Error(deleteError.message);
@@ -62,7 +84,7 @@ export async function syncEventsSnapshot(
     return;
   }
 
-  const rows = deduplicatedEvents.map((event) => ({
+  const rows: EventInsertRow[] = deduplicatedEvents.map((event) => ({
     user_id: userId,
     uid: event.uid,
     summary: event.summary,

@@ -12,6 +12,7 @@ interface TeamAvatarControlProps {
   editable?: boolean;
   onUpdated?: (team: Team) => void;
   sizeClass?: string;
+  refreshOnComplete?: boolean;
 }
 
 export default function TeamAvatarControl({
@@ -19,6 +20,7 @@ export default function TeamAvatarControl({
   editable = false,
   onUpdated,
   sizeClass = "h-11 w-11",
+  refreshOnComplete = true,
 }: TeamAvatarControlProps) {
   const [imageUrl, setImageUrl] = useState(team.image_url ?? null);
   const [open, setOpen] = useState(false);
@@ -47,7 +49,7 @@ export default function TeamAvatarControl({
     onUpdated?.(data as Team);
     toast.success("팀 프로필 사진을 변경했습니다");
     setOpen(false);
-    router.refresh();
+    if (refreshOnComplete) router.refresh();
   }
 
   async function remove() {
@@ -65,7 +67,7 @@ export default function TeamAvatarControl({
     onUpdated?.(data as Team);
     toast.success("팀 프로필 사진을 삭제했습니다");
     setOpen(false);
-    router.refresh();
+    if (refreshOnComplete) router.refresh();
   }
 
   const avatar = (

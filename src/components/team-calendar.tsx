@@ -22,11 +22,13 @@ import { ko } from "date-fns/locale";
 interface Props {
   members: { profile: UserProfile; events: CalendarEvent[] }[];
   currentDate: Date;
+  onMemberClick?: (userId: string) => void;
 }
 
-function TeamCalendar({ members, currentDate }: Props) {
+function TeamCalendar({ members, currentDate, onMemberClick }: Props) {
   const today = useMemo(() => new Date(), []);
   const todayWeekRef = useRef<HTMLTableRowElement | null>(null);
+  const calendarSlotHeightClass = "h-[40px] lg:h-[46px]";
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
@@ -36,23 +38,51 @@ function TeamCalendar({ members, currentDate }: Props) {
     { weekStartsOn: 1 }
   );
   const todayKey = getSeoulDateKey(today);
-  const sortedMembers = useMemo(() => {
-    return [...members].sort((a, b) => {
-      const aStart = getEarliestStartForDay(a.events, todayKey);
-      const bStart = getEarliestStartForDay(b.events, todayKey);
+  const preparedMembers = useMemo(() => {
+    return members
+      .map((member) => {
+        const eventsByDayKey = new Map<string, CalendarEvent[]>();
+        let todayEarliestStart: number | null = null;
 
-      if (aStart !== bStart) {
-        if (aStart === null) return 1;
-        if (bStart === null) return -1;
-        return aStart - bStart;
-      }
+        for (const event of member.events) {
+          const dayKey = getSeoulDateKey(event.start_at);
+          const bucket = eventsByDayKey.get(dayKey);
+          if (bucket) {
+            bucket.push(event);
+          } else {
+            eventsByDayKey.set(dayKey, [event]);
+          }
 
-      return a.profile.display_name.localeCompare(
-        b.profile.display_name,
-        ["ko", "en"],
-        { sensitivity: "base" }
-      );
-    });
+          if (dayKey === todayKey) {
+            const start = new Date(event.start_at).getTime();
+            if (todayEarliestStart === null || start < todayEarliestStart) {
+              todayEarliestStart = start;
+            }
+          }
+        }
+
+        return {
+          ...member,
+          eventsByDayKey,
+          todayEarliestStart,
+        };
+      })
+      .sort((a, b) => {
+        const aStart = a.todayEarliestStart;
+        const bStart = b.todayEarliestStart;
+
+        if (aStart !== bStart) {
+          if (aStart === null) return 1;
+          if (bStart === null) return -1;
+          return aStart - bStart;
+        }
+
+        return a.profile.display_name.localeCompare(
+          b.profile.display_name,
+          ["ko", "en"],
+          { sensitivity: "base" }
+        );
+      });
   }, [members, todayKey]);
 
   useEffect(() => {
@@ -97,7 +127,7 @@ function TeamCalendar({ members, currentDate }: Props) {
                   style={{ backgroundColor: "var(--bg-surface)" }}
                 >
                   <td
-                    className="sticky left-0 z-10 w-20 lg:w-32"
+                    className={`sticky left-0 z-10 w-20 lg:w-32 ${calendarSlotHeightClass}`}
                     style={{
                       backgroundColor: "var(--bg-surface)",
                       borderRight: "1px solid var(--border-light)",
@@ -117,7 +147,7 @@ function TeamCalendar({ members, currentDate }: Props) {
                     return (
                       <td
                         key={day.toISOString()}
-                        className="px-0.5 lg:px-3 py-1.5 lg:py-2 text-center text-xs font-medium relative"
+                        className="relative px-0.5 py-0.5 text-center text-xs font-medium lg:px-2 lg:py-1"
                         style={{
                           color: headerColor,
                           ...headerBg,
@@ -126,23 +156,30 @@ function TeamCalendar({ members, currentDate }: Props) {
                           ...(isToday && { outline: "1.5px solid var(--today-border)", outlineOffset: "-1.5px", zIndex: 1 }),
                         }}
                       >
-                        <div className="text-[10px]" style={{ color: "inherit" }}>
-                          {format(day, "EEE", { locale: ko })}
-                        </div>
-                        <span
-                          className={`inline-flex items-center justify-center text-[11px] ${isToday ? "font-bold" : ""}`}
+                        <div
+                          className={`flex flex-col items-center justify-center ${calendarSlotHeightClass}`}
                         >
-                          {format(day, "d")}
-                        </span>
+                          <div
+                            className="text-[10px]"
+                            style={{ color: "inherit" }}
+                          >
+                            {format(day, "EEE", { locale: ko })}
+                          </div>
+                          <span
+                            className={`inline-flex items-center justify-center text-[11px] ${isToday ? "font-bold" : ""}`}
+                          >
+                            {format(day, "d")}
+                          </span>
+                        </div>
                       </td>
                     );
                   })}
                 </tr>
 
-                {sortedMembers.map(({ profile, events }) => (
+                {preparedMembers.map(({ profile, eventsByDayKey }) => (
                   <tr key={`${weekStart.toISOString()}-${profile.id}`}>
                     <td
-                      className="sticky left-0 z-10 w-20 lg:w-32 px-1 lg:px-2 py-1.5 lg:py-2 text-xs lg:text-sm font-medium"
+                      className="sticky left-0 z-10 w-20 lg:w-32 p-0 text-xs lg:text-sm font-medium"
                       style={{
                         backgroundColor: "var(--bg-card)",
                         borderRight: "1px solid var(--border-light)",
@@ -150,7 +187,12 @@ function TeamCalendar({ members, currentDate }: Props) {
                         color: "var(--text-primary)",
                       }}
                     >
-                      <span className="flex min-w-0 items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => onMemberClick?.(profile.id)}
+                        disabled={!onMemberClick}
+                        className={`interactive-press flex w-full min-w-0 items-center gap-1.5 px-1 py-0.5 text-left disabled:opacity-100 lg:px-2 lg:py-1 ${calendarSlotHeightClass}`}
+                      >
                         <AvatarImage
                           src={profile.avatar_url}
                           name={profile.display_name}
@@ -160,38 +202,40 @@ function TeamCalendar({ members, currentDate }: Props) {
                         <span className="block min-w-0 truncate">
                           {profile.display_name}
                         </span>
-                      </span>
+                      </button>
                     </td>
                     {weekDays.map((day) => {
                       const dayKey = getSeoulDateKey(day);
-                      const dayEvents = events.filter(
-                        (e) => getSeoulDateKey(e.start_at) === dayKey
-                      );
+                      const dayEvents = eventsByDayKey.get(dayKey) ?? [];
                       const inMonth = isSameMonth(day, currentDate);
                       const bg = cellBackground(day, inMonth);
                       return (
                         <td
                           key={day.toISOString()}
-                          className="px-0.5 lg:px-1.5 py-1 lg:py-2 text-center align-top"
+                          className="px-0.5 py-0.5 text-center align-top lg:px-1 lg:py-1"
                           style={{
                             ...bg,
                             borderTop: "1px solid var(--border-light)",
                             borderLeft: "1px solid var(--border-light)",
                           }}
                         >
-                          {dayEvents.map((event) => (
-                            <div
-                              key={event.id}
-                              className="mb-0.5 rounded px-0.5 lg:px-1.5 py-0.5 lg:py-1 text-[11px] lg:text-[13px] leading-tight"
-                              style={{
-                                backgroundColor: "var(--event-bg)",
-                                color: "var(--event-sub)",
-                              }}
-                            >
-                              <div>{formatSeoulTime(event.start_at)}</div>
-                              <div>{formatSeoulTime(event.end_at)}</div>
-                            </div>
-                          ))}
+                          <div
+                            className={`flex flex-col ${calendarSlotHeightClass}`}
+                          >
+                            {dayEvents.map((event) => (
+                              <div
+                                key={event.id}
+                                className="flex h-full flex-col justify-center rounded-md px-0.5 py-0 text-[11px] leading-tight last:mb-0 lg:px-1 lg:py-0.5 lg:text-[12px]"
+                                style={{
+                                  backgroundColor: "var(--event-bg)",
+                                  color: "var(--event-sub)",
+                                }}
+                              >
+                                <div>{formatSeoulTime(event.start_at)}</div>
+                                <div>{formatSeoulTime(event.end_at)}</div>
+                              </div>
+                            ))}
+                          </div>
                         </td>
                       );
                     })}
@@ -207,15 +251,3 @@ function TeamCalendar({ members, currentDate }: Props) {
 }
 
 export default memo(TeamCalendar);
-
-function getEarliestStartForDay(events: CalendarEvent[], dayKey: string) {
-  let earliest: number | null = null;
-
-  for (const event of events) {
-    if (getSeoulDateKey(event.start_at) !== dayKey) continue;
-    const start = new Date(event.start_at).getTime();
-    if (earliest === null || start < earliest) earliest = start;
-  }
-
-  return earliest;
-}

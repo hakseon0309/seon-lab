@@ -1,297 +1,235 @@
 "use client";
 
-import { Team, CalendarEvent, UserProfile } from "@/lib/types";
-import PageHeader from "@/components/page-header";
-import TeamAvatarControl from "@/components/team-avatar-control";
-import TeamCalendar from "@/components/team-calendar";
+import {
+  CalendarWindow,
+  isWindowEndMonth,
+  isWindowStartMonth,
+  parseMonthKey,
+} from "@/lib/calendar-window";
 import InviteModal from "@/components/invite-modal";
 import MembersListModal from "@/components/members-list-modal";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { format } from "date-fns";
-import { ko } from "date-fns/locale";
+import TeamCalendar from "@/components/team-calendar";
+import CalendarMonthNavigator from "@/components/calendar-month-navigator";
+import TeamViewHeader from "@/components/team-view-header";
 import { useToast } from "@/components/toast-provider";
+import {
+  removeTeamMember,
+  renameTeam,
+  setTeamFavorite,
+  transferTeamOwnership,
+} from "@/lib/team-api-client";
+import { MemberWithEvents } from "@/lib/team-types";
 import { LABEL } from "@/lib/labels";
-
-export interface MemberWithEvents {
-  profile: UserProfile;
-  joinedAt: string | null;
-  events: CalendarEvent[];
-}
+import { Team } from "@/lib/types";
+import { useCallback, useMemo, useState, useTransition } from "react";
 
 interface Props {
   team: Team;
   initialMembers: MemberWithEvents[];
   currentUserId: string;
   initialIsFavorite: boolean;
+  calendarWindow: CalendarWindow;
 }
+
+export type { MemberWithEvents };
 
 export default function TeamView({
   team: initialTeam,
   initialMembers,
   currentUserId,
   initialIsFavorite,
+  calendarWindow,
 }: Props) {
+  const minMonthDate = parseMonthKey(calendarWindow.minMonth);
+  const maxMonthDate = parseMonthKey(calendarWindow.maxMonth);
   const [team, setTeam] = useState(initialTeam);
   const [members, setMembers] = useState(initialMembers);
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(
+    parseMonthKey(calendarWindow.initialMonth)
+  );
   const [showInvite, setShowInvite] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
+  const [preselectedMemberId, setPreselectedMemberId] = useState<string | null>(
+    null
+  );
+  const [returnToListOnDetailClose, setReturnToListOnDetailClose] =
+    useState(true);
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState(initialTeam.name);
   const [renameError, setRenameError] = useState("");
   const [isFavorite, setIsFavorite] = useState(initialIsFavorite);
   const [savingFavorite, setSavingFavorite] = useState(false);
-  const router = useRouter();
+  const [isChangingMonth, startMonthTransition] = useTransition();
   const toast = useToast();
-
-  const isLeader = team.created_by === currentUserId;
+  const memberItems = useMemo(
+    () =>
+      members.map((member) => ({
+        profile: member.profile,
+        joinedAt: member.joinedAt,
+      })),
+    [members]
+  );
 
   async function handleRename() {
-    if (!newName.trim() || newName.trim() === team.name) {
+    const nextName = newName.trim();
+
+    if (!nextName || nextName === team.name) {
       setEditingName(false);
       return;
     }
+
     setRenameError("");
-    const res = await fetch(`/api/teams/${team.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newName.trim() }),
-    });
-    if (res.ok) {
-      const updated = await res.json();
-      setTeam(updated);
-      setEditingName(false);
-      toast.success("팀 이름을 변경했습니다");
-      router.refresh();
-    } else {
-      const data = await res.json().catch(() => ({}));
-      setRenameError(data.error || "이름 변경에 실패했습니다");
+    const result = await renameTeam(team.id, nextName);
+
+    if (!result.ok) {
+      setRenameError(result.error || "이름 변경에 실패했습니다");
+      return;
     }
+
+    setTeam(result.data);
+    setNewName(result.data.name);
+    setEditingName(false);
+    toast.success("팀 이름을 변경했습니다");
   }
 
   async function handleRemoveMember(userId: string) {
-    const res = await fetch(`/api/teams/${team.id}/members`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId }),
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || `${LABEL.member} 제거에 실패했습니다`);
+    const result = await removeTeamMember(team.id, userId);
+    if (!result.ok) {
+      throw new Error(result.error || `${LABEL.member} 제거에 실패했습니다`);
     }
-    setMembers((prev) => prev.filter((m) => m.profile.id !== userId));
+
+    setMembers((prev) => prev.filter((member) => member.profile.id !== userId));
     toast.success(`${LABEL.member}을 제거했습니다`);
-    router.refresh();
   }
 
   async function handleTransferOwnership(userId: string) {
-    const res = await fetch(`/api/teams/${team.id}/transfer`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ new_owner_id: userId }),
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || "팀장 위임에 실패했습니다");
+    const result = await transferTeamOwnership(team.id, userId);
+    if (!result.ok) {
+      throw new Error(result.error || "팀장 위임에 실패했습니다");
     }
+
     setTeam((prev) => ({ ...prev, created_by: userId }));
     setShowMembers(false);
     toast.success("팀장을 위임했습니다");
-    router.refresh();
   }
 
   async function toggleFavorite() {
+    const nextFavorite = !isFavorite;
     setSavingFavorite(true);
-    const next = !isFavorite;
-    const res = await fetch(`/api/teams/${team.id}/favorite`, {
-      method: next ? "POST" : "DELETE",
-    });
-    const data = await res.json().catch(() => ({}));
+
+    const result = await setTeamFavorite(team.id, nextFavorite);
     setSavingFavorite(false);
 
-    if (!res.ok) {
-      toast.error(data.error || "즐겨찾기 변경에 실패했습니다");
+    if (!result.ok) {
+      toast.error(result.error || "즐겨찾기 변경에 실패했습니다");
       return;
     }
 
-    setIsFavorite(next);
-    toast.success(next ? "즐겨찾기에 추가했습니다" : "즐겨찾기에서 제거했습니다");
-    router.refresh();
+    setIsFavorite(nextFavorite);
+    toast.success(
+      nextFavorite
+        ? "즐겨찾기에 추가했습니다"
+        : "즐겨찾기에서 제거했습니다"
+    );
   }
 
-  function prevMonth() {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-  }
+  const openMembersList = useCallback(() => {
+    setPreselectedMemberId(null);
+    setReturnToListOnDetailClose(true);
+    setShowMembers(true);
+  }, []);
 
-  function nextMonth() {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
-  }
+  const openMemberDetail = useCallback((userId: string) => {
+    setPreselectedMemberId(userId);
+    setReturnToListOnDetailClose(false);
+    setShowMembers(true);
+  }, []);
+
+  const closeMembersModal = useCallback(() => {
+    setShowMembers(false);
+    setPreselectedMemberId(null);
+    setReturnToListOnDetailClose(true);
+  }, []);
+
+  const shiftMonth = useCallback((offset: number) => {
+    startMonthTransition(() => {
+      setCurrentDate((prev) => {
+        const next = new Date(prev.getFullYear(), prev.getMonth() + offset, 1);
+        if (next < minMonthDate || next > maxMonthDate) {
+          return prev;
+        }
+        return next;
+      });
+    });
+  }, [maxMonthDate, minMonthDate, startMonthTransition]);
+
+  const previousDisabled = isWindowStartMonth(currentDate, calendarWindow);
+  const nextDisabled = isWindowEndMonth(currentDate, calendarWindow);
 
   return (
     <>
-      <PageHeader>
-        <div className="flex min-w-0 flex-1 items-center gap-3">
-          <TeamAvatarControl
-            team={team}
-            editable={isLeader}
-            onUpdated={(updated) => setTeam(updated)}
-            sizeClass="h-10 w-10"
-          />
-          <div className="min-w-0 flex-1">
-          {editingName ? (
-            <div>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleRename();
-                }}
-                className="flex items-center gap-2"
-              >
-                <input
-                  autoFocus
-                  value={newName}
-                  onChange={(e) => { setNewName(e.target.value); setRenameError(""); }}
-                  className="text-lg font-bold rounded-md border px-2 py-0.5 focus:outline-none focus:ring-2"
-                  style={{
-                    color: "var(--text-primary)",
-                    backgroundColor: "var(--input-bg)",
-                    borderColor: renameError ? "var(--error)" : "var(--input-border)",
-                    "--tw-ring-color": "var(--primary)",
-                  } as React.CSSProperties}
-                />
-                <button
-                  type="submit"
-                  className="shrink-0 text-xs font-medium"
-                  style={{ color: "var(--primary)" }}
-                >
-                  저장
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setEditingName(false); setRenameError(""); setNewName(team.name); }}
-                  className="shrink-0 text-xs"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  취소
-                </button>
-              </form>
-              {renameError && (
-                <p className="mt-0.5 text-xs" style={{ color: "var(--error)" }}>
-                  {renameError}
-                </p>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <h1
-                className="text-xl font-bold truncate"
-                style={{ color: "var(--text-primary)" }}
-              >
-                {team.name}
-              </h1>
-              {isLeader && (
-                <button
-                  onClick={() => setEditingName(true)}
-                  className="shrink-0 text-xs"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  수정
-                </button>
-              )}
-            </div>
-          )}
-          <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-            {members.length}명의 {LABEL.member}
-          </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={toggleFavorite}
-            disabled={savingFavorite}
-            aria-label={isFavorite ? "즐겨찾기 해제" : "즐겨찾기 추가"}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border text-base disabled:opacity-50"
-            style={{
-              borderColor: "var(--border)",
-              color: isFavorite ? "var(--primary)" : "var(--text-muted)",
-              backgroundColor: isFavorite ? "var(--primary-light)" : "transparent",
-            }}
-          >
-            ★
-          </button>
-          <button
-            onClick={() => setShowMembers(true)}
-            className="rounded-lg border px-3 py-1.5 text-xs font-medium"
-            style={{
-              borderColor: "var(--border)",
-              color: "var(--text-secondary)",
-            }}
-          >
-            {LABEL.member}
-          </button>
-          <button
-            onClick={() => setShowInvite(true)}
-            className="rounded-lg px-3 py-1.5 text-xs font-medium"
-            style={{
-              backgroundColor: "var(--primary)",
-              color: "var(--text-on-primary)",
-            }}
-          >
-            초대
-          </button>
-        </div>
-      </PageHeader>
+      <TeamViewHeader
+        team={team}
+        memberCount={members.length}
+        currentUserId={currentUserId}
+        editingName={editingName}
+        newName={newName}
+        renameError={renameError}
+        isFavorite={isFavorite}
+        savingFavorite={savingFavorite}
+        onUpdatedTeam={setTeam}
+        onStartEditingName={() => setEditingName(true)}
+        onChangeName={(value) => {
+          setNewName(value);
+          setRenameError("");
+        }}
+        onSubmitName={handleRename}
+        onCancelEditingName={() => {
+          setEditingName(false);
+          setRenameError("");
+          setNewName(team.name);
+        }}
+        onToggleFavorite={toggleFavorite}
+        onOpenMembers={openMembersList}
+        onOpenInvite={() => setShowInvite(true)}
+      />
 
       {showInvite && (
-        <InviteModal inviteCode={team.invite_code} onClose={() => setShowInvite(false)} />
+        <InviteModal
+          inviteCode={team.invite_code}
+          onClose={() => setShowInvite(false)}
+        />
       )}
 
       {showMembers && (
         <MembersListModal
-          members={members.map((m) => ({ profile: m.profile, joinedAt: m.joinedAt }))}
+          members={memberItems}
           leaderId={team.created_by}
-          isLeader={isLeader}
+          isLeader={team.created_by === currentUserId}
           currentUserId={currentUserId}
-          onClose={() => setShowMembers(false)}
+          initialSelectedId={preselectedMemberId}
+          returnToListOnDetailClose={returnToListOnDetailClose}
+          onClose={closeMembersModal}
           onTransferOwnership={handleTransferOwnership}
           onRemoveMember={handleRemoveMember}
         />
       )}
 
-      <main className="mx-auto max-w-5xl px-0 lg:px-4 pb-tabbar lg:pb-6">
-        <div
-          className="sticky top-28 z-20 -mt-px flex items-center justify-between px-4 py-3 lg:top-0 lg:px-0"
-          style={{
-            backgroundColor: "var(--bg-base)",
-            boxShadow: "0 -1px 0 var(--bg-base)",
-          }}
-        >
-          <button
-            onClick={prevMonth}
-            aria-label="이전 달"
-            className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-medium"
-            style={{ color: "var(--text-primary)", backgroundColor: "var(--button-surface)" }}
-          >
-            ‹
-          </button>
-          <h2
-            className="text-xl font-semibold sm:text-2xl"
-            style={{ color: "var(--text-primary)" }}
-          >
-            {format(currentDate, "yyyy년 M월", { locale: ko })}
-          </h2>
-          <button
-            onClick={nextMonth}
-            aria-label="다음 달"
-            className="flex h-9 w-9 items-center justify-center rounded-full text-lg font-medium"
-            style={{ color: "var(--text-primary)", backgroundColor: "var(--button-surface)" }}
-          >
-            ›
-          </button>
-        </div>
+      <main className="mx-auto max-w-5xl px-0 pb-tabbar lg:px-4 lg:pb-6">
+        <CalendarMonthNavigator
+          currentDate={currentDate}
+          pending={isChangingMonth}
+          previousDisabled={previousDisabled}
+          nextDisabled={nextDisabled}
+          onPrevious={() => shiftMonth(-1)}
+          onNext={() => shiftMonth(1)}
+        />
 
-        <TeamCalendar members={members} currentDate={currentDate} />
+        <TeamCalendar
+          members={members}
+          currentDate={currentDate}
+          onMemberClick={openMemberDetail}
+        />
       </main>
     </>
   );
