@@ -1,7 +1,8 @@
 import { createClient as createServerClient } from "@supabase/supabase-js";
 import { syncEventsSnapshot } from "@/lib/event-sync";
 import { fetchAndParseICS } from "@/lib/ics-parser";
-import { apiErrors } from "@/lib/api-error";
+import { apiError, apiErrors } from "@/lib/api-error";
+import { getCompletedSwapPostExpiryCutoff } from "@/lib/shift-swap-retention";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
@@ -21,14 +22,11 @@ export async function GET(request: Request) {
     .select("id, ics_url")
     .not("ics_url", "is", null);
 
-  if (!profiles || profiles.length === 0) {
-    return NextResponse.json({ message: "No profiles to sync" });
-  }
-
   let synced = 0;
   let failed = 0;
+  const profileList = profiles ?? [];
 
-  for (const profile of profiles) {
+  for (const profile of profileList) {
     try {
       const events = await fetchAndParseICS(profile.ics_url!);
       await syncEventsSnapshot(supabase, profile.id, events);
@@ -44,5 +42,31 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({ synced, failed, total: profiles.length });
+  const { data: shiftSwapBoard, error: boardError } = await supabase
+    .from("boards")
+    .select("id")
+    .eq("slug", "shift-swap")
+    .maybeSingle();
+  let deletedCompletedSwapPosts = 0;
+
+  if (boardError) return apiError(500, boardError.message);
+
+  if (shiftSwapBoard?.id) {
+    const { count, error } = await supabase
+      .from("board_posts")
+      .delete({ count: "exact" })
+      .eq("board_id", shiftSwapBoard.id)
+      .eq("swap_status", "done")
+      .lte("completed_at", getCompletedSwapPostExpiryCutoff());
+
+    if (error) return apiError(500, error.message);
+    deletedCompletedSwapPosts = count ?? 0;
+  }
+
+  return NextResponse.json({
+    synced,
+    failed,
+    total: profileList.length,
+    deletedCompletedSwapPosts,
+  });
 }

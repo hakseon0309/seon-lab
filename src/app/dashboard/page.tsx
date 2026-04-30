@@ -2,6 +2,7 @@ import {
   createThreeMonthWindow,
   getCalendarWindowEventRange,
 } from "@/lib/calendar-window";
+import { getFallbackKoreanHolidays } from "@/lib/korean-holidays";
 import { createClient } from "@/lib/supabase/server";
 import { formatSeoulDateTime } from "@/lib/time";
 import { CalendarEvent, Team, UserProfile } from "@/lib/types";
@@ -29,7 +30,9 @@ export default async function DashboardPage() {
   }
 
   const calendarWindow = createThreeMonthWindow(new Date());
-  const { startISO, endISO } = getCalendarWindowEventRange(calendarWindow);
+  const { from, to, startISO, endISO } =
+    getCalendarWindowEventRange(calendarWindow);
+  const holidays = getFallbackKoreanHolidays(from, to);
 
   const [profileRes, eventsRes, coupleRes] = await Promise.all([
     supabase
@@ -106,7 +109,7 @@ export default async function DashboardPage() {
             className="text-xl font-bold"
             style={{ color: "var(--text-primary)" }}
           >
-            내 시프트
+            내 근무
           </h1>
         </PageHeader>
         <main className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center px-4 pb-tabbar lg:pb-8 text-center">
@@ -123,7 +126,7 @@ export default async function DashboardPage() {
             설정에서 캘린더 구독 URL을 입력하면
             <br className="lg:hidden" />
             <span className="hidden lg:inline"> </span>
-            시프트가 자동으로 입력되고 표시됩니다.
+            근무 일정이 자동으로 입력되고 표시됩니다.
           </p>
           <Link
             href="/settings"
@@ -150,7 +153,7 @@ export default async function DashboardPage() {
             className="text-xl font-bold"
             style={{ color: "var(--text-primary)" }}
           >
-            내 시프트
+            내 근무
           </h1>
           {profile.last_synced && (
             <p className="text-xs" style={{ color: "var(--text-muted)" }}>
@@ -166,6 +169,7 @@ export default async function DashboardPage() {
             events={events}
             partnerEvents={partnerEvents}
             calendarWindow={calendarWindow}
+            holidays={holidays}
           />
         </div>
 

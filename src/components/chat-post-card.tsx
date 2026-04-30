@@ -2,6 +2,7 @@
 
 import AvatarImage from "@/components/avatar-image";
 import PostStatusBadge from "@/components/post-status-badge";
+import { toWorkTerminology } from "@/lib/terminology";
 import { formatPostedAt } from "@/lib/time";
 
 interface Props {
@@ -23,6 +24,9 @@ export default function ChatPostCard({
   teamName,
   status,
 }: Props) {
+  const displayTitle = toWorkTerminology(title);
+  const displayBody = toWorkTerminology(body);
+
   return (
     <div
       className="mx-4 mt-2 rounded-lg border p-4 lg:mx-0"
@@ -35,7 +39,7 @@ export default function ChatPostCard({
         className="text-sm font-medium"
         style={{ color: "var(--text-primary)" }}
       >
-        {title}
+        {displayTitle}
       </p>
       <div className="mt-2 flex items-center gap-2">
         <AvatarImage
@@ -56,7 +60,7 @@ export default function ChatPostCard({
         className="mt-4 whitespace-pre-wrap text-sm leading-6"
         style={{ color: "var(--text-secondary)" }}
       >
-        {body}
+        {displayBody}
       </p>
     </div>
   );

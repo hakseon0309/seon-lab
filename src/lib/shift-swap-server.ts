@@ -1,5 +1,6 @@
 import { buildAuthorMap, collectAuthorIds } from "@/lib/board-authors";
 import { createClient } from "@/lib/supabase/server";
+import { isExpiredCompletedSwapPost } from "@/lib/shift-swap-retention";
 import {
   getSeoulDateKey,
   getSeoulIsoDayRange,
@@ -237,12 +238,13 @@ export async function loadShiftSwapBoardData(params: {
         "id, board_id, author_id, is_anonymous, title, body, is_pinned, status, created_at, updated_at, team_id, swap_date, swap_status, completed_at"
       )
       .eq("board_id", boardId)
-      .order("swap_status", { ascending: true })
       .order("created_at", { ascending: false })
-      .limit(100),
+      .limit(200),
   ]);
 
-  const posts = (postRes.data as ShiftSwapPostRow[] | null) ?? [];
+  const posts = ((postRes.data as ShiftSwapPostRow[] | null) ?? [])
+    .filter((post) => !isExpiredCompletedSwapPost(post))
+    .slice(0, 100);
   const authorIds = collectAuthorIds(posts);
   const teamIds = [...new Set(posts.map((post) => post.team_id))];
   const postIds = posts.map((post) => post.id);
@@ -302,6 +304,10 @@ export async function loadShiftSwapPostDetailData(params: {
   }
 
   const chatPost = postData as ShiftSwapPostRow;
+  if (isExpiredCompletedSwapPost(chatPost)) {
+    return null;
+  }
+
   const { data: messageRows } = await supabase
     .from("board_messages")
     .select("id, post_id, author_id, body, created_at")

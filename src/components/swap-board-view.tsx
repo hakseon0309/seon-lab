@@ -1,15 +1,12 @@
 "use client";
 
-import Link from "next/link";
-import AvatarImage from "@/components/avatar-image";
-import PostStatusBadge from "@/components/post-status-badge";
+import SwapPostDetailModal from "@/components/swap-post-detail-modal";
 import SwapPostTitleCard from "@/components/swap-post-title-card";
 import SwapWriteModal from "@/components/swap-write-modal";
 import { useToast } from "@/components/toast-provider";
 import { usePortalTarget } from "@/lib/client-dom";
 import { Board, SwapPost, TeamLite } from "@/lib/types";
-import { formatPostedAt } from "@/lib/time";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 
@@ -17,17 +14,27 @@ interface Props {
   board: Board;
   initialPosts: SwapPost[];
   myTeams: TeamLite[];
+  currentUserId: string;
+  isAdmin: boolean;
 }
 
 export default function SwapBoardView({
   board,
   initialPosts,
   myTeams,
+  currentUserId,
+  isAdmin,
 }: Props) {
   const [writing, setWriting] = useState(false);
+  const [posts, setPosts] = useState(initialPosts);
+  const [selectedPost, setSelectedPost] = useState<SwapPost | null>(null);
   const router = useRouter();
   const toast = useToast();
   const headerSlot = usePortalTarget("board-header-actions");
+
+  useEffect(() => {
+    setPosts(initialPosts);
+  }, [initialPosts]);
 
   const writeButton = (
     <button
@@ -47,7 +54,7 @@ export default function SwapBoardView({
     <div className="px-4 lg:px-0">
       {headerSlot ? createPortal(writeButton, headerSlot) : null}
 
-      {initialPosts.length === 0 ? (
+      {posts.length === 0 ? (
         <div
           className="rounded-lg border px-4 py-10 text-center"
           style={{
@@ -62,50 +69,27 @@ export default function SwapBoardView({
             아직 등록된 글이 없어요
           </p>
           <p className="mt-2 text-xs" style={{ color: "var(--text-muted)" }}>
-            시프트를 바꾸고 싶은 날짜를 골라 첫 글을 남겨보세요.
+            근무를 바꾸고 싶은 날짜를 골라 첫 글을 남겨보세요.
           </p>
         </div>
       ) : (
         <ul className="space-y-3">
-          {initialPosts.map((post) => {
+          {posts.map((post) => {
             const completed = post.swap_status === "done";
             return (
               <li key={post.id}>
-                <Link
-                  href={completed ? "#" : `/boards/${board.slug}/${post.id}`}
-                  aria-disabled={completed}
-                  tabIndex={completed ? -1 : 0}
-                  onClick={(e) => {
-                    if (completed) e.preventDefault();
-                  }}
-                  className="interactive-press flex flex-col gap-3 rounded-2xl border px-4 py-4"
+                <button
+                  type="button"
+                  onClick={() => setSelectedPost(post)}
+                  className="interactive-press block w-full rounded-lg border px-3 py-3 text-left"
                   style={{
                     borderColor: "var(--border-light)",
                     backgroundColor: "var(--bg-card)",
-                    opacity: completed ? 0.6 : 1,
-                    pointerEvents: completed ? "none" : "auto",
+                    opacity: completed ? 0.72 : 1,
                   }}
                 >
                   <SwapPostTitleCard post={post} />
-                  <div className="flex items-center gap-2">
-                    <AvatarImage
-                      src={post.team_image_url ?? null}
-                      name={post.team_name || "알 수 없는 팀"}
-                      sizeClass="h-7 w-7"
-                    />
-                    <p
-                      className="min-w-0 flex-1 truncate text-xs"
-                      style={{ color: "var(--text-muted)" }}
-                    >
-                      {(post.team_names?.join(", ") || post.team_name)} ·{" "}
-                      {formatPostedAt(post.created_at)}
-                    </p>
-                    <PostStatusBadge
-                      status={post.swap_status}
-                      className="shrink-0"
-                    />
-                  </div>
-                </Link>
+                </button>
               </li>
             );
           })}
@@ -120,6 +104,31 @@ export default function SwapBoardView({
           onCreated={() => {
             setWriting(false);
             toast.success("글을 등록했습니다");
+            router.refresh();
+          }}
+        />
+      )}
+
+      {selectedPost && (
+        <SwapPostDetailModal
+          key={selectedPost.id}
+          board={board}
+          post={selectedPost}
+          currentUserId={currentUserId}
+          canDelete={selectedPost.author_id === currentUserId || isAdmin}
+          onClose={() => setSelectedPost(null)}
+          onPostChanged={(nextPost) => {
+            setSelectedPost(nextPost);
+            setPosts((prev) =>
+              prev.map((post) => (post.id === nextPost.id ? nextPost : post))
+            );
+            router.refresh();
+          }}
+          onDeleted={() => {
+            setPosts((prev) =>
+              prev.filter((post) => post.id !== selectedPost.id)
+            );
+            setSelectedPost(null);
             router.refresh();
           }}
         />

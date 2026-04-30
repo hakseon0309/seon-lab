@@ -60,10 +60,13 @@
   --error: oklch(0.577 0.245 27.325);   /* 오류 텍스트 (빨강) */
   --error-bg: oklch(0.971 0.013 17.38); /* 오류 배경 */
 
-  /* ── 이벤트/시프트 (Event) ─────────────────────────── */
-  --event-bg: oklch(0.81 0.1 252 / 0.22);  /* 시프트 카드 배경 */
-  --event-text: oklch(0.49 0.22 264);       /* 시프트 카드 텍스트 */
-  --event-sub: oklch(0.55 0.22 263);        /* 시프트 카드 보조 텍스트 */
+  /* ── 이벤트/근무 (Event) ─────────────────────────── */
+  --event-bg: oklch(0.81 0.1 252 / 0.22);  /* 근무 카드 배경 */
+  --event-text: oklch(0.49 0.22 264);       /* 근무 카드 텍스트 */
+  --event-sub: oklch(0.55 0.22 263);        /* 근무 카드 보조 텍스트 */
+  --holiday-bg: oklch(0.66 0.22 25);
+  --holiday-bg-soft: oklch(0.97 0.035 25);
+  --holiday-text: oklch(0.99 0 0);
 
   /* ── 달력 오버레이 (Calendar Overlays) ─────────────── */
   /* 셀 배경 위에 겹쳐서 색상을 변화시키는 반투명 레이어.
@@ -128,10 +131,13 @@
   --error: oklch(0.704 0.191 22.216);
   --error-bg: oklch(0.269 0.03 22.216);
 
-  /* ── 이벤트/시프트 ── */
+  /* ── 이벤트/근무 ── */
   --event-bg: oklch(0.42 0.18 266 / 0.22);
   --event-text: oklch(0.81 0.1 252);
   --event-sub: oklch(0.62 0.19 260);
+  --holiday-bg: oklch(0.64 0.2 24);
+  --holiday-bg-soft: oklch(0.28 0.055 24);
+  --holiday-text: oklch(0.99 0 0);
 
   /* ── 달력 오버레이 ── */
   --today-border: oklch(0.65 0 0);

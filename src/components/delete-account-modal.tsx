@@ -65,7 +65,7 @@ export default function DeleteAccountModal({ ownedTeams, onClose, onConfirm }: P
               <p>탈퇴 시 아래 데이터가 모두 삭제됩니다.</p>
               <ul className="list-disc pl-5 text-xs" style={{ color: "var(--text-muted)" }}>
                 <li>프로필 및 캘린더 구독 정보</li>
-                <li>동기화된 시프트 이벤트</li>
+                <li>동기화된 근무 일정 이벤트</li>
                 <li>팀 가입 내역</li>
                 <li>커플 연결 (상대방은 자동으로 해제됩니다)</li>
               </ul>

@@ -2,6 +2,7 @@
 
 import AvatarImage from "@/components/avatar-image";
 import PostStatusBadge from "@/components/post-status-badge";
+import { toWorkTerminology } from "@/lib/terminology";
 import { formatPostedAt } from "@/lib/time";
 import { ReactNode } from "react";
 
@@ -57,7 +58,7 @@ export default function PostDetailCard({
           className="whitespace-pre-wrap text-sm leading-7"
           style={{ color: "var(--text-secondary)" }}
         >
-          {body}
+          {toWorkTerminology(body)}
         </p>
       </article>
     </>

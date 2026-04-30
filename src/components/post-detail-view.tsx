@@ -14,6 +14,7 @@ import {
   updateBoardPostStatus,
 } from "@/lib/board-api-client";
 import { usePortalTarget } from "@/lib/client-dom";
+import { toWorkTerminology } from "@/lib/terminology";
 import { Board, BoardComment, BoardPost } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -43,8 +44,8 @@ export default function PostDetailView({
   const [post, setPost] = useState(initialPost);
   const [comments, setComments] = useState(initialComments);
   const [editing, setEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(initialPost.title);
-  const [editBody, setEditBody] = useState(initialPost.body);
+  const [editTitle, setEditTitle] = useState(toWorkTerminology(initialPost.title));
+  const [editBody, setEditBody] = useState(toWorkTerminology(initialPost.body));
   const [savingEdit, setSavingEdit] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmingDeletePost, setConfirmingDeletePost] = useState(false);
@@ -153,8 +154,8 @@ export default function PostDetailView({
         <button
           type="button"
           onClick={() => {
-            setEditTitle(post.title);
-            setEditBody(post.body);
+            setEditTitle(toWorkTerminology(post.title));
+            setEditBody(toWorkTerminology(post.body));
             setEditing(true);
           }}
           className="interactive-press rounded-md px-2 py-1 text-xs font-medium"

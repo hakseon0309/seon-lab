@@ -89,7 +89,7 @@ export function formatSeoulDateTime(value: string | Date) {
 }
 
 /**
- * 시프트 교환 게시판용 짧은 날짜 포맷.
+ * 근무 교환 게시판용 짧은 날짜 포맷.
  * 예) "26. 04. 25 (토)" — YY. MM. DD (요일), 달력 아이콘은 사용하지 않음.
  */
 export function formatSwapDateShort(iso: string | null | undefined): string {
@@ -104,7 +104,7 @@ export function formatSwapDateShort(iso: string | null | undefined): string {
 }
 
 /**
- * 시프트 시작~종료 시각 포맷. 예) "09:45 – 18:45".
+ * 근무 시작~종료 시각 포맷. 예) "09:45 – 18:45".
  * 이벤트가 없으면 "휴무".
  */
 export function formatShiftRange(event: {
@@ -122,7 +122,7 @@ export function formatShiftRange(event: {
 }
 
 /**
- * 시프트 시작 시각만. 예) "09:45". 미니 달력 셀용.
+ * 근무 시작 시각만. 예) "09:45". 미니 달력 셀용.
  */
 export function formatShiftStart(
   event: { start_at: string } | null | undefined

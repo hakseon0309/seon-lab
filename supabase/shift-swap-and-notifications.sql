@@ -4,7 +4,7 @@
 --
 -- 사전 준비:
 --   1) Dashboard → Database → Extensions 에서 `pg_cron` 이 활성화돼 있어야
---      매일 자정 KST 에 완료된 시프트 교환 글의 메시지가 자동 삭제됨.
+--      매일 자정 KST 에 완료 후 3일이 지난 근무 교환 글이 자동 삭제됨.
 --      (이 스크립트에서 create extension if not exists pg_cron 도 시도.)
 --   2) 기존 community-and-avatars.sql 가 이미 적용돼 있어야 함
 --      (current_role_level, set_updated_at, board_posts, board_comments 사용).
@@ -243,22 +243,20 @@ create trigger board_comments_notify
   for each row execute function public.fn_notify_comment();
 
 -- ------------------------------------------------------------
--- 8) 완료 + 7일 지난 시프트 교환 글의 메시지 자동 삭제
---    규칙 : 완료일(서울 기준)의 자정에서 +7일 이 지난 순간 메시지 전부 제거.
---    예) 완료 2026-04-10 15:30 KST  →  2026-04-17 00:00 KST 이후 다음 cron 에서 삭제.
+-- 8) 완료 + 3일 지난 근무 교환 게시글 자동 삭제
+--    규칙 : 완료 시각으로부터 72시간이 지난 게시글을 제거.
+--    board_messages / board_comments / board_post_teams 등은 FK cascade 로 같이 정리됨.
 -- ------------------------------------------------------------
-create or replace function public.purge_completed_swap_messages()
+create or replace function public.purge_completed_swap_posts()
 returns void as $$
 begin
-  delete from public.board_messages m
-  using public.board_posts p
-  where m.post_id = p.id
+  delete from public.board_posts p
+  using public.boards b
+  where p.board_id = b.id
+    and b.slug = 'shift-swap'
     and p.swap_status = 'done'
     and p.completed_at is not null
-    and (
-      ((p.completed_at at time zone 'Asia/Seoul')::date + 7)
-      <= (now() at time zone 'Asia/Seoul')::date
-    );
+    and p.completed_at <= now() - interval '3 days';
 end;
 $$ language plpgsql security definer;
 
@@ -270,10 +268,17 @@ exception when others then
   null;
 end $$;
 
+do $$
+begin
+  perform cron.unschedule('purge-completed-swap-posts');
+exception when others then
+  null;
+end $$;
+
 select cron.schedule(
-  'purge-completed-swap-messages',
+  'purge-completed-swap-posts',
   '5 15 * * *',
-  $$select public.purge_completed_swap_messages();$$
+  $$select public.purge_completed_swap_posts();$$
 );
 
 -- ------------------------------------------------------------

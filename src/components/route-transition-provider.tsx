@@ -127,7 +127,7 @@ export function RouteTransitionProvider({ children }: { children: ReactNode }) {
       {children}
       {isNavigating && (
         <div
-          className="fixed inset-0 flex items-center justify-center bg-black/40 px-4"
+          className="fixed inset-0 flex items-center justify-center bg-black/30 px-4 backdrop-blur-[1px]"
           style={{ zIndex: 1500 }}
           aria-live="polite"
           aria-busy="true"
@@ -135,14 +135,14 @@ export function RouteTransitionProvider({ children }: { children: ReactNode }) {
           <div
             className="flex items-center justify-center rounded-[1.75rem] border shadow-2xl"
             style={{
-              width: "clamp(8.5rem, 33vw, 15rem)",
-              height: "clamp(8.5rem, 33vw, 15rem)",
+              width: "clamp(7.5rem, 28vw, 12rem)",
+              height: "clamp(7.5rem, 28vw, 12rem)",
               borderColor: "var(--border-light)",
               backgroundColor: "var(--bg-card)",
             }}
           >
             <div
-              className="h-8 w-8 rounded-full border-2 border-t-transparent animate-spin"
+              className="h-7 w-7 rounded-full border-2 border-t-transparent animate-spin"
               style={{
                 borderColor: "var(--border)",
                 borderTopColor: "transparent",

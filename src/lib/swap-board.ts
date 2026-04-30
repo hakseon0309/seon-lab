@@ -3,6 +3,7 @@ import {
   formatShiftRange,
   formatSwapDateShort,
 } from "@/lib/time";
+import { toWorkTerminology } from "@/lib/terminology";
 
 export const WORK_SHIFT_OPTIONS = [
   "08:00",
@@ -28,6 +29,7 @@ export interface SwapSummaryCardData {
   typeLabel: string;
   mine: SwapSummaryRow;
   target: SwapSummaryRow;
+  note?: string;
 }
 
 export function formatPreviewTitle(
@@ -94,7 +96,7 @@ export function formatSelectedTeams(teamNames: string[]) {
 
 export function buildWorkRequestTitle(times: string[]) {
   const summary = formatDesiredShiftSummary(times);
-  return summary ? `${summary} 근무 원해요` : "원하는 근무를 찾고 있어요";
+  return summary ? `${summary} 근무 원해요` : "근무 교환 원해요";
 }
 
 export function buildOffRequestTitle(myOffDate: string) {
@@ -113,6 +115,7 @@ export function buildSwapSummaryFromPost(post: SwapPost): SwapSummaryCardData {
   ) {
     return {
       typeLabel: "휴무 교환",
+      note: structured.note,
       mine: {
         label: "내 휴무",
         date: toCardDate(structured.myOffDate),
@@ -120,7 +123,7 @@ export function buildSwapSummaryFromPost(post: SwapPost): SwapSummaryCardData {
         tone: "mine",
       },
       target: {
-        label: "원하는 휴무",
+        label: "찾는 휴무",
         date: toCardDate(structured.desiredOffDate),
         values: ["휴무"],
         secondary: structured.desiredOffShift
@@ -136,6 +139,7 @@ export function buildSwapSummaryFromPost(post: SwapPost): SwapSummaryCardData {
 
   return {
     typeLabel: "근무 교환",
+    note: structured.note,
     mine: {
       label: "내 근무",
       date: swapDate,
@@ -145,75 +149,7 @@ export function buildSwapSummaryFromPost(post: SwapPost): SwapSummaryCardData {
     target: {
       label: "찾는 근무",
       date: swapDate,
-      values: splitShiftValues(desiredShiftSummary),
-      tone: "target",
-    },
-  };
-}
-
-export function buildSwapSummaryFromDraft(params: {
-  requestType: ShiftRequestType;
-  workDate: string;
-  workEvent: SwapEvent | null;
-  desiredShiftTimes: string[];
-  myOffDate: string;
-  desiredOffDate: string;
-  desiredOffEvent: SwapEvent | null;
-}): SwapSummaryCardData {
-  const {
-    requestType,
-    workDate,
-    workEvent,
-    desiredShiftTimes,
-    myOffDate,
-    desiredOffDate,
-    desiredOffEvent,
-  } = params;
-
-  if (requestType === "off") {
-    return {
-      typeLabel: "휴무 교환",
-      mine: {
-        label: "내 휴무",
-        date: toCardDate(myOffDate) || "날짜 선택 전",
-        values: ["휴무"],
-        tone: "mine",
-      },
-      target: {
-        label: "원하는 휴무",
-        date: toCardDate(desiredOffDate) || "날짜 선택 전",
-        values: ["휴무"],
-        secondary: desiredOffDate
-          ? desiredOffEvent
-            ? `그날 내 근무 ${formatShiftRange(desiredOffEvent)}`
-            : "그날 내 근무 확인 중"
-          : undefined,
-        tone: "target",
-      },
-    };
-  }
-
-  return {
-    typeLabel: "근무 교환",
-    mine: {
-      label: "내 근무",
-      date: toCardDate(workDate) || "날짜 선택 전",
-      values: [
-        workDate
-          ? workEvent
-            ? formatShiftRange(workEvent)
-            : "내 시프트 확인 중"
-          : "내 시프트 선택 전",
-      ],
-      tone: "mine",
-    },
-    target: {
-      label: "찾는 근무",
-      date: toCardDate(workDate) || "날짜 선택 전",
-      values:
-        desiredShiftTimes.length > 0
-          ? desiredShiftTimes
-          : ["원하는 시프트 선택 전"],
+      values: splitShiftValues(toWorkTerminology(desiredShiftSummary)),
       tone: "target",
     },
   };
@@ -246,33 +182,65 @@ function addDaysIso(date: string, days: number) {
 }
 
 function parseStructuredSwapBody(body: string) {
-  const lines = body
-    .split("\n")
+  const rawLines = body.split("\n");
+  const lines = rawLines
     .map((line) => line.trim())
     .filter(Boolean);
+  const noteLines: string[] = [];
+  let reachedNote = false;
+
+  for (const line of rawLines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      reachedNote = true;
+      continue;
+    }
+    if (reachedNote || !isStructuredSwapLine(trimmed)) {
+      noteLines.push(trimmed);
+    }
+  }
 
   return {
-    type: lines
-      .find((line) => line.startsWith("시프트 유형:"))
-      ?.split(":")[1]
-      ?.trim(),
-    myOffDate: lines
-      .find((line) => line.startsWith("내 휴무 날짜:"))
-      ?.split(":")[1]
-      ?.trim(),
-    desiredOffDate: lines
-      .find((line) => line.startsWith("원하는 휴무 날짜:"))
-      ?.split(":")[1]
-      ?.trim(),
-    desiredShifts: lines
-      .find((line) => line.startsWith("원하는 시프트:"))
-      ?.split(":")[1]
-      ?.trim(),
-    desiredOffShift: lines
-      .find((line) => line.startsWith("원하는 날짜의 내 시프트:"))
-      ?.split(":")[1]
-      ?.trim(),
+    type: findStructuredValue(lines, ["근무 유형:", "시프트 유형:"]),
+    myOffDate: findStructuredValue(lines, ["내 휴무 날짜:"]),
+    desiredOffDate: findStructuredValue(lines, [
+      "찾는 휴무 날짜:",
+      "원하는 휴무 날짜:",
+    ]),
+    desiredShifts: findStructuredValue(lines, [
+      "찾는 근무:",
+      "원하는 근무:",
+      "원하는 시프트:",
+    ]),
+    desiredOffShift: findStructuredValue(lines, [
+      "원하는 날짜의 내 근무:",
+      "원하는 날짜의 내 시프트:",
+    ]),
+    note: toWorkTerminology(noteLines.join(" ").trim()) || undefined,
   };
+}
+
+function findStructuredValue(lines: string[], prefixes: string[]) {
+  for (const line of lines) {
+    const prefix = prefixes.find((candidate) => line.startsWith(candidate));
+    if (prefix) return line.slice(prefix.length).trim();
+  }
+}
+
+function isStructuredSwapLine(line: string) {
+  return [
+    "근무 유형:",
+    "시프트 유형:",
+    "교환 날짜:",
+    "찾는 근무:",
+    "원하는 근무:",
+    "원하는 시프트:",
+    "내 휴무 날짜:",
+    "찾는 휴무 날짜:",
+    "원하는 휴무 날짜:",
+    "원하는 날짜의 내 근무:",
+    "원하는 날짜의 내 시프트:",
+  ].some((prefix) => line.startsWith(prefix));
 }
 
 function toCardDate(value: string | null | undefined) {
@@ -293,7 +261,7 @@ function formatSwapDateForCard(value: string) {
 }
 
 function splitShiftValues(value: string) {
-  if (!value) return ["시프트 협의"];
+  if (!value) return ["근무 협의"];
   if (value.includes(",")) {
     return value
       .split(",")

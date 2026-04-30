@@ -12,6 +12,11 @@ import { CalendarEvent } from "@/lib/types";
 import { formatSeoulTime, getSeoulDateKey } from "@/lib/time";
 import { weekendOverlay, cellBackground } from "@/lib/calendar-style";
 import {
+  getKoreanHolidayByDateKey,
+  getKoreanHolidayFromList,
+} from "@/lib/korean-holidays";
+import type { KoreanHoliday } from "@/lib/korean-holidays";
+import {
   format,
   startOfMonth,
   endOfMonth,
@@ -27,12 +32,14 @@ interface CalendarProps {
   events: CalendarEvent[];
   partnerEvents?: CalendarEvent[];
   calendarWindow?: CalendarWindow;
+  holidays?: KoreanHoliday[];
 }
 
 export default function Calendar({
   events,
   partnerEvents = [],
   calendarWindow,
+  holidays = [],
 }: CalendarProps) {
   const resolvedWindow = useMemo(
     () => calendarWindow ?? createThreeMonthWindow(new Date()),
@@ -117,6 +124,9 @@ export default function Calendar({
           const dayKey = getSeoulDateKey(day);
           const myDayEvents = myEventsByDayKey.get(dayKey) ?? [];
           const partnerDayEvents = partnerEventsByDayKey.get(dayKey) ?? [];
+          const holiday =
+            getKoreanHolidayFromList(dayKey, holidays) ??
+            getKoreanHolidayByDateKey(dayKey);
           const inMonth = isSameMonth(day, currentDate);
           const weekend = weekendOverlay(day, inMonth);
           const bg = cellBackground(day, inMonth);
@@ -131,7 +141,7 @@ export default function Calendar({
           return (
             <div
               key={day.toISOString()}
-              className="min-h-[82px] p-1 sm:min-h-[108px] sm:p-1.5 lg:min-h-[128px] lg:p-2"
+              className="relative min-h-[82px] overflow-hidden p-1 pb-6 sm:min-h-[108px] sm:p-1.5 sm:pb-7 lg:min-h-[128px] lg:p-2 lg:pb-8"
               style={todayStyle}
             >
               <div
@@ -141,7 +151,7 @@ export default function Calendar({
                 {format(day, "d")}
               </div>
 
-              {/* 내 시프트 */}
+              {/* 내 근무 */}
               {myDayEvents.slice(0, 1).map((event) => (
                 <div
                   key={event.id}
@@ -156,7 +166,7 @@ export default function Calendar({
                 </div>
               ))}
 
-              {/* 상대방 시프트 */}
+              {/* 상대방 근무 */}
               {partnerDayEvents.slice(0, 1).map((event) => (
                 <div
                   key={event.id}
@@ -177,6 +187,18 @@ export default function Calendar({
                   <div>{formatSeoulTime(event.end_at)}</div>
                 </div>
               ))}
+
+              {holiday && (
+                <div
+                  className="absolute inset-x-1 bottom-1 rounded-sm px-1.5 py-0.5 text-center text-[10px] font-semibold leading-tight sm:inset-x-1.5 sm:text-[11px] lg:inset-x-2"
+                  style={{
+                    backgroundColor: "var(--holiday-bg)",
+                    color: "var(--holiday-text)",
+                  }}
+                >
+                  {holiday.name}
+                </div>
+              )}
             </div>
           );
         })}

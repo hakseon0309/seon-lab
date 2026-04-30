@@ -8,6 +8,7 @@ import { isShiftSwapBoard } from "@/lib/boards";
 import { loadBoardPostDetailData } from "@/lib/board-server";
 import { loadShiftSwapPostDetailData } from "@/lib/shift-swap-server";
 import { createClient } from "@/lib/supabase/server";
+import { toWorkTerminology } from "@/lib/terminology";
 import { Board } from "@/lib/types";
 import { notFound, redirect } from "next/navigation";
 
@@ -37,7 +38,7 @@ export default async function PostPage({ params }: PostPageProps) {
   const isAdmin = Boolean(myProfile?.is_admin);
 
   // ============================================================
-  // 시프트 교환 (chat) 전용 경로
+  // 근무 교환 (chat) 전용 경로
   // ============================================================
   if (isShiftSwapBoard(currentBoard)) {
     const detail = await loadShiftSwapPostDetailData({
@@ -69,7 +70,7 @@ export default async function PostPage({ params }: PostPageProps) {
               className="min-w-0 flex-1 truncate text-xl font-bold"
               style={{ color: "var(--text-primary)" }}
             >
-              {chatPost.title}
+              {toWorkTerminology(chatPost.title)}
             </h1>
             {(canEdit || canDelete) && <PostHeaderActionsSlot />}
           </div>
@@ -126,7 +127,7 @@ export default async function PostPage({ params }: PostPageProps) {
             className="min-w-0 flex-1 truncate text-xl font-bold"
             style={{ color: "var(--text-primary)" }}
           >
-            {post.title}
+            {toWorkTerminology(post.title)}
           </h1>
           {(canEdit || canDelete) && (
             <PostHeaderActionsSlot />

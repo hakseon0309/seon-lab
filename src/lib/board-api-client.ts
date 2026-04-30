@@ -120,6 +120,12 @@ export function createBoardMessage(slug: string, postId: string, body: string) {
   );
 }
 
+export function loadBoardMessages(slug: string, postId: string) {
+  return requestBoardApi<{ messages: BoardMessage[] }>(
+    `/api/boards/${slug}/posts/${postId}/messages`
+  );
+}
+
 export function updateBoardPostCompletion(
   slug: string,
   postId: string,

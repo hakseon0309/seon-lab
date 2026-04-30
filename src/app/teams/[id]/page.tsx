@@ -17,11 +17,12 @@ export default async function TeamDetailPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { team, isFavorite, members, calendarWindow } = await loadTeamDetailData({
-    supabase,
-    teamId: id,
-    userId: user.id,
-  });
+  const { team, isFavorite, members, calendarWindow, holidays } =
+    await loadTeamDetailData({
+      supabase,
+      teamId: id,
+      userId: user.id,
+    });
 
   if (!team) redirect("/teams");
 
@@ -35,6 +36,7 @@ export default async function TeamDetailPage({
         currentUserId={user.id}
         initialIsFavorite={isFavorite}
         calendarWindow={calendarWindow}
+        holidays={holidays}
       />
     </>
   );

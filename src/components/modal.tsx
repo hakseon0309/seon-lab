@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect } from "react";
+import { CSSProperties, ReactNode, useEffect } from "react";
 import { useClientReady } from "@/lib/client-dom";
 import { createPortal } from "react-dom";
 
@@ -9,6 +9,9 @@ interface ModalProps {
   onClose: () => void;
   children: ReactNode;
   maxWidth?: string;
+  header?: ReactNode;
+  panelClassName?: string;
+  panelStyle?: CSSProperties;
 }
 
 let openModalCount = 0;
@@ -39,6 +42,9 @@ export default function Modal({
   onClose,
   children,
   maxWidth = "max-w-sm",
+  header,
+  panelClassName = "mx-4 p-6",
+  panelStyle,
 }: ModalProps) {
   const mounted = useClientReady();
 
@@ -107,17 +113,19 @@ export default function Modal({
         style={{ backgroundColor: "rgb(0 0 0 / 0.6)" }}
       />
       <div
-        className={`relative mx-4 w-full ${maxWidth} rounded-2xl p-6`}
-        style={{ backgroundColor: "var(--bg-card)" }}
+        className={`relative w-full ${maxWidth} rounded-2xl ${panelClassName}`}
+        style={{ backgroundColor: "var(--bg-card)", ...panelStyle }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-5">
-          <h3
-            className="text-base font-semibold"
-            style={{ color: "var(--text-primary)" }}
-          >
-            {title}
-          </h3>
+          {header ?? (
+            <h3
+              className="text-base font-semibold"
+              style={{ color: "var(--text-primary)" }}
+            >
+              {title}
+            </h3>
+          )}
         </div>
         {children}
       </div>

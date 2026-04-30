@@ -1,6 +1,7 @@
 "use client";
 
 import AvatarImage from "@/components/avatar-image";
+import { toWorkTerminology } from "@/lib/terminology";
 import { formatPostedAt } from "@/lib/time";
 import { BoardComment } from "@/lib/types";
 import type { FormEvent } from "react";
@@ -77,7 +78,7 @@ export default function PostCommentsSection({
                   className="mt-1 whitespace-pre-wrap text-sm leading-6"
                   style={{ color: "var(--text-secondary)" }}
                 >
-                  {comment.body}
+                  {toWorkTerminology(comment.body)}
                 </p>
               </div>
               {canDelete ? (

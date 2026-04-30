@@ -7,7 +7,6 @@ import {
 } from "@/lib/calendar-window";
 import Modal from "@/components/modal";
 import SwapDatePickerModal from "@/components/swap-date-picker-modal";
-import SwapRequestSummaryCard from "@/components/swap-request-summary-card";
 import SwapShiftTimePickerModal from "@/components/swap-shift-time-picker-modal";
 import SwapTeamPickerModal from "@/components/swap-team-picker-modal";
 import { useToast } from "@/components/toast-provider";
@@ -19,7 +18,6 @@ import {
 } from "@/lib/time";
 import { SwapEvent, TeamLite } from "@/lib/types";
 import {
-  buildSwapSummaryFromDraft,
   buildOffRequestTitle,
   buildWorkRequestTitle,
   formatDesiredShiftSummary,
@@ -108,27 +106,6 @@ export default function SwapWriteModal({
   const selectedWorkEvent = workDate
     ? prefetchedEventsByDate.get(workDate) ?? null
     : null;
-  const previewSummary = useMemo(
-    () =>
-      buildSwapSummaryFromDraft({
-        requestType,
-        workDate,
-        workEvent: selectedWorkEvent,
-        desiredShiftTimes: selectedDesiredShifts,
-        myOffDate,
-        desiredOffDate,
-        desiredOffEvent,
-      }),
-    [
-      requestType,
-      workDate,
-      selectedWorkEvent,
-      selectedDesiredShifts,
-      myOffDate,
-      desiredOffDate,
-      desiredOffEvent,
-    ]
-  );
 
   function resetTypeSpecificFields(next: ShiftRequestType) {
     setRequestType(next);
@@ -144,18 +121,18 @@ export default function SwapWriteModal({
 
     if (requestType === "work") {
       const lines = [
-        "시프트 유형: 근무",
+        "근무 유형: 근무",
         `교환 날짜: ${formatSwapDateShort(workDate)}`,
-        `원하는 시프트: ${formatDesiredShiftSummary(selectedDesiredShifts)}`,
+        `찾는 근무: ${formatDesiredShiftSummary(selectedDesiredShifts)}`,
       ];
       return note ? `${lines.join("\n")}\n\n${note}` : lines.join("\n");
     }
 
     const lines = [
-      "시프트 유형: 휴무",
+      "근무 유형: 휴무",
       `내 휴무 날짜: ${formatSwapDateShort(myOffDate)}`,
-      `원하는 휴무 날짜: ${formatSwapDateShort(desiredOffDate)}`,
-      `원하는 날짜의 내 시프트: ${formatShiftRange(desiredOffEvent)}`,
+      `찾는 휴무 날짜: ${formatSwapDateShort(desiredOffDate)}`,
+      `원하는 날짜의 내 근무: ${formatShiftRange(desiredOffEvent)}`,
     ];
     return note ? `${lines.join("\n")}\n\n${note}` : lines.join("\n");
   }
@@ -178,7 +155,7 @@ export default function SwapWriteModal({
         return;
       }
       if (selectedDesiredShifts.length === 0) {
-        toast.error("원하는 시프트를 하나 이상 선택해주세요");
+        toast.error("찾는 근무를 하나 이상 선택해주세요");
         return;
       }
     }
@@ -189,7 +166,7 @@ export default function SwapWriteModal({
         return;
       }
       if (!desiredOffDate) {
-        toast.error("원하는 휴무 날짜를 선택해주세요");
+        toast.error("찾는 휴무 날짜를 선택해주세요");
         return;
       }
       if (myOffDate === desiredOffDate) {
@@ -222,7 +199,7 @@ export default function SwapWriteModal({
 
   return (
     <>
-      <Modal title="시프트 교환 글쓰기" onClose={onClose} maxWidth="max-w-lg">
+      <Modal title="근무 교환 글쓰기" onClose={onClose} maxWidth="max-w-lg">
         <form onSubmit={submit} className="space-y-4">
           <div>
             <label
@@ -275,7 +252,7 @@ export default function SwapWriteModal({
               className="mb-1 block text-xs font-semibold"
               style={{ color: "var(--text-muted)" }}
             >
-              시프트 유형
+              근무 유형
             </label>
             <div className="grid grid-cols-2 gap-2">
               {[
@@ -337,12 +314,6 @@ export default function SwapWriteModal({
                       }`
                     : "날짜를 선택하세요"}
                 </button>
-                <p
-                  className="mt-1 text-xs"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  내가 실제로 근무하는 날짜를 고르면 그 시프트가 자동으로 같이 표시됩니다.
-                </p>
               </div>
 
               <div>
@@ -350,7 +321,7 @@ export default function SwapWriteModal({
                   className="mb-1 block text-xs font-semibold"
                   style={{ color: "var(--text-muted)" }}
                 >
-                  원하는 시프트
+                  찾는 근무
                 </label>
                 <button
                   type="button"
@@ -367,7 +338,7 @@ export default function SwapWriteModal({
                 >
                   {selectedDesiredShifts.length > 0
                     ? formatDesiredShiftSummary(selectedDesiredShifts)
-                    : "원하는 시프트를 선택하세요"}
+                    : "찾는 근무를 선택하세요"}
                 </button>
               </div>
             </>
@@ -405,7 +376,7 @@ export default function SwapWriteModal({
                   className="mb-1 block text-xs font-semibold"
                   style={{ color: "var(--text-muted)" }}
                 >
-                  원하는 휴무 날짜
+                  찾는 휴무 날짜
                 </label>
                 <button
                   type="button"
@@ -425,31 +396,11 @@ export default function SwapWriteModal({
                           ? ` · ${formatShiftRange(desiredOffEvent)}`
                           : ""
                       }`
-                    : "원하는 휴무 날짜를 선택하세요"}
+                    : "찾는 휴무 날짜를 선택하세요"}
                 </button>
               </div>
             </>
           )}
-
-          <div>
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <label
-                className="block text-xs font-semibold"
-                style={{ color: "var(--text-muted)" }}
-              >
-                등록 미리보기
-              </label>
-              {selectedTeamNames.length > 0 && (
-                <span
-                  className="text-[11px] font-medium"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  {formatSelectedTeams(selectedTeamNames)}
-                </span>
-              )}
-            </div>
-            <SwapRequestSummaryCard summary={previewSummary} />
-          </div>
 
           <div>
             <label
@@ -461,7 +412,7 @@ export default function SwapWriteModal({
             <textarea
               value={body}
               onChange={(event) => setBody(event.target.value)}
-              rows={5}
+              rows={4}
               placeholder="내용을 입력하세요."
               className="w-full resize-none rounded-lg border px-3 py-2 text-sm leading-6 focus:outline-none focus:ring-2"
               style={inputStyle}
@@ -520,7 +471,7 @@ export default function SwapWriteModal({
 
       {pickingDesiredOffDate && (
         <SwapDatePickerModal
-          title="원하는 휴무 날짜 선택"
+          title="찾는 휴무 날짜 선택"
           initialDate={desiredOffDate || today}
           selectedDate={desiredOffDate}
           minDate={today}

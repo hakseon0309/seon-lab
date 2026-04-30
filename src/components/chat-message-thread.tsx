@@ -1,6 +1,7 @@
 "use client";
 
 import AvatarImage from "@/components/avatar-image";
+import { toWorkTerminology } from "@/lib/terminology";
 import { formatPostedAt } from "@/lib/time";
 import { BoardMessage } from "@/lib/types";
 
@@ -85,7 +86,9 @@ export default function ChatMessageThread({
                         : "var(--text-primary)",
                     }}
                   >
-                    <p className="whitespace-pre-wrap">{message.body}</p>
+                    <p className="whitespace-pre-wrap">
+                      {toWorkTerminology(message.body)}
+                    </p>
                   </div>
                   {showMeta && (
                     <span

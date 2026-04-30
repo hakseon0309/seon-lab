@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import RouteTransitionDone from "@/components/route-transition-done";
+import { useRouteTransition } from "@/components/route-transition-provider";
 import { useToast } from "@/components/toast-provider";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
@@ -13,6 +14,7 @@ function HomeContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const toast = useToast();
+  const { startNavigation, stopNavigation } = useRouteTransition();
   const handledReasonRef = useRef(false);
   const urlError = searchParams.get("error");
   const error = authError || (urlError ? decodeURIComponent(urlError) : "");
@@ -32,24 +34,32 @@ function HomeContent() {
 
   useEffect(() => {
     const handlePageShow = (e: PageTransitionEvent) => {
-      if (e.persisted) setLoading(false);
+      if (e.persisted) {
+        setLoading(false);
+        stopNavigation();
+      }
     };
     window.addEventListener("pageshow", handlePageShow);
     return () => window.removeEventListener("pageshow", handlePageShow);
-  }, []);
+  }, [stopNavigation]);
 
   async function handleGoogleLogin() {
     setAuthError("");
     setLoading(true);
+    startNavigation();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/api/auth/callback`,
+        queryParams: {
+          prompt: "select_account",
+        },
       },
     });
     if (error) {
       setAuthError(error.message);
       setLoading(false);
+      stopNavigation();
     }
   }
 
@@ -65,10 +75,10 @@ function HomeContent() {
             SEON LAB
           </h1>
           <p className="text-base font-medium" style={{ color: "var(--text-secondary)" }}>
-            팀원들의 근무 시프트를 한눈에 확인하세요
+            팀 근무 일정 공유 서비스
           </p>
           <p className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>
-            캘린더 구독 URL 기반 시프트 공유 서비스
+            캘린더 구독 URL 기반
           </p>
         </div>
 
@@ -97,7 +107,7 @@ function HomeContent() {
             color: "var(--text-secondary)",
           }}
         >
-          {loading ? "이동 중..." : "Google로 시작하기"}
+          Google로 시작하기
         </button>
       </div>
     </div>

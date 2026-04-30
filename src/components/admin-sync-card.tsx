@@ -21,7 +21,7 @@ export default function AdminSyncCard({ syncing, message, onSync }: Props) {
             className="text-sm font-medium"
             style={{ color: "var(--text-primary)" }}
           >
-            모든 사용자 시프트 동기화
+            모든 사용자 근무 일정 동기화
           </p>
           <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
             관리자 권한으로 전체 사용자 ICS 데이터를 즉시 새로고침합니다.

@@ -15,6 +15,7 @@ import {
 import { usePortalTarget } from "@/lib/client-dom";
 import { createClient } from "@/lib/supabase/client";
 import { formatPreviewTitle } from "@/lib/swap-board";
+import { toWorkTerminology } from "@/lib/terminology";
 import {
   Board,
   BoardMessage,
@@ -79,8 +80,8 @@ export default function ChatPostView({
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(post.title);
-  const [editBody, setEditBody] = useState(post.body);
+  const [editTitle, setEditTitle] = useState(toWorkTerminology(post.title));
+  const [editBody, setEditBody] = useState(toWorkTerminology(post.body));
   const [savingEdit, setSavingEdit] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmingDeletePost, setConfirmingDeletePost] = useState(false);
@@ -241,8 +242,8 @@ export default function ChatPostView({
         <button
           type="button"
           onClick={() => {
-            setEditTitle(post.title);
-            setEditBody(post.body);
+            setEditTitle(toWorkTerminology(post.title));
+            setEditBody(toWorkTerminology(post.body));
             setEditing(true);
           }}
           className="interactive-press rounded-lg px-3 py-2 text-sm font-medium"

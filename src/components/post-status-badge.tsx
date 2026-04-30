@@ -2,7 +2,7 @@ import { CSSProperties } from "react";
 
 // 피드백 게시판 상태
 export type FeedbackStatus = "requested" | "accepted" | "resolved";
-// 시프트 교환 게시판 상태
+// 근무 교환 게시판 상태
 export type SwapStatus = "open" | "done";
 
 type Status = FeedbackStatus | SwapStatus;

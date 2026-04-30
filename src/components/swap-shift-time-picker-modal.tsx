@@ -28,10 +28,10 @@ export default function SwapShiftTimePickerModal({
   }
 
   return (
-    <Modal title="원하는 시프트 선택" onClose={onCancel} maxWidth="max-w-md">
+    <Modal title="찾는 근무 선택" onClose={onCancel} maxWidth="max-w-md">
       <div className="space-y-4">
         <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-          원하는 시프트를 선택하세요. 여러 개 선택할 수 있어요.
+          찾는 근무를 선택하세요. 여러 개 선택할 수 있어요.
         </p>
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">

@@ -7,7 +7,6 @@ import DeleteAccountModal from "@/components/delete-account-modal";
 import Modal from "@/components/modal";
 import ProfileAvatarControl from "@/components/profile-avatar-control";
 import { useRouteTransition } from "@/components/route-transition-provider";
-import { useTheme } from "@/lib/theme";
 import { APP_VERSION } from "@/lib/version";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -41,7 +40,6 @@ export default function SettingsForm({
   const supabase = createClient();
   const router = useRouter();
   const { startNavigation } = useRouteTransition();
-  const { theme, toggle } = useTheme();
   const toast = useToast();
 
   useEffect(() => {
@@ -124,7 +122,7 @@ export default function SettingsForm({
 
     toast.success(
       typeof result.synced === "number"
-        ? `${result.synced}개의 시프트를 불러왔어요`
+        ? `${result.synced}개의 근무 일정을 불러왔어요`
         : "캘린더 동기화가 완료됐어요"
     );
     router.refresh();
@@ -133,7 +131,7 @@ export default function SettingsForm({
   async function handleLogout() {
     await supabase.auth.signOut();
     startNavigation();
-    router.push("/login");
+    router.push("/");
   }
 
   async function handleDeleteAccount() {
@@ -230,16 +228,6 @@ export default function SettingsForm({
         >
           <span className="block text-sm font-medium" style={{ color: "var(--text-primary)" }}>
             실험적 기능
-          </span>
-        </button>
-
-        <button
-          onClick={toggle}
-          className="flex w-full items-center justify-between rounded-lg border p-4 text-left"
-          style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-card)" }}
-        >
-          <span className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
-            {theme === "light" ? "다크 모드" : "라이트 모드"}
           </span>
         </button>
 

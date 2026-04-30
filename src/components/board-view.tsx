@@ -5,6 +5,8 @@ import Link from "next/link";
 import AvatarImage from "@/components/avatar-image";
 import PostStatusBadge from "@/components/post-status-badge";
 import { createBoardPost } from "@/lib/board-api-client";
+import { getBoardDisplayName } from "@/lib/boards";
+import { toWorkTerminology } from "@/lib/terminology";
 import { Board, BoardPost } from "@/lib/types";
 import { usePortalTarget } from "@/lib/client-dom";
 import { formatPostedAt } from "@/lib/time";
@@ -117,7 +119,7 @@ export default function BoardView({ board, initialPosts }: BoardViewProps) {
                         고정
                       </span>
                     )}
-                    {post.title}
+                    {toWorkTerminology(post.title)}
                   </p>
                   <p
                     className="mt-0.5 truncate text-xs"
@@ -138,7 +140,7 @@ export default function BoardView({ board, initialPosts }: BoardViewProps) {
 
       <BoardPostEditorModal
         open={writing}
-        modalTitle={`${board.name} 글쓰기`}
+        modalTitle={`${getBoardDisplayName(board.name)} 글쓰기`}
         titleValue={title}
         bodyValue={body}
         saving={saving}

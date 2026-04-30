@@ -7,9 +7,9 @@ import {
 } from "@/lib/time";
 
 // GET /api/shifts/me?date=YYYY-MM-DD
-//   → 해당 하루의 내 시프트 1건 (없으면 null).
+//   → 해당 하루의 내 근무 1건 (없으면 null).
 // GET /api/shifts/me?from=YYYY-MM-DD&to=YYYY-MM-DD  (to 포함)
-//   → 범위 내 모든 시프트. 미니 달력용.
+//   → 범위 내 모든 근무. 미니 달력용.
 export async function GET(request: Request) {
   const supabase = await createClient();
   const {

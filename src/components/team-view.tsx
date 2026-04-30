@@ -20,6 +20,7 @@ import {
 } from "@/lib/team-api-client";
 import { MemberWithEvents } from "@/lib/team-types";
 import { LABEL } from "@/lib/labels";
+import type { KoreanHoliday } from "@/lib/korean-holidays";
 import { Team } from "@/lib/types";
 import { useCallback, useMemo, useState, useTransition } from "react";
 
@@ -29,6 +30,7 @@ interface Props {
   currentUserId: string;
   initialIsFavorite: boolean;
   calendarWindow: CalendarWindow;
+  holidays: KoreanHoliday[];
 }
 
 export type { MemberWithEvents };
@@ -39,6 +41,7 @@ export default function TeamView({
   currentUserId,
   initialIsFavorite,
   calendarWindow,
+  holidays,
 }: Props) {
   const minMonthDate = parseMonthKey(calendarWindow.minMonth);
   const maxMonthDate = parseMonthKey(calendarWindow.maxMonth);
@@ -228,6 +231,7 @@ export default function TeamView({
         <TeamCalendar
           members={members}
           currentDate={currentDate}
+          holidays={holidays}
           onMemberClick={openMemberDetail}
         />
       </main>

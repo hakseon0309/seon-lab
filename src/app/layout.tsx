@@ -9,9 +9,9 @@ import OfflineBanner from "@/components/offline-banner";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SEON LAB — 팀 시프트 공유",
+  title: "SEON LAB — 팀 근무 일정 공유",
   description:
-    "Apple 캘린더 구독 URL을 활용하여 팀원들의 근무 시프트를 한눈에 공유·확인하는 서비스",
+    "Apple 캘린더 구독 URL을 활용하여 팀 근무 일정을 공유·확인하는 서비스",
   applicationName: "SEON LAB",
   appleWebApp: {
     capable: true,

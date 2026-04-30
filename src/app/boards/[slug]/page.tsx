@@ -4,7 +4,7 @@ import RouteTransitionDone from "@/components/route-transition-done";
 import BoardView from "@/components/board-view";
 import BoardManageButton from "@/components/board-manage-button";
 import SwapBoardView from "@/components/swap-board-view";
-import { isShiftSwapBoard } from "@/lib/boards";
+import { getBoardDisplayName, isShiftSwapBoard } from "@/lib/boards";
 import { loadBoardPostsData } from "@/lib/board-server";
 import { loadShiftSwapBoardData } from "@/lib/shift-swap-server";
 import { createClient } from "@/lib/supabase/server";
@@ -37,9 +37,10 @@ export default async function BoardPage({ params }: BoardPageProps) {
 
   const currentBoard = board as Board;
   const isAdmin = Boolean(myProfile?.is_admin);
+  const boardDisplayName = getBoardDisplayName(currentBoard.name);
 
   // ============================================================
-  // 시프트 교환 (chat 타입) 전용 경로
+  // 근무 교환 (chat 타입) 전용 경로
   // ============================================================
   if (isShiftSwapBoard(currentBoard)) {
     const { myTeams, swapPosts } = await loadShiftSwapBoardData({
@@ -58,7 +59,7 @@ export default async function BoardPage({ params }: BoardPageProps) {
               className="min-w-0 flex-1 text-xl font-bold"
               style={{ color: "var(--text-primary)" }}
             >
-              {currentBoard.name}
+              {boardDisplayName}
             </h1>
             <BoardHeaderActionsSlot />
           </div>
@@ -68,6 +69,8 @@ export default async function BoardPage({ params }: BoardPageProps) {
             board={currentBoard}
             initialPosts={swapPosts}
             myTeams={myTeams}
+            currentUserId={user.id}
+            isAdmin={isAdmin}
           />
         </main>
       </>
@@ -94,7 +97,7 @@ export default async function BoardPage({ params }: BoardPageProps) {
             className="min-w-0 flex-1 text-xl font-bold"
             style={{ color: "var(--text-primary)" }}
           >
-            {currentBoard.name}
+            {boardDisplayName}
           </h1>
           <BoardHeaderActionsSlot />
           {isAdmin && <BoardManageButton boardId={currentBoard.id} />}

@@ -1,5 +1,6 @@
 "use client";
 
+import { getBoardDisplayName } from "@/lib/boards";
 import { createClient } from "@/lib/supabase/client";
 
 export interface SidebarBoardLink {
@@ -76,7 +77,7 @@ export function loadSidebarData() {
     const boards =
       boardResult.data?.map((board) => ({
         slug: board.slug,
-        name: board.name,
+        name: getBoardDisplayName(board.name),
       })) ?? [];
 
     sidebarDataCache = { avatar, name, boards };

@@ -3,6 +3,7 @@
 import AvatarImage from "@/components/avatar-image";
 import { formatPostedAt } from "@/lib/time";
 import { labelForNotificationKind } from "@/lib/notification-client";
+import { toWorkTerminology } from "@/lib/terminology";
 import { NotificationRow } from "@/lib/types";
 import Link from "next/link";
 
@@ -113,7 +114,7 @@ export default function NotificationPanel({
                             className="font-medium"
                             style={{ color: "var(--text-secondary)" }}
                           >
-                            {notification.post_title}
+                            {toWorkTerminology(notification.post_title)}
                           </span>
                         </p>
                         {notification.preview && (
@@ -122,7 +123,7 @@ export default function NotificationPanel({
                             style={{ color: "var(--text-muted)" }}
                           >
                             {labelForNotificationKind(notification.kind)} ·{" "}
-                            {notification.preview}
+                            {toWorkTerminology(notification.preview)}
                           </p>
                         )}
                         <p

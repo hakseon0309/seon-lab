@@ -12,6 +12,18 @@ type CreateBody = {
   swap_date?: unknown;
 };
 
+function isMissingBoardPostTeamsError(error: {
+  code?: string | null;
+  message?: string | null;
+}) {
+  const message = error.message ?? "";
+  return (
+    error.code === "42P01" ||
+    (message.includes("board_post_teams") &&
+      (message.includes("schema cache") || message.includes("does not exist")))
+  );
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {
@@ -22,15 +34,27 @@ export async function POST(request: Request) {
   const parsed = await parseJsonBody<CreateBody>(request);
   if (!parsed.ok) return parsed.response;
 
-  const title = typeof parsed.body.title === "string" ? parsed.body.title.trim() : "";
-  const body = typeof parsed.body.body === "string" ? parsed.body.body.trim() : "";
-  const legacyTeamId = typeof parsed.body.team_id === "string" ? parsed.body.team_id : "";
+  const title =
+    typeof parsed.body.title === "string" ? parsed.body.title.trim() : "";
+  const body =
+    typeof parsed.body.body === "string" ? parsed.body.body.trim() : "";
+  const legacyTeamId =
+    typeof parsed.body.team_id === "string" ? parsed.body.team_id : "";
   const requestedTeamIds = Array.isArray(parsed.body.team_ids)
-    ? parsed.body.team_ids.filter((value): value is string => typeof value === "string")
+    ? parsed.body.team_ids.filter(
+        (value): value is string => typeof value === "string"
+      )
     : [];
-  const teamIds = [...new Set((requestedTeamIds.length > 0 ? requestedTeamIds : [legacyTeamId]).filter(Boolean))];
+  const teamIds = [
+    ...new Set(
+      (requestedTeamIds.length > 0 ? requestedTeamIds : [legacyTeamId]).filter(
+        Boolean
+      )
+    ),
+  ];
   const team_id = teamIds[0] ?? "";
-  const swap_date = typeof parsed.body.swap_date === "string" ? parsed.body.swap_date : "";
+  const swap_date =
+    typeof parsed.body.swap_date === "string" ? parsed.body.swap_date : "";
 
   if (title.length < 2) return apiErrors.badRequest("제목을 2자 이상 입력해주세요");
   if (body.length < 2) return apiErrors.badRequest("내용을 2자 이상 입력해주세요");
@@ -50,7 +74,7 @@ export async function POST(request: Request) {
     .from("team_members")
     .select("team_id")
     .in("team_id", teamIds)
-    .eq("user_id", user.id)
+    .eq("user_id", user.id);
   const membershipIds = new Set((memberships ?? []).map((row) => row.team_id));
   if (teamIds.some((id) => !membershipIds.has(id))) {
     return apiErrors.forbidden("내가 속한 팀에만 올릴 수 있어요");
@@ -75,12 +99,21 @@ export async function POST(request: Request) {
     error &&
     ((typeof error.code === "string" && error.code === "PGRST202") ||
       error.message.includes("create_shift_swap_post"));
+  const postTargetTableMissing = error
+    ? isMissingBoardPostTeamsError(error)
+    : false;
 
-  if (error && !rpcMissing) {
+  if (postTargetTableMissing && teamIds.length > 1) {
+    return apiErrors.badRequest(
+      "현재 DB에서는 여러 팀 동시 등록을 사용할 수 없어요. 팀을 하나만 선택해주세요"
+    );
+  }
+
+  if (error && !rpcMissing && !postTargetTableMissing) {
     return apiError(500, error.message);
   }
 
-  if (rpcMissing) {
+  if (rpcMissing || postTargetTableMissing) {
     const { data: legacyPost, error: legacyError } = await supabase
       .from("board_posts")
       .insert({
@@ -98,16 +131,25 @@ export async function POST(request: Request) {
 
     if (legacyError) return apiError(500, legacyError.message);
 
-    const { error: targetError } = await supabase.from("board_post_teams").insert(
-      teamIds.map((id) => ({
-        post_id: legacyPost.id,
-        team_id: id,
-      }))
-    );
+    if (teamIds.length > 1) {
+      const { error: targetError } = await supabase.from("board_post_teams").insert(
+        teamIds.map((id) => ({
+          post_id: legacyPost.id,
+          team_id: id,
+        }))
+      );
 
-    if (targetError) {
-      await supabase.from("board_posts").delete().eq("id", legacyPost.id);
-      return apiError(500, targetError.message);
+      if (targetError) {
+        await supabase.from("board_posts").delete().eq("id", legacyPost.id);
+
+        if (isMissingBoardPostTeamsError(targetError)) {
+          return apiErrors.badRequest(
+            "현재 DB에서는 여러 팀 동시 등록을 사용할 수 없어요. 팀을 하나만 선택해주세요"
+          );
+        }
+
+        return apiError(500, targetError.message);
+      }
     }
 
     createdPostId = legacyPost.id;

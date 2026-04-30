@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "SEON LAB",
     short_name: "SEON LAB",
-    description: "팀원들의 근무 시프트를 한눈에 확인하세요",
+    description: "팀 근무 일정 공유 서비스",
     start_url: "/dashboard",
     display: "standalone",
     orientation: "portrait",

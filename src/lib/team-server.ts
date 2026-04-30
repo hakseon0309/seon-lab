@@ -5,6 +5,10 @@ import {
 } from "@/lib/calendar-window";
 import { createClient } from "@/lib/supabase/server";
 import { MemberWithEvents } from "@/lib/team-types";
+import {
+  getFallbackKoreanHolidays,
+  type KoreanHoliday,
+} from "@/lib/korean-holidays";
 import { CalendarEvent, Team, UserProfile } from "@/lib/types";
 
 type ServerSupabase = Awaited<ReturnType<typeof createClient>>;
@@ -20,6 +24,7 @@ interface TeamDetailData {
   isFavorite: boolean;
   members: MemberWithEvents[];
   calendarWindow: CalendarWindow;
+  holidays: KoreanHoliday[];
 }
 
 const EVENT_COLUMNS =
@@ -32,7 +37,9 @@ export async function loadTeamDetailData({
 }: LoadTeamDetailDataParams): Promise<TeamDetailData> {
   const now = new Date();
   const calendarWindow = createThreeMonthWindow(now);
-  const { startISO, endISO } = getCalendarWindowEventRange(calendarWindow);
+  const { from, to, startISO, endISO } =
+    getCalendarWindowEventRange(calendarWindow);
+  const holidays = getFallbackKoreanHolidays(from, to);
   const [{ data: teamData }, { data: favorite }, { data: memberRows }] =
     await Promise.all([
       supabase.from("teams").select("*").eq("id", teamId).maybeSingle(),
@@ -49,7 +56,13 @@ export async function loadTeamDetailData({
     ]);
 
   if (!teamData) {
-    return { team: null, isFavorite: false, members: [], calendarWindow };
+    return {
+      team: null,
+      isFavorite: false,
+      members: [],
+      calendarWindow,
+      holidays,
+    };
   }
 
   const joinedAtByUser = new Map(
@@ -66,6 +79,7 @@ export async function loadTeamDetailData({
       isFavorite: Boolean(favorite),
       members: [],
       calendarWindow,
+      holidays,
     };
   }
 
@@ -112,5 +126,6 @@ export async function loadTeamDetailData({
     isFavorite: Boolean(favorite),
     members,
     calendarWindow,
+    holidays,
   };
 }

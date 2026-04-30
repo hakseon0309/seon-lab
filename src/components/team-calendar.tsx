@@ -1,10 +1,16 @@
 "use client";
 
-import { memo, Fragment, useEffect, useMemo, useRef } from "react";
+import { memo, Fragment, useEffect, useMemo, useRef, useState } from "react";
 import AvatarImage from "@/components/avatar-image";
 import { formatSeoulTime, getSeoulDateKey } from "@/lib/time";
 import { CalendarEvent, UserProfile } from "@/lib/types";
 import { weekendOverlay, cellBackground } from "@/lib/calendar-style";
+import {
+  getKoreanHolidayByDateKey,
+  getKoreanHolidayFromList,
+} from "@/lib/korean-holidays";
+import type { KoreanHoliday } from "@/lib/korean-holidays";
+import { createPortal } from "react-dom";
 import {
   startOfMonth,
   endOfMonth,
@@ -22,17 +28,33 @@ import { ko } from "date-fns/locale";
 interface Props {
   members: { profile: UserProfile; events: CalendarEvent[] }[];
   currentDate: Date;
+  holidays?: KoreanHoliday[];
   onMemberClick?: (userId: string) => void;
 }
 
-function TeamCalendar({ members, currentDate, onMemberClick }: Props) {
+function TeamCalendar({
+  members,
+  currentDate,
+  holidays = [],
+  onMemberClick,
+}: Props) {
   const today = useMemo(() => new Date(), []);
   const todayWeekRef = useRef<HTMLTableRowElement | null>(null);
+  const [activeHoliday, setActiveHoliday] = useState<{
+    dayKey: string;
+    monthKey: string;
+    name: string;
+    x: number;
+    y: number;
+  } | null>(null);
   const calendarSlotHeightClass = "h-[40px] lg:h-[46px]";
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
   const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+  const currentMonthKey = format(currentDate, "yyyy-MM");
+  const activeHolidayForCurrentMonth =
+    activeHoliday?.monthKey === currentMonthKey ? activeHoliday : null;
   const weekStarts = eachWeekOfInterval(
     { start: calendarStart, end: calendarEnd },
     { weekStartsOn: 1 }
@@ -98,6 +120,37 @@ function TeamCalendar({ members, currentDate, onMemberClick }: Props) {
     return () => window.cancelAnimationFrame(frame);
   }, [currentDate, today]);
 
+  useEffect(() => {
+    if (!activeHolidayForCurrentMonth) return;
+
+    const close = () => setActiveHoliday(null);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+    };
+
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [activeHolidayForCurrentMonth]);
+
+  function showHolidayPopover(
+    dayKey: string,
+    name: string,
+    target: HTMLElement
+  ) {
+    const rect = target.getBoundingClientRect();
+    setActiveHoliday({
+      dayKey,
+      monthKey: currentMonthKey,
+      name,
+      x: rect.left + rect.width / 2,
+      y: rect.top - 8,
+    });
+  }
+
   return (
     <div
       className="overflow-x-hidden lg:rounded-lg border-y lg:border"
@@ -135,6 +188,10 @@ function TeamCalendar({ members, currentDate, onMemberClick }: Props) {
                     }}
                   />
                   {weekDays.map((day) => {
+                    const dayKey = getSeoulDateKey(day);
+                    const holiday =
+                      getKoreanHolidayFromList(dayKey, holidays) ??
+                      getKoreanHolidayByDateKey(dayKey);
                     const inMonth = isSameMonth(day, currentDate);
                     const ws = weekendOverlay(day, inMonth);
                     const headerColor = ws
@@ -156,21 +213,36 @@ function TeamCalendar({ members, currentDate, onMemberClick }: Props) {
                           ...(isToday && { outline: "1.5px solid var(--today-border)", outlineOffset: "-1.5px", zIndex: 1 }),
                         }}
                       >
-                        <div
-                          className={`flex flex-col items-center justify-center ${calendarSlotHeightClass}`}
-                        >
+                        {holiday ? (
+                          <button
+                            type="button"
+                            className={`flex w-full flex-col items-center justify-center ${calendarSlotHeightClass}`}
+                            aria-label={`${format(day, "M월 d일")} ${holiday.name}`}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              showHolidayPopover(
+                                dayKey,
+                                holiday.name,
+                                event.currentTarget
+                              );
+                            }}
+                          >
+                            <HeaderDateText day={day} isToday={isToday} />
+                          </button>
+                        ) : (
                           <div
-                            className="text-[10px]"
-                            style={{ color: "inherit" }}
+                            className={`flex flex-col items-center justify-center ${calendarSlotHeightClass}`}
                           >
-                            {format(day, "EEE", { locale: ko })}
+                            <HeaderDateText day={day} isToday={isToday} />
                           </div>
+                        )}
+                        {holiday && (
                           <span
-                            className={`inline-flex items-center justify-center text-[11px] ${isToday ? "font-bold" : ""}`}
-                          >
-                            {format(day, "d")}
-                          </span>
-                        </div>
+                            className="pointer-events-none absolute inset-x-1 bottom-1 h-1 rounded-full"
+                            style={{ backgroundColor: "var(--holiday-bg)" }}
+                            aria-hidden="true"
+                          />
+                        )}
                       </td>
                     );
                   })}
@@ -246,8 +318,51 @@ function TeamCalendar({ members, currentDate, onMemberClick }: Props) {
           })}
         </tbody>
       </table>
+      {activeHolidayForCurrentMonth && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              className="fixed rounded-lg border px-3 py-2 text-xs font-semibold shadow-xl"
+              role="tooltip"
+              style={{
+                left: activeHolidayForCurrentMonth.x,
+                top: activeHolidayForCurrentMonth.y,
+                zIndex: 1600,
+                transform: "translate(-50%, -100%)",
+                borderColor: "var(--border-light)",
+                backgroundColor: "var(--bg-card)",
+                color: "var(--text-primary)",
+              }}
+            >
+              {activeHolidayForCurrentMonth.name}
+              <span
+                className="absolute left-1/2 top-full h-2 w-2 -translate-x-1/2 -translate-y-1/2 rotate-45 border-b border-r"
+                style={{
+                  borderColor: "var(--border-light)",
+                  backgroundColor: "var(--bg-card)",
+                }}
+                aria-hidden="true"
+              />
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
 }
 
 export default memo(TeamCalendar);
+
+function HeaderDateText({ day, isToday }: { day: Date; isToday: boolean }) {
+  return (
+    <>
+      <div className="text-[10px]" style={{ color: "inherit" }}>
+        {format(day, "EEE", { locale: ko })}
+      </div>
+      <span
+        className={`inline-flex items-center justify-center text-[11px] ${isToday ? "font-bold" : ""}`}
+      >
+        {format(day, "d")}
+      </span>
+    </>
+  );
+}

@@ -97,7 +97,7 @@ export default function CoupleSettingsPanel({ initialCoupleStatus }: { initialCo
           커플 연결
         </h2>
         <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
-          실험 중인 기능이에요. 연결 후 달력에서 서로의 시프트를 함께 볼 수 있습니다.
+          실험 중인 기능이에요. 연결 후 달력에서 서로의 근무 일정을 함께 볼 수 있습니다.
         </p>
       </div>
 
@@ -199,7 +199,7 @@ export default function CoupleSettingsPanel({ initialCoupleStatus }: { initialCo
         {coupleStatus.status === "accepted" && (
           <div className="space-y-3">
             <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-              ♥ <span style={{ color: "var(--primary)" }}>{coupleStatus.partner_name}</span>님과 연결되어 있어요. 달력에서 시프트를 함께 볼 수 있어요.
+              ♥ <span style={{ color: "var(--primary)" }}>{coupleStatus.partner_name}</span>님과 연결되어 있어요. 달력에서 근무 일정을 함께 볼 수 있어요.
             </p>
             <button
               onClick={handleCoupleDelete}

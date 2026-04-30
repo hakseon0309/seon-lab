@@ -50,7 +50,7 @@ export default function SyncButton({ lastSynced }: SyncButtonProps) {
 
     toast.success(
       typeof result.synced === "number"
-        ? `${result.synced}개의 시프트를 불러왔어요`
+        ? `${result.synced}개의 근무 일정을 불러왔어요`
         : "동기화가 완료됐어요"
     );
     try {
