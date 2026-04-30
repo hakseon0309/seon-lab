@@ -2,7 +2,10 @@ import { createClient as createServerClient } from "@supabase/supabase-js";
 import { syncEventsSnapshot } from "@/lib/event-sync";
 import { fetchAndParseICS } from "@/lib/ics-parser";
 import { apiError, apiErrors } from "@/lib/api-error";
-import { getCompletedSwapPostExpiryCutoff } from "@/lib/shift-swap-retention";
+import {
+  getCompletedSwapPostExpiryCutoff,
+  getExpiredSwapDateCutoff,
+} from "@/lib/shift-swap-retention";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
@@ -48,10 +51,21 @@ export async function GET(request: Request) {
     .eq("slug", "shift-swap")
     .maybeSingle();
   let deletedCompletedSwapPosts = 0;
+  let deletedExpiredSwapPosts = 0;
 
   if (boardError) return apiError(500, boardError.message);
 
   if (shiftSwapBoard?.id) {
+    const expiredDateCutoff = getExpiredSwapDateCutoff();
+    const { count: expiredCount, error: expiredError } = await supabase
+      .from("board_posts")
+      .delete({ count: "exact" })
+      .eq("board_id", shiftSwapBoard.id)
+      .lt("swap_date", expiredDateCutoff);
+
+    if (expiredError) return apiError(500, expiredError.message);
+    deletedExpiredSwapPosts = expiredCount ?? 0;
+
     const { count, error } = await supabase
       .from("board_posts")
       .delete({ count: "exact" })
@@ -68,5 +82,6 @@ export async function GET(request: Request) {
     failed,
     total: profileList.length,
     deletedCompletedSwapPosts,
+    deletedExpiredSwapPosts,
   });
 }

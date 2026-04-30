@@ -1,7 +1,10 @@
 "use client";
 
 import Modal from "@/components/modal";
-import { WORK_SHIFT_OPTIONS } from "@/lib/swap-board";
+import {
+  formatWorkShiftOption,
+  WORK_SHIFT_OPTIONS,
+} from "@/lib/swap-board";
 import { useState } from "react";
 
 interface Props {
@@ -53,7 +56,7 @@ export default function SwapShiftTimePickerModal({
                   color: active ? "var(--primary)" : "var(--text-muted)",
                 }}
               >
-                {time}
+                {formatWorkShiftOption(time)}
               </button>
             );
           })}
@@ -86,7 +89,7 @@ export default function SwapShiftTimePickerModal({
                     color: "var(--primary)",
                   }}
                 >
-                  {time} ✕
+                  {formatWorkShiftOption(time)} ✕
                 </button>
               ))}
             </div>

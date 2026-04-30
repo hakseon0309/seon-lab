@@ -26,7 +26,8 @@ import {
   isSameMonth,
   isToday,
 } from "date-fns";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 interface CalendarProps {
   events: CalendarEvent[];
@@ -34,6 +35,10 @@ interface CalendarProps {
   calendarWindow?: CalendarWindow;
   holidays?: KoreanHoliday[];
 }
+
+const EDGE_POPOVER_TAIL_OFFSET = 14;
+const HOLIDAY_POPOVER_TAIL_HEIGHT = 6;
+type HolidayPopoverAlign = "left" | "center" | "right";
 
 export default function Calendar({
   events,
@@ -48,6 +53,14 @@ export default function Calendar({
   const [currentDate, setCurrentDate] = useState(() =>
     parseMonthKey(resolvedWindow.initialMonth)
   );
+  const [activeHoliday, setActiveHoliday] = useState<{
+    dayKey: string;
+    monthKey: string;
+    name: string;
+    x: number;
+    y: number;
+    align: HolidayPopoverAlign;
+  } | null>(null);
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -56,6 +69,9 @@ export default function Calendar({
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
   const previousDisabled = isWindowStartMonth(currentDate, resolvedWindow);
   const nextDisabled = isWindowEndMonth(currentDate, resolvedWindow);
+  const currentMonthKey = format(currentDate, "yyyy-MM");
+  const activeHolidayForCurrentMonth =
+    activeHoliday?.monthKey === currentMonthKey ? activeHoliday : null;
   const myEventsByDayKey = useMemo(() => groupEventsByDayKey(events), [events]);
   const partnerEventsByDayKey = useMemo(
     () => groupEventsByDayKey(partnerEvents),
@@ -63,6 +79,44 @@ export default function Calendar({
   );
 
   const weekDays = ["월", "화", "수", "목", "금", "토", "일"];
+
+  useEffect(() => {
+    if (!activeHolidayForCurrentMonth) return;
+
+    const close = () => setActiveHoliday(null);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+    };
+
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [activeHolidayForCurrentMonth]);
+
+  function showHolidayPopover(
+    dayKey: string,
+    name: string,
+    target: HTMLElement,
+    day: Date
+  ) {
+    const cell = target.closest("[data-calendar-cell='true']") as
+      | HTMLElement
+      | null;
+    const rect = (cell ?? target).getBoundingClientRect();
+    const anchorX = rect.left + rect.width / 2;
+
+    setActiveHoliday({
+      dayKey,
+      monthKey: currentMonthKey,
+      name,
+      x: anchorX,
+      y: rect.top - HOLIDAY_POPOVER_TAIL_HEIGHT,
+      align: getHolidayPopoverAlign(day),
+    });
+  }
 
   return (
     <section className="w-full min-w-0">
@@ -141,9 +195,26 @@ export default function Calendar({
           return (
             <div
               key={day.toISOString()}
+              data-calendar-cell="true"
               className="relative min-h-[82px] overflow-hidden p-1 pb-6 sm:min-h-[108px] sm:p-1.5 sm:pb-7 lg:min-h-[128px] lg:p-2 lg:pb-8"
               style={todayStyle}
             >
+              {holiday && (
+                <button
+                  type="button"
+                  className="absolute inset-0 z-10 border-0 bg-transparent p-0"
+                  aria-label={`${format(day, "M월 d일")} ${holiday.name}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    showHolidayPopover(
+                      dayKey,
+                      holiday.name,
+                      event.currentTarget,
+                      day
+                    );
+                  }}
+                />
+              )}
               <div
                 className={`mb-1 text-xs font-medium sm:text-sm ${isToday(day) ? "font-bold" : ""}`}
                 style={{ color: dayNumColor }}
@@ -189,20 +260,47 @@ export default function Calendar({
               ))}
 
               {holiday && (
-                <div
-                  className="absolute inset-x-1 bottom-1 rounded-sm px-1.5 py-0.5 text-center text-[10px] font-semibold leading-tight sm:inset-x-1.5 sm:text-[11px] lg:inset-x-2"
-                  style={{
-                    backgroundColor: "var(--holiday-bg)",
-                    color: "var(--holiday-text)",
-                  }}
-                >
-                  {holiday.name}
-                </div>
+                <span
+                  className="pointer-events-none absolute inset-x-1 bottom-1 h-1 rounded-full sm:inset-x-1.5 lg:inset-x-2"
+                  style={{ backgroundColor: "var(--holiday-bg)" }}
+                  aria-hidden="true"
+                />
               )}
             </div>
           );
         })}
       </div>
+      {activeHolidayForCurrentMonth && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              className="fixed w-max max-w-[calc(100vw-1rem)] whitespace-nowrap rounded-lg border px-3 py-2 text-xs font-semibold shadow-xl"
+              role="tooltip"
+              style={{
+                left:
+                  activeHolidayForCurrentMonth.align === "left"
+                    ? activeHolidayForCurrentMonth.x - EDGE_POPOVER_TAIL_OFFSET
+                    : activeHolidayForCurrentMonth.align === "right"
+                    ? activeHolidayForCurrentMonth.x + EDGE_POPOVER_TAIL_OFFSET
+                    : activeHolidayForCurrentMonth.x,
+                top: activeHolidayForCurrentMonth.y,
+                zIndex: 1600,
+                transform:
+                  activeHolidayForCurrentMonth.align === "left"
+                    ? "translate(0, -100%)"
+                    : activeHolidayForCurrentMonth.align === "right"
+                    ? "translate(-100%, -100%)"
+                    : "translate(-50%, -100%)",
+                borderColor: "var(--border-light)",
+                backgroundColor: "var(--bg-card)",
+                color: "var(--text-primary)",
+              }}
+            >
+              {activeHolidayForCurrentMonth.name}
+              <HolidayPopoverTail align={activeHolidayForCurrentMonth.align} />
+            </div>,
+            document.body
+          )
+        : null}
     </section>
   );
 }
@@ -221,4 +319,46 @@ function groupEventsByDayKey(events: CalendarEvent[]) {
   }
 
   return eventsByDayKey;
+}
+
+function getHolidayPopoverAlign(day: Date): HolidayPopoverAlign {
+  const dayOfWeek = day.getDay();
+  if (dayOfWeek === 1) return "left";
+  if (dayOfWeek === 0) return "right";
+  return "center";
+}
+
+function HolidayPopoverTail({ align }: { align: HolidayPopoverAlign }) {
+  const horizontalPosition =
+    align === "left"
+      ? `${EDGE_POPOVER_TAIL_OFFSET}px`
+      : align === "right"
+        ? `calc(100% - ${EDGE_POPOVER_TAIL_OFFSET}px)`
+        : "50%";
+
+  return (
+    <>
+      <span
+        className="absolute top-full h-0 w-0 -translate-x-1/2"
+        style={{
+          left: horizontalPosition,
+          borderLeft: `${HOLIDAY_POPOVER_TAIL_HEIGHT}px solid transparent`,
+          borderRight: `${HOLIDAY_POPOVER_TAIL_HEIGHT}px solid transparent`,
+          borderTop: `${HOLIDAY_POPOVER_TAIL_HEIGHT}px solid var(--border-light)`,
+        }}
+        aria-hidden="true"
+      />
+      <span
+        className="absolute h-0 w-0 -translate-x-1/2"
+        style={{
+          left: horizontalPosition,
+          top: "calc(100% - 1px)",
+          borderLeft: "5px solid transparent",
+          borderRight: "5px solid transparent",
+          borderTop: "5px solid var(--bg-card)",
+        }}
+        aria-hidden="true"
+      />
+    </>
+  );
 }

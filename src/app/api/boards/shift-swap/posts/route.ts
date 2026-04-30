@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { apiError, apiErrors, parseJsonBody } from "@/lib/api-error";
 import { getSeoulDateKey } from "@/lib/time";
+import { isSameMondayWeek } from "@/lib/swap-board";
 
 type CreateBody = {
   title?: unknown;
@@ -22,6 +23,26 @@ function isMissingBoardPostTeamsError(error: {
     (message.includes("board_post_teams") &&
       (message.includes("schema cache") || message.includes("does not exist")))
   );
+}
+
+function findStructuredValue(body: string, prefix: string) {
+  return body
+    .split("\n")
+    .map((line) => line.trim())
+    .find((line) => line.startsWith(prefix))
+    ?.slice(prefix.length)
+    .trim();
+}
+
+function parseStructuredSwapDate(value: string | undefined) {
+  if (!value) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+
+  const match = value.match(/(\d{2})\.\s*(\d{2})\.\s*(\d{2})/);
+  if (!match) return "";
+
+  const [, year, month, day] = match;
+  return `20${year}-${month}-${day}`;
 }
 
 export async function POST(request: Request) {
@@ -68,6 +89,24 @@ export async function POST(request: Request) {
   const today = getSeoulDateKey(new Date());
   if (swap_date < today)
     return apiErrors.badRequest("오늘 이후 날짜만 선택할 수 있어요");
+
+  if (findStructuredValue(body, "근무 유형:") === "휴무") {
+    const myOffDate = parseStructuredSwapDate(
+      findStructuredValue(body, "내 휴무 날짜:")
+    );
+
+    if (!myOffDate) {
+      return apiErrors.badRequest("내 휴무 날짜를 선택해주세요");
+    }
+
+    if (myOffDate === swap_date) {
+      return apiErrors.badRequest("서로 다른 날짜를 선택해주세요");
+    }
+
+    if (!isSameMondayWeek(myOffDate, swap_date)) {
+      return apiErrors.badRequest("같은 주차의 날짜만 교환할 수 있어요");
+    }
+  }
 
   // 팀 멤버십 검증
   const { data: memberships } = await supabase

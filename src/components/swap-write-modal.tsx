@@ -22,6 +22,7 @@ import {
   buildWorkRequestTitle,
   formatDesiredShiftSummary,
   formatSelectedTeams,
+  isSameMondayWeek,
   ShiftRequestType,
 } from "@/lib/swap-board";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
@@ -116,6 +117,15 @@ export default function SwapWriteModal({
     setDesiredOffEvent(null);
   }
 
+  function pickMyOffDate(pickedDate: string) {
+    setMyOffDate(pickedDate);
+
+    if (desiredOffDate && !isSameMondayWeek(pickedDate, desiredOffDate)) {
+      setDesiredOffDate("");
+      setDesiredOffEvent(null);
+    }
+  }
+
   function buildPayloadBody() {
     const note = body.trim();
 
@@ -167,6 +177,10 @@ export default function SwapWriteModal({
       }
       if (!desiredOffDate) {
         toast.error("찾는 휴무 날짜를 선택해주세요");
+        return;
+      }
+      if (!isSameMondayWeek(myOffDate, desiredOffDate)) {
+        toast.error("같은 주차의 날짜만 교환할 수 있어요");
         return;
       }
       if (myOffDate === desiredOffDate) {
@@ -380,7 +394,13 @@ export default function SwapWriteModal({
                 </label>
                 <button
                   type="button"
-                  onClick={() => setPickingDesiredOffDate(true)}
+                  onClick={() => {
+                    if (!myOffDate) {
+                      toast.error("내 휴무 날짜를 먼저 선택해주세요");
+                      return;
+                    }
+                    setPickingDesiredOffDate(true);
+                  }}
                   className="interactive-press w-full rounded-lg border px-3 py-2 text-left text-sm"
                   style={{
                     backgroundColor: "var(--input-bg)",
@@ -463,7 +483,7 @@ export default function SwapWriteModal({
           eventsByDate={prefetchedEventsByDate}
           onCancel={() => setPickingMyOffDate(false)}
           onPick={(pickedDate) => {
-            setMyOffDate(pickedDate);
+            pickMyOffDate(pickedDate);
             setPickingMyOffDate(false);
           }}
         />
@@ -472,10 +492,11 @@ export default function SwapWriteModal({
       {pickingDesiredOffDate && (
         <SwapDatePickerModal
           title="찾는 휴무 날짜 선택"
-          initialDate={desiredOffDate || today}
+          initialDate={desiredOffDate || myOffDate || today}
           selectedDate={desiredOffDate}
           minDate={today}
           selectionMode="workOnly"
+          sameWeekAnchorDate={myOffDate}
           calendarWindow={calendarWindow}
           eventsByDate={prefetchedEventsByDate}
           onCancel={() => setPickingDesiredOffDate(false)}

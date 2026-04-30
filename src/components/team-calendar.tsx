@@ -32,6 +32,10 @@ interface Props {
   onMemberClick?: (userId: string) => void;
 }
 
+const EDGE_POPOVER_TAIL_OFFSET = 14;
+const HOLIDAY_POPOVER_TAIL_HEIGHT = 6;
+type HolidayPopoverAlign = "left" | "center" | "right";
+
 function TeamCalendar({
   members,
   currentDate,
@@ -46,6 +50,7 @@ function TeamCalendar({
     name: string;
     x: number;
     y: number;
+    align: HolidayPopoverAlign;
   } | null>(null);
   const calendarSlotHeightClass = "h-[40px] lg:h-[46px]";
   const monthStart = startOfMonth(currentDate);
@@ -139,15 +144,18 @@ function TeamCalendar({
   function showHolidayPopover(
     dayKey: string,
     name: string,
-    target: HTMLElement
+    target: HTMLElement,
+    day: Date
   ) {
-    const rect = target.getBoundingClientRect();
+    const rect = (target.closest("td") ?? target).getBoundingClientRect();
+    const anchorX = rect.left + rect.width / 2;
     setActiveHoliday({
       dayKey,
       monthKey: currentMonthKey,
       name,
-      x: rect.left + rect.width / 2,
-      y: rect.top - 8,
+      x: anchorX,
+      y: rect.top - HOLIDAY_POPOVER_TAIL_HEIGHT,
+      align: getHolidayPopoverAlign(day),
     });
   }
 
@@ -223,7 +231,8 @@ function TeamCalendar({
                               showHolidayPopover(
                                 dayKey,
                                 holiday.name,
-                                event.currentTarget
+                                event.currentTarget,
+                                day
                               );
                             }}
                           >
@@ -321,27 +330,30 @@ function TeamCalendar({
       {activeHolidayForCurrentMonth && typeof document !== "undefined"
         ? createPortal(
             <div
-              className="fixed rounded-lg border px-3 py-2 text-xs font-semibold shadow-xl"
+              className="fixed w-max max-w-[calc(100vw-1rem)] whitespace-nowrap rounded-lg border px-3 py-2 text-xs font-semibold shadow-xl"
               role="tooltip"
               style={{
-                left: activeHolidayForCurrentMonth.x,
+                left:
+                  activeHolidayForCurrentMonth.align === "left"
+                    ? activeHolidayForCurrentMonth.x - EDGE_POPOVER_TAIL_OFFSET
+                    : activeHolidayForCurrentMonth.align === "right"
+                    ? activeHolidayForCurrentMonth.x + EDGE_POPOVER_TAIL_OFFSET
+                    : activeHolidayForCurrentMonth.x,
                 top: activeHolidayForCurrentMonth.y,
                 zIndex: 1600,
-                transform: "translate(-50%, -100%)",
+                transform:
+                  activeHolidayForCurrentMonth.align === "left"
+                    ? "translate(0, -100%)"
+                    : activeHolidayForCurrentMonth.align === "right"
+                    ? "translate(-100%, -100%)"
+                    : "translate(-50%, -100%)",
                 borderColor: "var(--border-light)",
                 backgroundColor: "var(--bg-card)",
                 color: "var(--text-primary)",
               }}
             >
               {activeHolidayForCurrentMonth.name}
-              <span
-                className="absolute left-1/2 top-full h-2 w-2 -translate-x-1/2 -translate-y-1/2 rotate-45 border-b border-r"
-                style={{
-                  borderColor: "var(--border-light)",
-                  backgroundColor: "var(--bg-card)",
-                }}
-                aria-hidden="true"
-              />
+              <HolidayPopoverTail align={activeHolidayForCurrentMonth.align} />
             </div>,
             document.body
           )
@@ -363,6 +375,48 @@ function HeaderDateText({ day, isToday }: { day: Date; isToday: boolean }) {
       >
         {format(day, "d")}
       </span>
+    </>
+  );
+}
+
+function getHolidayPopoverAlign(day: Date): HolidayPopoverAlign {
+  const dayOfWeek = day.getDay();
+  if (dayOfWeek === 1) return "left";
+  if (dayOfWeek === 0) return "right";
+  return "center";
+}
+
+function HolidayPopoverTail({ align }: { align: HolidayPopoverAlign }) {
+  const horizontalPosition =
+    align === "left"
+      ? `${EDGE_POPOVER_TAIL_OFFSET}px`
+      : align === "right"
+        ? `calc(100% - ${EDGE_POPOVER_TAIL_OFFSET}px)`
+        : "50%";
+
+  return (
+    <>
+      <span
+        className="absolute top-full h-0 w-0 -translate-x-1/2"
+        style={{
+          left: horizontalPosition,
+          borderLeft: `${HOLIDAY_POPOVER_TAIL_HEIGHT}px solid transparent`,
+          borderRight: `${HOLIDAY_POPOVER_TAIL_HEIGHT}px solid transparent`,
+          borderTop: `${HOLIDAY_POPOVER_TAIL_HEIGHT}px solid var(--border-light)`,
+        }}
+        aria-hidden="true"
+      />
+      <span
+        className="absolute h-0 w-0 -translate-x-1/2"
+        style={{
+          left: horizontalPosition,
+          top: "calc(100% - 1px)",
+          borderLeft: "5px solid transparent",
+          borderRight: "5px solid transparent",
+          borderTop: "5px solid var(--bg-card)",
+        }}
+        aria-hidden="true"
+      />
     </>
   );
 }

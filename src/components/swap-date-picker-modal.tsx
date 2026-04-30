@@ -16,6 +16,7 @@ import {
   DatePickerSelectionMode,
   getCalendarRange,
   hasAnyDataInWeek,
+  isSameMondayWeek,
   isoDate,
 } from "@/lib/swap-board";
 import { useMemo, useState } from "react";
@@ -26,6 +27,7 @@ export interface SwapDatePickerModalProps {
   selectedDate?: string;
   minDate: string;
   selectionMode?: DatePickerSelectionMode;
+  sameWeekAnchorDate?: string;
   calendarWindow?: CalendarWindow;
   eventsByDate?: Map<string, SwapEvent>;
   onCancel: () => void;
@@ -38,6 +40,7 @@ export default function SwapDatePickerModal({
   selectedDate,
   minDate,
   selectionMode = "all",
+  sameWeekAnchorDate,
   calendarWindow,
   eventsByDate,
   onCancel,
@@ -148,7 +151,10 @@ export default function SwapDatePickerModal({
               selectionMode === "all" ||
               (selectionMode === "workOnly" && hasWork) ||
               (selectionMode === "offOnly" && !hasWork && weekHasAnyData);
-            const disabled = date < minDate || !matchesMode;
+            const matchesWeek =
+              !sameWeekAnchorDate ||
+              isSameMondayWeek(date, sameWeekAnchorDate);
+            const disabled = date < minDate || !matchesMode || !matchesWeek;
             const selected = date === selectedDate;
             const dayNumber = Number(date.split("-")[2]);
 
@@ -191,7 +197,11 @@ export default function SwapDatePickerModal({
           className="text-center text-[11px]"
           style={{ color: "var(--text-muted)" }}
         >
-          {selectionMode === "offOnly"
+          {sameWeekAnchorDate && selectionMode === "workOnly"
+            ? "선택한 날짜와 같은 주차의 근무일만 선택할 수 있습니다."
+            : sameWeekAnchorDate
+              ? "선택한 날짜와 같은 주차만 선택할 수 있습니다."
+              : selectionMode === "offOnly"
             ? "휴무인 날만 선택할 수 있습니다."
             : selectionMode === "workOnly"
               ? "근무가 있는 날만 선택할 수 있습니다."

@@ -52,14 +52,6 @@ function SwapPostTitleCard({
           <CompactSummaryRow row={summary.mine} />
           <CompactSummaryRow row={summary.target} />
         </div>
-        {summary.target.secondary && (
-          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-            <CompactToken tone="neutral">받는 근무</CompactToken>
-            <CompactToken tone="plain">
-              {summary.target.secondary.replace(/^그날 내 근무\s*/, "")}
-            </CompactToken>
-          </div>
-        )}
         {summary.note && (
           <p
             className="truncate rounded-md px-2 py-1 text-xs"
@@ -77,8 +69,17 @@ function SwapPostTitleCard({
 }
 
 function CompactSummaryRow({ row }: { row: SwapSummaryRow }) {
-  const visibleValues = row.values.slice(0, 2);
+  const showSingleTargetShift =
+    row.displayMode === "shiftOptions" && row.values.length > 1;
+  const visibleCount =
+    row.displayMode === "scheduleFlow"
+      ? row.values.length
+      : showSingleTargetShift
+        ? 1
+        : 2;
+  const visibleValues = row.values.slice(0, visibleCount);
   const hasMore = row.values.length > visibleValues.length;
+  const hiddenCount = row.values.length - visibleValues.length;
 
   return (
     <>
@@ -86,18 +87,46 @@ function CompactSummaryRow({ row }: { row: SwapSummaryRow }) {
         {row.label}
       </CompactToken>
       <CompactToken tone="plain">{row.date}</CompactToken>
-      <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
+      <div
+        className={`flex min-w-0 items-center gap-1.5 ${
+          row.displayMode === "scheduleFlow"
+            ? "overflow-visible whitespace-nowrap"
+            : "overflow-visible"
+        }`}
+      >
         {visibleValues.map((value, index) => (
-          <CompactToken
-            key={`${row.label}-${value}-${index}`}
-            tone={row.tone === "target" ? "targetSoft" : "plain"}
-          >
-            {value}
-          </CompactToken>
+          value === "→" ? (
+            <span
+              key={`${row.label}-${value}-${index}`}
+              className="shrink-0 text-sm font-semibold"
+              style={{ color: "var(--text-muted)" }}
+            >
+              {value}
+            </span>
+          ) : (
+            <CompactToken
+              key={`${row.label}-${value}-${index}`}
+              tone={
+                value === "휴무"
+                  ? "off"
+                  : row.tone === "target"
+                    ? "targetSoft"
+                    : "plain"
+              }
+            >
+              {value}
+            </CompactToken>
+          )
         ))}
+        {row.secondary && (
+          <CompactToken tone="plain">{row.secondary}</CompactToken>
+        )}
         {hasMore && (
-          <CompactToken tone={row.tone === "target" ? "targetSoft" : "plain"}>
-            ...
+          <CompactToken
+            tone={row.tone === "target" ? "targetSoft" : "plain"}
+            className="shrink-0"
+          >
+            {`+${hiddenCount}`}
           </CompactToken>
         )}
       </div>
@@ -108,9 +137,11 @@ function CompactSummaryRow({ row }: { row: SwapSummaryRow }) {
 function CompactToken({
   children,
   tone,
+  className = "",
 }: {
   children: string;
-  tone: "neutral" | "target" | "targetSoft" | "plain";
+  tone: "neutral" | "target" | "targetSoft" | "plain" | "off";
+  className?: string;
 }) {
   const styles = {
     neutral: {
@@ -133,11 +164,16 @@ function CompactToken({
       backgroundColor: "var(--bg-card)",
       color: "var(--text-primary)",
     },
+    off: {
+      borderColor: "var(--border-light)",
+      backgroundColor: "var(--bg-muted)",
+      color: "var(--text-secondary)",
+    },
   }[tone];
 
   return (
     <span
-      className="inline-flex min-h-7 max-w-full items-center rounded-md border px-2 py-1 text-[11px] font-semibold leading-tight"
+      className={`inline-flex min-h-7 max-w-full shrink-0 items-center rounded-md border px-2 py-1 text-[11px] font-semibold leading-tight ${className}`}
       style={styles}
     >
       <span className="truncate">{children}</span>

@@ -14,6 +14,16 @@ export const WORK_SHIFT_OPTIONS = [
   "13:30",
 ] as const;
 
+export const WORK_SHIFT_END_BY_START: Record<string, string> = {
+  "08:00": "17:00",
+  "09:00": "18:00",
+  "09:30": "18:30",
+  "09:45": "18:45",
+  "11:00": "20:00",
+  "12:00": "21:00",
+  "13:30": "22:30",
+};
+
 export type ShiftRequestType = "work" | "off";
 export type DatePickerSelectionMode = "all" | "workOnly" | "offOnly";
 
@@ -23,6 +33,7 @@ export interface SwapSummaryRow {
   values: string[];
   secondary?: string;
   tone: "mine" | "target";
+  displayMode?: "shiftOptions" | "scheduleFlow";
 }
 
 export interface SwapSummaryCardData {
@@ -94,6 +105,12 @@ export function formatSelectedTeams(teamNames: string[]) {
   return `${teamNames[0]} 외 ${teamNames.length - 1}팀`;
 }
 
+export function formatWorkShiftOption(time: string) {
+  return WORK_SHIFT_END_BY_START[time]
+    ? `${time} – ${WORK_SHIFT_END_BY_START[time]}`
+    : time;
+}
+
 export function buildWorkRequestTitle(times: string[]) {
   const summary = formatDesiredShiftSummary(times);
   return summary ? `${summary} 근무 원해요` : "근무 교환 원해요";
@@ -117,40 +134,44 @@ export function buildSwapSummaryFromPost(post: SwapPost): SwapSummaryCardData {
       typeLabel: "휴무 교환",
       note: structured.note,
       mine: {
-        label: "내 휴무",
+        label: "나의 일정",
         date: toCardDate(structured.myOffDate),
         values: ["휴무"],
         tone: "mine",
       },
       target: {
-        label: "찾는 휴무",
+        label: "찾는 일정",
         date: toCardDate(structured.desiredOffDate),
-        values: ["휴무"],
-        secondary: structured.desiredOffShift
-          ? `그날 내 근무 ${structured.desiredOffShift}`
-          : undefined,
+        values: structured.desiredOffShift
+          ? [formatDesiredShiftValue(structured.desiredOffShift), "→", "휴무"]
+          : ["휴무"],
         tone: "target",
+        displayMode: "scheduleFlow",
       },
     };
   }
 
   const swapDate = post.swap_date ? toCardDate(post.swap_date) : "날짜 미정";
   const desiredShiftSummary = structured.desiredShifts || post.title;
+  const desiredShiftValues = sortShiftValues(
+    splitShiftValues(toWorkTerminology(desiredShiftSummary))
+  ).map(formatDesiredShiftValue);
 
   return {
     typeLabel: "근무 교환",
     note: structured.note,
     mine: {
-      label: "내 근무",
+      label: "나의 일정",
       date: swapDate,
       values: [formatShiftRange(post.swap_event)],
       tone: "mine",
     },
     target: {
-      label: "찾는 근무",
+      label: "찾는 일정",
       date: swapDate,
-      values: splitShiftValues(toWorkTerminology(desiredShiftSummary)),
+      values: desiredShiftValues,
       tone: "target",
+      displayMode: "shiftOptions",
     },
   };
 }
@@ -166,6 +187,10 @@ export function hasAnyDataInWeek(
     }
   }
   return false;
+}
+
+export function isSameMondayWeek(a: string, b: string) {
+  return getWeekStartIso(a) === getWeekStartIso(b);
 }
 
 function getWeekStartIso(date: string) {
@@ -255,9 +280,15 @@ function toCardDate(value: string | null | undefined) {
 
 function formatSwapDateForCard(value: string) {
   const match = value.match(/(\d{2})\.\s*(\d{2})\.\s*(\d{2})\s*\((.)\)/);
-  if (!match) return value;
+  if (!match) {
+    const compactMatch = value.match(/(\d{1,2})\/(\d{1,2})\s*\((.)\)/);
+    if (!compactMatch) return value;
+    const [, month, day, weekday] = compactMatch;
+    return `${Number(month)}월 ${Number(day)}일 ${weekday}요일`;
+  }
+
   const [, , month, day, weekday] = match;
-  return `${month}/${day} (${weekday})`;
+  return `${Number(month)}월 ${Number(day)}일 ${weekday}요일`;
 }
 
 function splitShiftValues(value: string) {
@@ -265,8 +296,45 @@ function splitShiftValues(value: string) {
   if (value.includes(",")) {
     return value
       .split(",")
-      .map((part) => part.trim())
+      .map(cleanDesiredShiftValue)
       .filter(Boolean);
   }
-  return [value];
+  return [cleanDesiredShiftValue(value)];
+}
+
+function cleanDesiredShiftValue(value: string) {
+  return value
+    .replace(/\s*근무\s*원해요\s*$/u, "")
+    .replace(/\s*교환\s*원해요\s*$/u, "")
+    .trim();
+}
+
+function sortShiftValues(values: string[]) {
+  return [...values].sort(
+    (a, b) => getShiftSortMinutes(a) - getShiftSortMinutes(b)
+  );
+}
+
+function getShiftSortMinutes(value: string) {
+  const match = value.match(/(\d{2}):(\d{2})/);
+  if (!match) return Number.MAX_SAFE_INTEGER;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function formatDesiredShiftValue(value: string) {
+  const cleanValue = cleanDesiredShiftValue(value);
+  const times = [...cleanValue.matchAll(/(\d{2}:\d{2})/g)].map(
+    (match) => match[1]
+  );
+  const [start, end] = times;
+
+  if (start && end) {
+    return `${start} – ${end}`;
+  }
+
+  if (start && WORK_SHIFT_END_BY_START[start]) {
+    return `${start} – ${WORK_SHIFT_END_BY_START[start]}`;
+  }
+
+  return cleanValue || "근무 협의";
 }
