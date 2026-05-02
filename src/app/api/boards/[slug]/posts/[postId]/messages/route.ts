@@ -3,9 +3,17 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { apiError, apiErrors, parseJsonBody } from "@/lib/api-error";
 import { isShiftSwapBoard } from "@/lib/boards";
+import { notifyShiftSwapMessageCreated } from "@/lib/push-server";
 import { Board, BoardMessage } from "@/lib/types";
 
+export const runtime = "nodejs";
+
 type RouteBoard = Pick<Board, "id" | "slug" | "kind">;
+type RoutePost = {
+  id: string;
+  title: string;
+  author_id: string | null;
+};
 
 async function loadBoardAndPost(
   slug: string,
@@ -15,7 +23,7 @@ async function loadBoardAndPost(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { supabase, user: null, board: null, postExists: false as const };
+  if (!user) return { supabase, user: null, board: null, post: null };
 
   const { data: boardData } = await supabase
     .from("boards")
@@ -28,12 +36,12 @@ async function loadBoardAndPost(
     : null;
 
   if (!board) {
-    return { supabase, user, board: null, postExists: false as const };
+    return { supabase, user, board: null, post: null };
   }
 
   const { data: post } = await supabase
     .from("board_posts")
-    .select("id")
+    .select("id, title, author_id")
     .eq("id", postId)
     .eq("board_id", board.id)
     .maybeSingle();
@@ -42,7 +50,7 @@ async function loadBoardAndPost(
     supabase,
     user,
     board,
-    postExists: Boolean(post),
+    post: (post as RoutePost | null) ?? null,
   };
 }
 
@@ -51,9 +59,9 @@ export async function GET(
   { params }: { params: Promise<{ slug: string; postId: string }> }
 ) {
   const { slug, postId } = await params;
-  const { supabase, user, board, postExists } = await loadBoardAndPost(slug, postId);
+  const { supabase, user, board, post } = await loadBoardAndPost(slug, postId);
   if (!user) return apiErrors.unauthorized();
-  if (!board || !postExists) return apiErrors.notFound();
+  if (!board || !post) return apiErrors.notFound();
 
   const { data: messages, error } = await supabase
     .from("board_messages")
@@ -106,9 +114,9 @@ export async function POST(
   { params }: { params: Promise<{ slug: string; postId: string }> }
 ) {
   const { slug, postId } = await params;
-  const { supabase, user, board, postExists } = await loadBoardAndPost(slug, postId);
+  const { supabase, user, board, post } = await loadBoardAndPost(slug, postId);
   if (!user) return apiErrors.unauthorized();
-  if (!board || !postExists) return apiErrors.notFound();
+  if (!board || !post) return apiErrors.notFound();
 
   const parsed = await parseJsonBody<CreateBody>(request);
   if (!parsed.ok) return parsed.response;
@@ -135,6 +143,19 @@ export async function POST(
     .maybeSingle();
 
   revalidatePath(`/boards/${slug}/${postId}`);
+  try {
+    await notifyShiftSwapMessageCreated({
+      postId,
+      postTitle: post.title,
+      postAuthorId: post.author_id,
+      actorId: user.id,
+      actorName: profile?.display_name || "이름 없음",
+      body,
+    });
+  } catch {
+    // Push delivery should never make message creation fail.
+  }
+
   return NextResponse.json({
     message: {
       ...data,

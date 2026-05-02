@@ -3,7 +3,10 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { apiError, apiErrors, parseJsonBody } from "@/lib/api-error";
 import { getSeoulDateKey } from "@/lib/time";
+import { notifyShiftSwapPostCreated } from "@/lib/push-server";
 import { isSameMondayWeek } from "@/lib/swap-board";
+
+export const runtime = "nodejs";
 
 type CreateBody = {
   title?: unknown;
@@ -195,5 +198,26 @@ export async function POST(request: Request) {
   }
 
   revalidatePath("/boards/shift-swap");
+
+  if (createdPostId) {
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("display_name")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    try {
+      await notifyShiftSwapPostCreated({
+        postId: createdPostId,
+        title,
+        authorId: user.id,
+        actorName: profile?.display_name || "이름 없음",
+        teamIds,
+      });
+    } catch {
+      // Push delivery should never make post creation fail.
+    }
+  }
+
   return NextResponse.json({ id: createdPostId });
 }

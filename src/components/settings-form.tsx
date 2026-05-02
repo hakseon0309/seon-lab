@@ -6,6 +6,7 @@ import { requestCalendarSync } from "@/lib/calendar-sync-client";
 import DeleteAccountModal from "@/components/delete-account-modal";
 import Modal from "@/components/modal";
 import ProfileAvatarControl from "@/components/profile-avatar-control";
+import PushNotificationControl from "@/components/push-notification-control";
 import { useRouteTransition } from "@/components/route-transition-provider";
 import { APP_VERSION } from "@/lib/version";
 import { setTeamScheduleSharing } from "@/lib/team-api-client";
@@ -322,6 +323,8 @@ export default function SettingsForm({
             </div>
           </section>
         )}
+
+        <PushNotificationControl />
 
         <button
           onClick={() => {
