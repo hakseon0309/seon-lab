@@ -6,6 +6,7 @@ export interface UserProfile {
   is_admin?: boolean;
   avatar_url?: string | null;
   avatar_path?: string | null;
+  onboarding_completed_at?: string | null;
   created_at: string;
 }
 
@@ -50,6 +51,7 @@ export interface TeamMember {
   team_id: string;
   user_id: string;
   joined_at: string;
+  share_schedule?: boolean;
   user_profiles?: UserProfile;
 }
 

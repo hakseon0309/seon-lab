@@ -8,6 +8,7 @@ import Modal from "@/components/modal";
 import ProfileAvatarControl from "@/components/profile-avatar-control";
 import { useRouteTransition } from "@/components/route-transition-provider";
 import { APP_VERSION } from "@/lib/version";
+import { setTeamScheduleSharing } from "@/lib/team-api-client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -17,6 +18,11 @@ interface Props {
   initialAvatarUrl: string | null;
   isAdmin: boolean;
   ownedTeams: { id: string; name: string }[];
+  initialScheduleShareTeams: {
+    id: string;
+    name: string;
+    shareSchedule: boolean;
+  }[];
 }
 
 export default function SettingsForm({
@@ -25,6 +31,7 @@ export default function SettingsForm({
   initialAvatarUrl,
   isAdmin,
   ownedTeams,
+  initialScheduleShareTeams,
 }: Props) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [displayName, setDisplayName] = useState(initialDisplayName);
@@ -36,6 +43,10 @@ export default function SettingsForm({
   const [urlSaved, setUrlSaved] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
+  const [scheduleShareTeams, setScheduleShareTeams] = useState(
+    initialScheduleShareTeams
+  );
+  const [savingShareTeamId, setSavingShareTeamId] = useState<string | null>(null);
 
   const supabase = createClient();
   const router = useRouter();
@@ -145,6 +156,35 @@ export default function SettingsForm({
     router.push("/");
   }
 
+  async function toggleScheduleSharing(teamId: string) {
+    const current = scheduleShareTeams.find((team) => team.id === teamId);
+    if (!current || savingShareTeamId) return;
+
+    const nextShare = !current.shareSchedule;
+    setSavingShareTeamId(teamId);
+    setScheduleShareTeams((prev) =>
+      prev.map((team) =>
+        team.id === teamId ? { ...team, shareSchedule: nextShare } : team
+      )
+    );
+
+    const result = await setTeamScheduleSharing(teamId, nextShare);
+    setSavingShareTeamId(null);
+
+    if (!result.ok) {
+      setScheduleShareTeams((prev) =>
+        prev.map((team) =>
+          team.id === teamId ? { ...team, shareSchedule: current.shareSchedule } : team
+        )
+      );
+      toast.error(result.error || "일정 공유 설정 변경에 실패했습니다");
+      return;
+    }
+
+    toast.success(nextShare ? "이 팀에 근무 일정을 공유합니다" : "이 팀에서는 근무 일정을 숨깁니다");
+    router.refresh();
+  }
+
   const inputStyle = {
     backgroundColor: "var(--input-bg)",
     borderColor: "var(--input-border)",
@@ -217,6 +257,71 @@ export default function SettingsForm({
             )}
           </form>
         </div>
+
+        {scheduleShareTeams.length > 0 && (
+          <section
+            className="rounded-lg border p-4"
+            style={{
+              borderColor: "var(--border-light)",
+              backgroundColor: "var(--bg-card)",
+            }}
+          >
+            <div className="mb-3">
+              <h2
+                className="text-sm font-semibold"
+                style={{ color: "var(--text-primary)" }}
+              >
+                팀별 근무 일정 공유
+              </h2>
+              <p className="mt-1 text-xs leading-5" style={{ color: "var(--text-muted)" }}>
+                끄면 해당 팀 화면에서 내 근무 시간이 보이지 않습니다.
+              </p>
+            </div>
+            <div className="space-y-2">
+              {scheduleShareTeams.map((team) => (
+                <div
+                  key={team.id}
+                  className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5"
+                  style={{
+                    borderColor: "var(--border-light)",
+                    backgroundColor: "var(--bg-surface)",
+                  }}
+                >
+                  <span
+                    className="min-w-0 truncate text-sm font-medium"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    {team.name}
+                  </span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={team.shareSchedule}
+                    disabled={savingShareTeamId === team.id}
+                    onClick={() => toggleScheduleSharing(team.id)}
+                    className="relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-50"
+                    style={{
+                      backgroundColor: team.shareSchedule
+                        ? "var(--primary)"
+                        : "var(--border)",
+                    }}
+                  >
+                    <span
+                      className="absolute top-1 h-5 w-5 rounded-full transition-transform"
+                      style={{
+                        left: "0.25rem",
+                        backgroundColor: "var(--bg-card)",
+                        transform: team.shareSchedule
+                          ? "translateX(1.25rem)"
+                          : "translateX(0)",
+                      }}
+                    />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         <button
           onClick={() => {

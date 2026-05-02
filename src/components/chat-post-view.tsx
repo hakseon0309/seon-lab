@@ -154,9 +154,7 @@ export default function ChatPostView({
     };
   }, [currentUserId, post.id]);
 
-  async function send(event: React.FormEvent) {
-    event.preventDefault();
-    const body = input.trim();
+  async function sendBody(body: string) {
     if (body.length < 1) return;
     if (post.swap_status === "done") {
       toast.error("완료된 글에는 메시지를 보낼 수 없어요");
@@ -179,6 +177,11 @@ export default function ChatPostView({
     });
     setMessages((prev) => [...prev, message]);
     setInput("");
+  }
+
+  async function send(event: React.FormEvent) {
+    event.preventDefault();
+    await sendBody(input.trim());
   }
 
   async function saveEdit(event: React.FormEvent) {
@@ -296,6 +299,10 @@ export default function ChatPostView({
       )}
     </div>
   );
+  const canQuickApply =
+    !canEdit &&
+    post.swap_status === "open" &&
+    !messages.some((message) => message.author_id === currentUserId);
 
   return (
     <div className="flex flex-col">
@@ -316,6 +323,23 @@ export default function ChatPostView({
         messages={messages}
       />
       <div ref={listEndRef} />
+
+      {canQuickApply && (
+        <div className="mx-4 mt-4 lg:mx-0">
+          <button
+            type="button"
+            onClick={() => sendBody("교환 신청합니다.")}
+            disabled={sending}
+            className="interactive-press w-full rounded-lg px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
+            style={{
+              backgroundColor: "var(--success-bg)",
+              color: "var(--success)",
+            }}
+          >
+            교환 신청
+          </button>
+        </div>
+      )}
 
       <ChatComposer
         value={input}

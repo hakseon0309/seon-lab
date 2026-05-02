@@ -81,6 +81,14 @@ export default function MemberDetailSection({
             {formatDate(member.joinedAt)}
           </dd>
         </div>
+        <div className="flex items-center justify-between">
+          <dt className="text-xs" style={{ color: "var(--text-muted)" }}>
+            일정 공유
+          </dt>
+          <dd className="text-sm" style={{ color: "var(--text-primary)" }}>
+            {member.shareSchedule ? "공유 중" : "공유 안 함"}
+          </dd>
+        </div>
       </dl>
 
       {error && (

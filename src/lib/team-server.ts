@@ -51,7 +51,7 @@ export async function loadTeamDetailData({
         .maybeSingle(),
       supabase
         .from("team_members")
-        .select("user_id, joined_at")
+        .select("user_id, joined_at, share_schedule")
         .eq("team_id", teamId),
     ]);
 
@@ -71,7 +71,18 @@ export async function loadTeamDetailData({
       row.joined_at,
     ])
   );
+  const shareScheduleByUser = new Map(
+    (memberRows ?? []).map(
+      (row: { user_id: string; share_schedule: boolean | null }) => [
+        row.user_id,
+        row.share_schedule ?? true,
+      ]
+    )
+  );
   const userIds = (memberRows ?? []).map((row: { user_id: string }) => row.user_id);
+  const visibleEventUserIds = userIds.filter(
+    (memberId) => memberId === userId || shareScheduleByUser.get(memberId) !== false
+  );
 
   if (userIds.length === 0) {
     return {
@@ -85,13 +96,15 @@ export async function loadTeamDetailData({
 
   const [{ data: profiles }, { data: allEvents }] = await Promise.all([
     supabase.from("user_profiles").select("*").in("id", userIds),
-    supabase
-      .from("events")
-      .select(EVENT_COLUMNS)
-      .in("user_id", userIds)
-      .gte("start_at", startISO)
-      .lt("start_at", endISO)
-      .order("start_at", { ascending: true }),
+    visibleEventUserIds.length > 0
+      ? supabase
+          .from("events")
+          .select(EVENT_COLUMNS)
+          .in("user_id", visibleEventUserIds)
+          .gte("start_at", startISO)
+          .lt("start_at", endISO)
+          .order("start_at", { ascending: true })
+      : Promise.resolve({ data: [] }),
   ]);
 
   const profileMap = new Map(
@@ -116,7 +129,11 @@ export async function loadTeamDetailData({
       {
         profile,
         joinedAt: joinedAtByUser.get(memberId) ?? null,
-        events: eventsByUser.get(memberId) ?? [],
+        shareSchedule: shareScheduleByUser.get(memberId) ?? true,
+        events:
+          memberId === userId || shareScheduleByUser.get(memberId) !== false
+            ? eventsByUser.get(memberId) ?? []
+            : [],
       },
     ];
   });

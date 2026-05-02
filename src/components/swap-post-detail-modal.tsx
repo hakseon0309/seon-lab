@@ -162,9 +162,7 @@ export default function SwapPostDetailModal({
     listEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length]);
 
-  async function send(event: React.FormEvent) {
-    event.preventDefault();
-    const body = input.trim();
+  async function sendBody(body: string) {
     if (body.length === 0) return;
     if (post.swap_status === "done") {
       toast.error("완료된 글에는 메시지를 보낼 수 없어요");
@@ -187,6 +185,11 @@ export default function SwapPostDetailModal({
     });
     setMessages((prev) => [...prev, message]);
     setInput("");
+  }
+
+  async function send(event: React.FormEvent) {
+    event.preventDefault();
+    await sendBody(input.trim());
   }
 
   async function toggleComplete(next: "open" | "done") {
@@ -222,6 +225,10 @@ export default function SwapPostDetailModal({
     toast.success("글을 삭제했습니다");
     onDeleted();
   }
+  const canQuickApply =
+    !canEdit &&
+    post.swap_status === "open" &&
+    !messages.some((message) => message.author_id === currentUserId);
 
   return (
     <Modal
@@ -334,6 +341,21 @@ export default function SwapPostDetailModal({
             <div ref={listEndRef} />
           </div>
         </section>
+
+        {canQuickApply && (
+          <button
+            type="button"
+            onClick={() => sendBody("교환 신청합니다.")}
+            disabled={sending}
+            className="interactive-press mt-3 w-full rounded-lg px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
+            style={{
+              backgroundColor: "var(--success-bg)",
+              color: "var(--success)",
+            }}
+          >
+            교환 신청
+          </button>
+        )}
 
         <form onSubmit={send} className="mt-3 flex gap-2">
           <input

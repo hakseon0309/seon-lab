@@ -69,6 +69,7 @@ export default function TeamView({
       members.map((member) => ({
         profile: member.profile,
         joinedAt: member.joinedAt,
+        shareSchedule: member.shareSchedule,
       })),
     [members]
   );

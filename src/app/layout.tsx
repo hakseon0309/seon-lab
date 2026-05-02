@@ -3,6 +3,7 @@ import { ThemeProvider } from "@/lib/theme";
 import { I18nProvider } from "@/lib/i18n";
 import ButtonGuard from "@/components/button-guard";
 import { RouteTransitionProvider } from "@/components/route-transition-provider";
+import ServiceWorkerRegistration from "@/components/service-worker-registration";
 import SplashScreen from "@/components/splash-screen";
 import { ToastProvider } from "@/components/toast-provider";
 import OfflineBanner from "@/components/offline-banner";
@@ -41,6 +42,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <SplashScreen />
+        <ServiceWorkerRegistration />
         <I18nProvider>
           <ThemeProvider>
             <ToastProvider>

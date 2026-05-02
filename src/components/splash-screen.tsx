@@ -18,6 +18,9 @@ function SplashReadyMarker() {
 export default function SplashScreen() {
   return (
     <>
+      <div className="splash-screen" aria-hidden="true">
+        <div className="splash-screen__mark">SEON LAB</div>
+      </div>
       <SplashReadyMarker />
     </>
   );

@@ -37,7 +37,7 @@ export default async function DashboardPage() {
   const [profileRes, eventsRes, coupleRes] = await Promise.all([
     supabase
       .from("user_profiles")
-      .select("id, display_name, ics_url, last_synced, created_at")
+      .select("id, display_name, ics_url, last_synced, created_at, onboarding_completed_at")
       .eq("id", user.id)
       .single(),
     supabase
@@ -56,6 +56,10 @@ export default async function DashboardPage() {
   ]);
 
   const profile = (profileRes.data as UserProfile | null) ?? null;
+  if (!profile?.onboarding_completed_at) {
+    redirect("/onboarding");
+  }
+
   const events = (eventsRes.data as CalendarEvent[] | null) ?? [];
   const request = coupleRes.data?.[0];
   const partnerId =
@@ -99,50 +103,6 @@ export default async function DashboardPage() {
       .filter((team): team is Team => Boolean(team));
   }
 
-  if (!profile?.ics_url) {
-    return (
-      <>
-        <RouteTransitionDone />
-        <Nav />
-        <PageHeader>
-          <h1
-            className="text-xl font-bold"
-            style={{ color: "var(--text-primary)" }}
-          >
-            내 근무
-          </h1>
-        </PageHeader>
-        <main className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center px-4 pb-tabbar lg:pb-8 text-center">
-          <h2
-            className="text-xl font-semibold"
-            style={{ color: "var(--text-primary)" }}
-          >
-            캘린더 구독 URL을 등록해주세요
-          </h2>
-          <p
-            className="mt-3 max-w-sm text-sm leading-7"
-            style={{ color: "var(--text-muted)" }}
-          >
-            설정에서 캘린더 구독 URL을 입력하면
-            <br className="lg:hidden" />
-            <span className="hidden lg:inline"> </span>
-            근무 일정이 자동으로 입력되고 표시됩니다.
-          </p>
-          <Link
-            href="/settings"
-            className="interactive-press mt-8 inline-flex rounded-lg px-6 py-2.5 text-sm font-medium"
-            style={{
-              backgroundColor: "var(--primary)",
-              color: "var(--text-on-primary)",
-            }}
-          >
-            설정으로 이동
-          </Link>
-        </main>
-      </>
-    );
-  }
-
   return (
     <>
       <RouteTransitionDone />
@@ -172,6 +132,29 @@ export default async function DashboardPage() {
             holidays={holidays}
           />
         </div>
+
+        {!profile.ics_url && (
+          <div
+            className="mx-4 mt-4 rounded-lg border p-4 text-sm lg:mx-0"
+            style={{
+              borderColor: "var(--border-light)",
+              backgroundColor: "var(--bg-card)",
+              color: "var(--text-secondary)",
+            }}
+          >
+            <p>캘린더 구독 URL을 등록하면 근무 일정이 자동으로 표시됩니다.</p>
+            <Link
+              href="/settings"
+              className="interactive-press mt-3 inline-flex rounded-lg px-3 py-2 text-xs font-medium"
+              style={{
+                backgroundColor: "var(--button-surface)",
+                color: "var(--text-primary)",
+              }}
+            >
+              설정에서 등록
+            </Link>
+          </div>
+        )}
 
         <FavoriteTeams teams={favoriteTeams} />
 

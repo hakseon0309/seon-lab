@@ -66,3 +66,14 @@ export function setTeamFavorite(teamId: string, favorite: boolean) {
     method: favorite ? "POST" : "DELETE",
   });
 }
+
+export function setTeamScheduleSharing(teamId: string, shareSchedule: boolean) {
+  return requestTeamApi<{ team_id: string; share_schedule: boolean }>(
+    `/api/teams/${teamId}/share-schedule`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ share_schedule: shareSchedule }),
+    }
+  );
+}
