@@ -14,14 +14,16 @@ interface Props {
   renameError: string;
   isFavorite: boolean;
   savingFavorite: boolean;
+  shareSchedule: boolean;
+  savingShareSchedule: boolean;
   onUpdatedTeam: (team: Team) => void;
   onStartEditingName: () => void;
   onChangeName: (value: string) => void;
   onSubmitName: () => void;
   onCancelEditingName: () => void;
   onToggleFavorite: () => void;
+  onToggleScheduleSharing: () => void;
   onOpenMembers: () => void;
-  onOpenInvite: () => void;
 }
 
 export default function TeamViewHeader({
@@ -33,14 +35,16 @@ export default function TeamViewHeader({
   renameError,
   isFavorite,
   savingFavorite,
+  shareSchedule,
+  savingShareSchedule,
   onUpdatedTeam,
   onStartEditingName,
   onChangeName,
   onSubmitName,
   onCancelEditingName,
   onToggleFavorite,
+  onToggleScheduleSharing,
   onOpenMembers,
-  onOpenInvite,
 }: Props) {
   const isLeader = team.created_by === currentUserId;
 
@@ -126,39 +130,80 @@ export default function TeamViewHeader({
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <button
+          type="button"
           onClick={onToggleFavorite}
           disabled={savingFavorite}
           aria-label={isFavorite ? "즐겨찾기 해제" : "즐겨찾기 추가"}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border text-base disabled:opacity-50"
+          aria-pressed={isFavorite}
+          className="interactive-press flex h-8 w-8 items-center justify-center rounded-full border text-sm disabled:opacity-40"
           style={{
-            borderColor: "var(--border)",
+            borderColor: "var(--border-light)",
             color: isFavorite ? "var(--primary)" : "var(--text-muted)",
-            backgroundColor: isFavorite
+            backgroundColor: isFavorite ? "var(--primary-light)" : "transparent",
+          }}
+        >
+          <span aria-hidden="true">★</span>
+        </button>
+        <button
+          type="button"
+          onClick={onToggleScheduleSharing}
+          disabled={savingShareSchedule}
+          aria-label={
+            shareSchedule
+              ? "근무 일정 공유 끄기"
+              : "근무 일정 공유 켜기"
+          }
+          aria-pressed={shareSchedule}
+          className="interactive-press flex h-8 w-8 items-center justify-center rounded-full border disabled:opacity-40"
+          style={{
+            borderColor: "var(--border-light)",
+            color: shareSchedule ? "var(--primary)" : "var(--text-muted)",
+            backgroundColor: shareSchedule
               ? "var(--primary-light)"
               : "transparent",
           }}
         >
-          ★
+          <svg
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="1.8"
+          >
+            <path d="M12 15V3" />
+            <path d="m8 7 4-4 4 4" />
+            <path d="M5 11v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8" />
+          </svg>
         </button>
         <button
+          type="button"
           onClick={onOpenMembers}
-          className="rounded-lg border px-3 py-1.5 text-xs font-medium"
+          aria-label={`${LABEL.member} 목록 보기`}
+          className="interactive-press flex h-8 w-8 items-center justify-center rounded-full border"
           style={{
-            borderColor: "var(--border)",
-            color: "var(--text-secondary)",
+            borderColor: "var(--border-light)",
+            color: "var(--text-muted)",
+            backgroundColor: "transparent",
           }}
         >
-          {LABEL.member}
-        </button>
-        <button
-          onClick={onOpenInvite}
-          className="rounded-lg px-3 py-1.5 text-xs font-medium"
-          style={{
-            backgroundColor: "var(--primary)",
-            color: "var(--text-on-primary)",
-          }}
-        >
-          초대
+          <svg
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="1.8"
+          >
+            <path d="M16 19v-1.5a3.5 3.5 0 0 0-7 0V19" />
+            <circle cx="12.5" cy="8" r="3.5" />
+            <path d="M5 19v-1a3 3 0 0 1 3-3" />
+            <path d="M7.5 6.2a3 3 0 0 0 0 5.6" />
+          </svg>
         </button>
       </div>
     </PageHeader>

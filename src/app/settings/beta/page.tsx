@@ -44,9 +44,6 @@ export default async function BetaSettingsPage() {
       </PageHeader>
       <main className="mx-auto w-full max-w-lg pb-tabbar lg:pb-8">
         <div className="px-4 lg:px-0">
-          <p className="mb-6 text-sm" style={{ color: "var(--text-muted)" }}>
-            아직 다듬는 중인 기능들을 먼저 써볼 수 있는 공간입니다.
-          </p>
           <CoupleSettingsPanel initialCoupleStatus={coupleStatus} />
         </div>
       </main>

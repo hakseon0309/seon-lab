@@ -1,9 +1,12 @@
 "use client";
 
 import AvatarImage from "@/components/avatar-image";
+import { useRouteTransition } from "@/components/route-transition-provider";
 import { SidebarBoardLink, SidebarData } from "@/lib/sidebar-client";
+import { createClient } from "@/lib/supabase/client";
 import { useTheme } from "@/lib/theme";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface Props {
   data: SidebarData;
@@ -13,6 +16,16 @@ interface Props {
 
 export default function AppSidebarPanel({ data, loaded, onClose }: Props) {
   const { theme, toggle } = useTheme();
+  const router = useRouter();
+  const supabase = createClient();
+  const { startNavigation } = useRouteTransition();
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    onClose();
+    startNavigation();
+    router.push("/");
+  }
 
   return (
     <div
@@ -70,6 +83,24 @@ export default function AppSidebarPanel({ data, loaded, onClose }: Props) {
             />
           </div>
         </nav>
+
+        <div
+          className="border-t p-3"
+          style={{ borderColor: "var(--border-light)" }}
+        >
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="interactive-press w-full rounded-xl border px-4 py-2.5 text-left text-sm font-semibold"
+            style={{
+              borderColor: "var(--border-light)",
+              backgroundColor: "var(--bg-surface)",
+              color: "var(--error)",
+            }}
+          >
+            로그아웃
+          </button>
+        </div>
       </aside>
     </div>
   );

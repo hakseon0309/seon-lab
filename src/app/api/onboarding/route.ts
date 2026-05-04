@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { apiError, apiErrors, parseJsonBody } from "@/lib/api-error";
 import { CORP_TEAM_NAMES, isCorpTeamName } from "@/lib/corp-teams";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 type OnboardingBody = {
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
   const teamNames = Array.isArray(parsed.body.team_names)
     ? parsed.body.team_names
         .filter((name): name is string => typeof name === "string")
-        .map((name) => name.trim().toUpperCase())
+        .map((name) => name.trim())
         .filter(isCorpTeamName)
     : [];
 
@@ -44,14 +45,15 @@ export async function POST(request: Request) {
   }
 
   const uniqueTeamNames = [...new Set(teamNames)];
-  const { error: profileError } = await supabase
+  const admin = createAdminClient();
+  const { error: profileError } = await admin
     .from("user_profiles")
-    .update({
+    .upsert({
+      id: user.id,
       display_name: displayName,
       ics_url: icsUrl || null,
       onboarding_completed_at: new Date().toISOString(),
-    })
-    .eq("id", user.id);
+    });
 
   if (profileError) {
     return apiError(
@@ -63,13 +65,19 @@ export async function POST(request: Request) {
   }
 
   if (uniqueTeamNames.length > 0) {
-    const { data: existingTeams, error: teamLoadError } = await supabase
+    const { data: existingTeams, error: teamLoadError } = await admin
       .from("teams")
       .select("id, name")
-      .in("name", CORP_TEAM_NAMES);
+      .in("name", CORP_TEAM_NAMES)
+      .eq("is_corp_team", true);
 
     if (teamLoadError) {
-      return apiError(500, "팀 목록을 불러오지 못했습니다", "team_load_failed", teamLoadError.message);
+      return apiError(
+        500,
+        "팀 목록을 불러오지 못했습니다",
+        "team_load_failed",
+        teamLoadError.message
+      );
     }
 
     const teamsByName = new Map(
@@ -79,37 +87,14 @@ export async function POST(request: Request) {
       ])
     );
     const missingTeamNames = uniqueTeamNames.filter(
-      (name) => !teamsByName.has(name)
+      (name) => !teamsByName.has(name.toUpperCase())
     );
-
     if (missingTeamNames.length > 0) {
-      const { data: createdTeams, error: createTeamError } = await supabase
-        .from("teams")
-        .insert(
-          missingTeamNames.map((name) => ({
-            name,
-            created_by: user.id,
-            is_corp_team: true,
-          }))
-        )
-        .select("id, name");
-
-      if (createTeamError) {
-        return apiError(
-          500,
-          "팀을 준비하지 못했습니다",
-          "team_create_failed",
-          createTeamError.message
-        );
-      }
-
-      for (const team of (createdTeams ?? []) as TeamRow[]) {
-        teamsByName.set(team.name.toUpperCase(), team);
-      }
+      return apiError(500, "팀 설정을 확인해주세요", "team_missing");
     }
 
     const memberships = uniqueTeamNames
-      .map((name) => teamsByName.get(name))
+      .map((name) => teamsByName.get(name.toUpperCase()))
       .filter((team): team is TeamRow => Boolean(team))
       .map((team) => ({
         team_id: team.id,
@@ -118,7 +103,7 @@ export async function POST(request: Request) {
       }));
 
     if (memberships.length > 0) {
-      const { error: memberError } = await supabase
+      const { error: memberError } = await admin
         .from("team_members")
         .upsert(memberships, { onConflict: "team_id,user_id" });
 

@@ -3,6 +3,7 @@ import {
   createThreeMonthWindow,
   getCalendarWindowEventRange,
 } from "@/lib/calendar-window";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { MemberWithEvents } from "@/lib/team-types";
 import {
@@ -40,16 +41,23 @@ export async function loadTeamDetailData({
   const { from, to, startISO, endISO } =
     getCalendarWindowEventRange(calendarWindow);
   const holidays = getFallbackKoreanHolidays(from, to);
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("is_admin")
+    .eq("id", userId)
+    .maybeSingle();
+  const dataClient = profile?.is_admin ? createAdminClient() : supabase;
+
   const [{ data: teamData }, { data: favorite }, { data: memberRows }] =
     await Promise.all([
-      supabase.from("teams").select("*").eq("id", teamId).maybeSingle(),
-      supabase
+      dataClient.from("teams").select("*").eq("id", teamId).maybeSingle(),
+      dataClient
         .from("team_favorites")
         .select("id")
         .eq("team_id", teamId)
         .eq("user_id", userId)
         .maybeSingle(),
-      supabase
+      dataClient
         .from("team_members")
         .select("user_id, joined_at, share_schedule")
         .eq("team_id", teamId),
@@ -95,9 +103,9 @@ export async function loadTeamDetailData({
   }
 
   const [{ data: profiles }, { data: allEvents }] = await Promise.all([
-    supabase.from("user_profiles").select("*").in("id", userIds),
+    dataClient.from("user_profiles").select("*").in("id", userIds),
     visibleEventUserIds.length > 0
-      ? supabase
+      ? dataClient
           .from("events")
           .select(EVENT_COLUMNS)
           .in("user_id", visibleEventUserIds)

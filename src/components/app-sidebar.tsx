@@ -16,6 +16,15 @@ import {
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
+let savedScrollY = 0;
+let savedHtmlOverflow = "";
+let savedBodyOverflow = "";
+let savedBodyPosition = "";
+let savedBodyTop = "";
+let savedBodyLeft = "";
+let savedBodyRight = "";
+let savedBodyWidth = "";
+
 export default function AppSidebar() {
   const [open, setOpen] = useState(false);
   const [data, setData] = useState<SidebarData>(
@@ -55,6 +64,23 @@ export default function AppSidebar() {
   useEffect(() => {
     if (!open) return;
 
+    savedScrollY = window.scrollY;
+    savedHtmlOverflow = document.documentElement.style.overflow;
+    savedBodyOverflow = document.body.style.overflow;
+    savedBodyPosition = document.body.style.position;
+    savedBodyTop = document.body.style.top;
+    savedBodyLeft = document.body.style.left;
+    savedBodyRight = document.body.style.right;
+    savedBodyWidth = document.body.style.width;
+
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${savedScrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
+
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setOpen(false);
@@ -64,6 +90,14 @@ export default function AppSidebar() {
     document.addEventListener("keydown", handleEscape);
     return () => {
       document.removeEventListener("keydown", handleEscape);
+      document.documentElement.style.overflow = savedHtmlOverflow;
+      document.body.style.overflow = savedBodyOverflow;
+      document.body.style.position = savedBodyPosition;
+      document.body.style.top = savedBodyTop;
+      document.body.style.left = savedBodyLeft;
+      document.body.style.right = savedBodyRight;
+      document.body.style.width = savedBodyWidth;
+      window.scrollTo(0, savedScrollY);
     };
   }, [open]);
 

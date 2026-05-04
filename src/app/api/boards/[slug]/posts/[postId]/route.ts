@@ -8,6 +8,37 @@ type UpdatePostBody = {
   body?: unknown;
 };
 
+async function requireAdminForAdminOnlyBoard(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  slug: string,
+  postId: string,
+  userId: string
+) {
+  const { data: post } = await supabase
+    .from("board_posts")
+    .select("id, boards!inner(slug, write_role)")
+    .eq("id", postId)
+    .eq("boards.slug", slug)
+    .maybeSingle();
+
+  if (!post) return apiErrors.notFound("글을 찾을 수 없습니다");
+
+  const board = Array.isArray(post.boards) ? post.boards[0] : post.boards;
+  if (board?.write_role !== "admin") return null;
+
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("is_admin")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!profile?.is_admin) {
+    return apiErrors.forbidden("관리자만 수정하거나 삭제할 수 있습니다");
+  }
+
+  return null;
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ slug: string; postId: string }> }
@@ -18,6 +49,14 @@ export async function PATCH(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return apiErrors.unauthorized();
+
+  const guard = await requireAdminForAdminOnlyBoard(
+    supabase,
+    slug,
+    postId,
+    user.id
+  );
+  if (guard) return guard;
 
   const parsed = await parseJsonBody<UpdatePostBody>(request);
   if (!parsed.ok) return parsed.response;
@@ -51,6 +90,14 @@ export async function DELETE(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return apiErrors.unauthorized();
+
+  const guard = await requireAdminForAdminOnlyBoard(
+    supabase,
+    slug,
+    postId,
+    user.id
+  );
+  if (guard) return guard;
 
   const { error } = await supabase.from("board_posts").delete().eq("id", postId);
   if (error) return apiError(500, error.message);

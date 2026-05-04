@@ -8,6 +8,7 @@ interface Props {
   pending?: boolean;
   previousDisabled?: boolean;
   nextDisabled?: boolean;
+  sticky?: boolean;
   onPrevious: () => void;
   onNext: () => void;
 }
@@ -17,13 +18,18 @@ export default function CalendarMonthNavigator({
   pending = false,
   previousDisabled = false,
   nextDisabled = false,
+  sticky = true,
   onPrevious,
   onNext,
 }: Props) {
   return (
     <div
-      className="sticky top-28 z-20 flex items-center justify-between px-4 py-3 lg:top-0 lg:px-0"
-      style={{ backgroundColor: "var(--bg-base)" }}
+      className={
+        sticky
+          ? "sticky top-28 z-20 flex items-center justify-between px-4 py-3 lg:top-0 lg:px-0"
+          : "flex items-center justify-between px-4 py-3 lg:px-0"
+      }
+      style={sticky ? { backgroundColor: "var(--bg-base)" } : undefined}
     >
       <button
         type="button"

@@ -102,6 +102,7 @@ style={{ borderColor: "var(--border-light)", backgroundColor: "var(--bg-card)" }
 ## Overlays
 
 - Dismissible side panels and drawers should close via outside click and `Escape`.
+- Side panels and drawers must lock the underlying page scroll while open on every page. The panel itself may scroll internally, but `html`/`body` should be restored to the previous scroll position when the panel closes.
 - Do not add dedicated `닫기`, `X`, or close-icon buttons to those overlays unless there is a strong accessibility reason and outside click is not available.
 
 ## Theme Tokens

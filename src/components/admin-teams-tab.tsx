@@ -1,6 +1,7 @@
 "use client";
 
 import { AdminTeamRow } from "@/lib/types";
+import Link from "next/link";
 
 interface Props {
   teams: AdminTeamRow[];
@@ -18,15 +19,15 @@ export default function AdminTeamsTab({
       {teams.map((team) => (
         <div
           key={team.id}
-          className="flex items-center justify-between rounded-lg border p-4"
+          className="flex items-center justify-between gap-3 rounded-lg border p-4"
           style={{
             borderColor: "var(--border-light)",
             backgroundColor: "var(--bg-card)",
           }}
         >
-          <div>
+          <div className="min-w-0">
             <p
-              className="text-sm font-medium"
+              className="truncate text-sm font-medium"
               style={{ color: "var(--text-primary)" }}
             >
               {team.name}
@@ -40,26 +41,38 @@ export default function AdminTeamsTab({
               {team.id}
             </p>
           </div>
-          <button
-            disabled={busyTeamId === team.id}
-            onClick={() => onToggleCorpTeam(team.id, team.is_corp_team)}
-            className="rounded-md border px-3 py-1.5 text-xs font-medium disabled:opacity-50"
-            style={
-              team.is_corp_team
-                ? {
-                    borderColor: "var(--primary)",
-                    color: "var(--primary)",
-                    backgroundColor: "var(--primary-light)",
-                  }
-                : {
-                    borderColor: "var(--border)",
-                    color: "var(--text-muted)",
-                    backgroundColor: "var(--bg-card)",
-                  }
-            }
-          >
-            {team.is_corp_team ? "회사팀 ✓" : "회사팀 지정"}
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <Link
+              href={`/teams/${team.id}`}
+              className="interactive-press rounded-md border px-3 py-1.5 text-xs font-medium"
+              style={{
+                borderColor: "var(--border)",
+                color: "var(--text-secondary)",
+              }}
+            >
+              열기
+            </Link>
+            <button
+              disabled={busyTeamId === team.id}
+              onClick={() => onToggleCorpTeam(team.id, team.is_corp_team)}
+              className="rounded-md border px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+              style={
+                team.is_corp_team
+                  ? {
+                      borderColor: "var(--primary)",
+                      color: "var(--primary)",
+                      backgroundColor: "var(--primary-light)",
+                    }
+                  : {
+                      borderColor: "var(--border)",
+                      color: "var(--text-muted)",
+                      backgroundColor: "var(--bg-card)",
+                    }
+              }
+            >
+              {team.is_corp_team ? "회사팀 ✓" : "회사팀 지정"}
+            </button>
+          </div>
         </div>
       ))}
       {teams.length === 0 && (

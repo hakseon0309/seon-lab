@@ -29,16 +29,18 @@ export async function POST(request: Request) {
   if (uploadError) return apiError(500, uploadError.message);
 
   const avatar_url = publicAvatarUrl(admin.storage, path);
-  const { data: previous } = await supabase
+  const { data: previous } = await admin
     .from("user_profiles")
     .select("avatar_path")
     .eq("id", user.id)
     .maybeSingle();
 
-  const { data, error } = await supabase
+  const { data, error } = await admin
     .from("user_profiles")
-    .update({ avatar_url, avatar_path: path })
-    .eq("id", user.id)
+    .upsert(
+      { id: user.id, avatar_url, avatar_path: path },
+      { onConflict: "id" }
+    )
     .select("avatar_url, avatar_path")
     .single();
 
@@ -51,6 +53,7 @@ export async function POST(request: Request) {
 
   revalidatePath("/settings");
   revalidatePath("/dashboard");
+  revalidatePath("/onboarding");
   return NextResponse.json(data);
 }
 
@@ -62,27 +65,30 @@ export async function DELETE() {
 
   if (!user) return apiErrors.unauthorized();
 
-  const { data: previous } = await supabase
+  const admin = createAdminClient();
+  const { data: previous } = await admin
     .from("user_profiles")
     .select("avatar_path")
     .eq("id", user.id)
     .maybeSingle();
 
-  const { data, error } = await supabase
+  const { data, error } = await admin
     .from("user_profiles")
-    .update({ avatar_url: null, avatar_path: null })
-    .eq("id", user.id)
+    .upsert(
+      { id: user.id, avatar_url: null, avatar_path: null },
+      { onConflict: "id" }
+    )
     .select("avatar_url, avatar_path")
     .single();
 
   if (error) return apiError(500, error.message);
 
   if (previous?.avatar_path) {
-    const admin = createAdminClient();
     await admin.storage.from(AVATAR_BUCKET).remove([previous.avatar_path]);
   }
 
   revalidatePath("/settings");
   revalidatePath("/dashboard");
+  revalidatePath("/onboarding");
   return NextResponse.json(data);
 }

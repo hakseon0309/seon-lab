@@ -9,11 +9,13 @@ import { useState } from "react";
 interface ProfileAvatarControlProps {
   initialAvatarUrl?: string | null;
   displayName: string;
+  compact?: boolean;
 }
 
 export default function ProfileAvatarControl({
   initialAvatarUrl,
   displayName,
+  compact = false,
 }: ProfileAvatarControlProps) {
   const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl ?? null);
   const [open, setOpen] = useState(false);
@@ -65,23 +67,31 @@ export default function ProfileAvatarControl({
 
   return (
     <>
-      {/* 프로필 사진은 설정 페이지 섹션의 상하좌우 여백이 동일(p-6 = 24px) 해야 답답해 보이지 않음.
-          아바타 크기는 기존 80px 대비 200% 확대 → 240px (h-60 w-60). 편집 배지는 그에 맞춰 비례 확대. */}
-      <div className="flex flex-col items-center gap-3 p-6">
+      <div
+        className={`flex flex-col items-center ${
+          compact ? "gap-3 py-3" : "gap-3 p-6"
+        }`}
+      >
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="interactive-press relative"
+          className="interactive-press relative rounded-full border-2 p-1 shadow-sm"
+          style={{
+            borderColor: "var(--border)",
+            backgroundColor: "var(--bg-card)",
+          }}
           aria-label="프로필 사진 변경"
         >
           <AvatarImage
             src={avatarUrl}
             name={displayName}
-            sizeClass="h-[160px] w-[160px]"
-            textClass="text-5xl"
+            sizeClass={compact ? "h-[120px] w-[120px]" : "h-[160px] w-[160px]"}
+            textClass={compact ? "text-4xl" : "text-5xl"}
           />
           <span
-            className="absolute right-1 top-1 flex h-9 w-9 items-center justify-center rounded-full border shadow-sm"
+            className={`absolute flex items-center justify-center rounded-full border shadow-sm ${
+              compact ? "right-0 top-0 h-8 w-8" : "right-1 top-1 h-9 w-9"
+            }`}
             style={{
               backgroundColor: "var(--bg-card)",
               borderColor: "var(--border-light)",

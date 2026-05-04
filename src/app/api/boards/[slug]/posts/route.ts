@@ -44,11 +44,22 @@ export async function POST(
 
   const { data: board } = await supabase
     .from("boards")
-    .select("id, allow_anonymous, has_status")
+    .select("id, allow_anonymous, has_status, write_role")
     .eq("slug", slug)
     .maybeSingle();
 
   if (!board) return apiErrors.notFound("게시판을 찾을 수 없습니다");
+  if (board.write_role === "admin") {
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("is_admin")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (!profile?.is_admin) {
+      return apiErrors.forbidden("관리자만 글을 작성할 수 있습니다");
+    }
+  }
 
   const { data, error } = await supabase
     .from("board_posts")

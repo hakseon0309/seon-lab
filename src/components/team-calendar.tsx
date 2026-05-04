@@ -134,9 +134,11 @@ function TeamCalendar({
     };
 
     document.addEventListener("pointerdown", close);
+    document.addEventListener("scroll", close, true);
     document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("pointerdown", close);
+      document.removeEventListener("scroll", close, true);
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [activeHolidayForCurrentMonth]);
@@ -202,7 +204,9 @@ function TeamCalendar({
                       getKoreanHolidayByDateKey(dayKey);
                     const inMonth = isSameMonth(day, currentDate);
                     const ws = weekendOverlay(day, inMonth);
-                    const headerColor = ws
+                    const headerColor = holiday
+                      ? "var(--holiday-bg)"
+                      : ws
                       ? ws.text
                       : inMonth
                         ? "var(--text-secondary)"
@@ -244,13 +248,6 @@ function TeamCalendar({
                           >
                             <HeaderDateText day={day} isToday={isToday} />
                           </div>
-                        )}
-                        {holiday && (
-                          <span
-                            className="pointer-events-none absolute inset-x-1 bottom-1 h-1 rounded-full"
-                            style={{ backgroundColor: "var(--holiday-bg)" }}
-                            aria-hidden="true"
-                          />
                         )}
                       </td>
                     );

@@ -13,7 +13,7 @@ import FavoriteTeams from "@/components/favorite-teams";
 import Nav from "@/components/nav";
 import PageHeader from "@/components/page-header";
 import RouteTransitionDone from "@/components/route-transition-done";
-import Link from "next/link";
+import StandalonePushPrompt from "@/components/standalone-push-prompt";
 import { redirect } from "next/navigation";
 
 const EVENT_COLUMNS =
@@ -77,6 +77,9 @@ export default async function DashboardPage() {
     partnerEvents = (data as CalendarEvent[] | null) ?? [];
   }
 
+  const showCalendarSetupHint =
+    !profile.ics_url && events.length === 0 && partnerEvents.length === 0;
+
   const { data: favoriteRows } = await supabase
     .from("team_favorites")
     .select("team_id")
@@ -106,6 +109,7 @@ export default async function DashboardPage() {
   return (
     <>
       <RouteTransitionDone />
+      <StandalonePushPrompt userId={user.id} />
       <Nav />
       <PageHeader>
         <div>
@@ -130,31 +134,9 @@ export default async function DashboardPage() {
             partnerEvents={partnerEvents}
             calendarWindow={calendarWindow}
             holidays={holidays}
+            showSetupHint={showCalendarSetupHint}
           />
         </div>
-
-        {!profile.ics_url && (
-          <div
-            className="mx-4 mt-4 rounded-lg border p-4 text-sm lg:mx-0"
-            style={{
-              borderColor: "var(--border-light)",
-              backgroundColor: "var(--bg-card)",
-              color: "var(--text-secondary)",
-            }}
-          >
-            <p>캘린더 구독 URL을 등록하면 근무 일정이 자동으로 표시됩니다.</p>
-            <Link
-              href="/settings"
-              className="interactive-press mt-3 inline-flex rounded-lg px-3 py-2 text-xs font-medium"
-              style={{
-                backgroundColor: "var(--button-surface)",
-                color: "var(--text-primary)",
-              }}
-            >
-              설정에서 등록
-            </Link>
-          </div>
-        )}
 
         <FavoriteTeams teams={favoriteTeams} />
 

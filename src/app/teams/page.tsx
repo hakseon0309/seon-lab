@@ -5,8 +5,7 @@ import PageHeader from "@/components/page-header";
 import RouteTransitionDone from "@/components/route-transition-done";
 import TeamsFooterActions from "@/components/teams-footer-actions";
 import CorpTeamSection from "@/components/corp-team-section";
-import TeamAvatarControl from "@/components/team-avatar-control";
-import Link from "next/link";
+import TeamList from "@/components/team-list";
 import { redirect } from "next/navigation";
 
 export default async function TeamsPage() {
@@ -81,29 +80,7 @@ export default async function TeamsPage() {
               </span>
             </div>
           ) : (
-            <div className="space-y-4">
-              {myTeams.map((team) => (
-                <Link
-                  key={team.id}
-                  href={`/teams/${team.id}`}
-                  className="interactive-press flex items-center justify-between rounded-lg border p-4"
-                  style={{
-                    borderColor: "var(--border-light)",
-                    backgroundColor: "var(--bg-card)",
-                  }}
-                >
-                  <span className="flex min-w-0 items-center gap-3">
-                    <TeamAvatarControl team={team} />
-                    <span
-                      className="truncate text-sm font-medium"
-                      style={{ color: "var(--text-primary)" }}
-                    >
-                      {team.name}
-                    </span>
-                  </span>
-                </Link>
-              ))}
-            </div>
+            <TeamList initialTeams={myTeams} />
           )}
         </div>
       </main>

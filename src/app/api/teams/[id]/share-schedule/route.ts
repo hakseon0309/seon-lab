@@ -35,6 +35,7 @@ export async function PATCH(
   if (!data) return apiErrors.notFound("팀 가입 정보를 찾을 수 없습니다");
 
   revalidatePath(`/teams/${id}`);
+  revalidatePath("/teams");
   revalidatePath("/settings");
 
   return NextResponse.json(data);

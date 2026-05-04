@@ -39,4 +39,4 @@ create policy "Users can view shared team member events"
 -- 고정 회사팀을 온보딩에서 선택할 수 있게, 이미 존재하는 팀은 회사팀으로 표시한다.
 update public.teams
    set is_corp_team = true
- where upper(name) in ('ALL', 'PZ', 'GB', 'OPS', 'TAA');
+ where name in ('애플 하남', 'PZ', 'GB', 'OPS', 'TAA');

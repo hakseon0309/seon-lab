@@ -38,6 +38,7 @@ export default async function BoardPage({ params }: BoardPageProps) {
   const currentBoard = board as Board;
   const isAdmin = Boolean(myProfile?.is_admin);
   const boardDisplayName = getBoardDisplayName(currentBoard.name);
+  const canWrite = currentBoard.write_role === "admin" ? isAdmin : true;
 
   // ============================================================
   // 근무 교환 (chat 타입) 전용 경로
@@ -104,7 +105,11 @@ export default async function BoardPage({ params }: BoardPageProps) {
         </div>
       </PageHeader>
       <main className="mx-auto w-full max-w-lg pb-tabbar lg:pb-8">
-        <BoardView board={currentBoard} initialPosts={postsWithAuthors} />
+          <BoardView
+            board={currentBoard}
+            initialPosts={postsWithAuthors}
+            canWrite={canWrite}
+          />
       </main>
     </>
   );

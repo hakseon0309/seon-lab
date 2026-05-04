@@ -115,6 +115,9 @@ export default async function PostPage({ params }: PostPageProps) {
     canDelete,
     canChangeStatus,
   } = detail;
+  const canEditPost = currentBoard.write_role === "admin" ? isAdmin : canEdit;
+  const canDeletePost =
+    currentBoard.write_role === "admin" ? isAdmin : canDelete;
 
   return (
     <>
@@ -129,7 +132,7 @@ export default async function PostPage({ params }: PostPageProps) {
           >
             {toWorkTerminology(post.title)}
           </h1>
-          {(canEdit || canDelete) && (
+          {(canEditPost || canDeletePost) && (
             <PostHeaderActionsSlot />
           )}
         </div>
@@ -141,8 +144,8 @@ export default async function PostPage({ params }: PostPageProps) {
           initialComments={enrichedComments}
           postAuthorName={postAuthorName}
           postAuthorAvatar={postAuthorAvatar}
-          canEdit={canEdit}
-          canDelete={canDelete}
+          canEdit={canEditPost}
+          canDelete={canDeletePost}
           canChangeStatus={canChangeStatus}
         />
       </main>

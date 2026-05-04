@@ -186,14 +186,8 @@ export default function PushNotificationControl() {
             className="text-sm font-semibold"
             style={{ color: "var(--text-primary)" }}
           >
-            근무 교환 알림
+            근무 교환 게시판 알림
           </h2>
-          <p
-            className="mt-1 text-xs leading-5"
-            style={{ color: "var(--text-muted)" }}
-          >
-            새 근무 교환 글과 내 글의 대화 메시지만 알려드립니다.
-          </p>
         </div>
         <button
           type="button"
@@ -224,7 +218,7 @@ export default function PushNotificationControl() {
       )}
       {!standalone && support === "supported" && permission !== "denied" && (
         <p className="mt-3 text-xs" style={{ color: "var(--text-muted)" }}>
-          아이폰에서는 홈 화면에 추가한 앱에서 알림을 켤 수 있습니다.
+          홈 화면에 추가한 앱으로 실행해야 알림이 울립니다.
         </p>
       )}
     </section>

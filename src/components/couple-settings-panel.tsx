@@ -1,7 +1,7 @@
 "use client";
 
 import { CoupleStatus } from "@/lib/types";
-import { useState } from "react";
+import { type FormEvent, useState } from "react";
 import { useToast } from "@/components/toast-provider";
 
 export default function CoupleSettingsPanel({ initialCoupleStatus }: { initialCoupleStatus: CoupleStatus }) {
@@ -18,7 +18,8 @@ export default function CoupleSettingsPanel({ initialCoupleStatus }: { initialCo
     }
   }
 
-  async function handleCoupleRequest() {
+  async function handleCoupleRequest(event?: FormEvent<HTMLFormElement>) {
+    event?.preventDefault();
     if (!partnerCodeInput.trim()) return;
     setCoupleLoading(true);
     setCoupleMessage("");
@@ -127,25 +128,25 @@ export default function CoupleSettingsPanel({ initialCoupleStatus }: { initialCo
             <p className="mb-2 text-xs" style={{ color: "var(--text-muted)" }}>
               상대방 코드로 연결
             </p>
-            <div className="flex gap-2">
+            <form onSubmit={handleCoupleRequest} className="grid grid-cols-[minmax(0,1fr)_auto] items-stretch gap-2">
               <input
                 type="text"
                 value={partnerCodeInput}
                 onChange={(e) => setPartnerCodeInput(e.target.value)}
                 placeholder="상대방 코드 입력"
                 maxLength={6}
-                className="flex-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2"
+                className="h-12 min-w-0 rounded-lg border px-3 text-sm focus:outline-none focus:ring-2"
                 style={inputStyle}
               />
               <button
-                onClick={handleCoupleRequest}
+                type="submit"
                 disabled={coupleLoading || !partnerCodeInput.trim()}
-                className="rounded-lg px-3 py-2 text-sm font-medium disabled:opacity-50"
+                className="interactive-press flex h-12 min-w-20 shrink-0 items-center justify-center rounded-lg px-4 text-sm font-medium whitespace-nowrap disabled:opacity-50"
                 style={{ backgroundColor: "var(--primary)", color: "var(--text-on-primary)" }}
               >
                 요청
               </button>
-            </div>
+            </form>
             {coupleMessage && (
               <p className="mt-2 text-xs" style={{ color: "var(--error)" }}>
                 {coupleMessage}

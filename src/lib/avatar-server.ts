@@ -1,4 +1,4 @@
-import { AVATAR_BUCKET, MAX_AVATAR_BYTES } from "@/lib/avatar";
+import { AVATAR_BUCKET, MAX_AVATAR_BYTES, MAX_AVATAR_MB } from "@/lib/avatar";
 
 export async function fileFromFormData(request: Request) {
   const form = await request.formData();
@@ -10,7 +10,7 @@ export async function fileFromFormData(request: Request) {
     return { error: "이미지 파일만 업로드할 수 있습니다" };
   }
   if (file.size > MAX_AVATAR_BYTES) {
-    return { error: "3MB 이하의 이미지만 업로드할 수 있습니다" };
+    return { error: `${MAX_AVATAR_MB}MB 이하의 이미지만 업로드할 수 있습니다` };
   }
   return { file };
 }

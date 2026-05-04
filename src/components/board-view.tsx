@@ -18,9 +18,10 @@ import { createPortal } from "react-dom";
 interface BoardViewProps {
   board: Board;
   initialPosts: BoardPost[];
+  canWrite: boolean;
 }
 
-export default function BoardView({ board, initialPosts }: BoardViewProps) {
+export default function BoardView({ board, initialPosts, canWrite }: BoardViewProps) {
   const [writing, setWriting] = useState(false);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -69,7 +70,7 @@ export default function BoardView({ board, initialPosts }: BoardViewProps) {
 
   return (
     <div className="px-4 lg:px-0">
-      {headerSlot ? createPortal(writeButton, headerSlot) : null}
+      {headerSlot && canWrite ? createPortal(writeButton, headerSlot) : null}
 
       {initialPosts.length === 0 ? (
         <div

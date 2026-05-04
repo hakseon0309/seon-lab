@@ -8,6 +8,7 @@ import {
 } from "@/lib/calendar-window";
 import InviteModal from "@/components/invite-modal";
 import MembersListModal from "@/components/members-list-modal";
+import PageFooter from "@/components/page-footer";
 import TeamCalendar from "@/components/team-calendar";
 import CalendarMonthNavigator from "@/components/calendar-month-navigator";
 import TeamViewHeader from "@/components/team-view-header";
@@ -16,12 +17,14 @@ import {
   removeTeamMember,
   renameTeam,
   setTeamFavorite,
+  setTeamScheduleSharing,
   transferTeamOwnership,
 } from "@/lib/team-api-client";
 import { MemberWithEvents } from "@/lib/team-types";
 import { LABEL } from "@/lib/labels";
 import type { KoreanHoliday } from "@/lib/korean-holidays";
 import { Team } from "@/lib/types";
+import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState, useTransition } from "react";
 
 interface Props {
@@ -62,8 +65,14 @@ export default function TeamView({
   const [renameError, setRenameError] = useState("");
   const [isFavorite, setIsFavorite] = useState(initialIsFavorite);
   const [savingFavorite, setSavingFavorite] = useState(false);
+  const [shareSchedule, setShareSchedule] = useState(
+    initialMembers.find((member) => member.profile.id === currentUserId)
+      ?.shareSchedule ?? true
+  );
+  const [savingShareSchedule, setSavingShareSchedule] = useState(false);
   const [isChangingMonth, startMonthTransition] = useTransition();
   const toast = useToast();
+  const router = useRouter();
   const memberItems = useMemo(
     () =>
       members.map((member) => ({
@@ -137,6 +146,44 @@ export default function TeamView({
     );
   }
 
+  async function toggleScheduleSharing() {
+    if (savingShareSchedule) return;
+
+    const nextShare = !shareSchedule;
+    setSavingShareSchedule(true);
+    setShareSchedule(nextShare);
+    setMembers((prev) =>
+      prev.map((member) =>
+        member.profile.id === currentUserId
+          ? { ...member, shareSchedule: nextShare }
+          : member
+      )
+    );
+
+    const result = await setTeamScheduleSharing(team.id, nextShare);
+    setSavingShareSchedule(false);
+
+    if (!result.ok) {
+      setShareSchedule(!nextShare);
+      setMembers((prev) =>
+        prev.map((member) =>
+          member.profile.id === currentUserId
+            ? { ...member, shareSchedule: !nextShare }
+            : member
+        )
+      );
+      toast.error(result.error || "일정 공유 설정 변경에 실패했습니다");
+      return;
+    }
+
+    toast.success(
+      nextShare
+        ? "이 팀에 근무 일정을 공유합니다"
+        : "이 팀에서는 근무 일정을 숨깁니다"
+    );
+    router.refresh();
+  }
+
   const openMembersList = useCallback(() => {
     setPreselectedMemberId(null);
     setReturnToListOnDetailClose(true);
@@ -181,6 +228,8 @@ export default function TeamView({
         renameError={renameError}
         isFavorite={isFavorite}
         savingFavorite={savingFavorite}
+        shareSchedule={shareSchedule}
+        savingShareSchedule={savingShareSchedule}
         onUpdatedTeam={setTeam}
         onStartEditingName={() => setEditingName(true)}
         onChangeName={(value) => {
@@ -194,8 +243,8 @@ export default function TeamView({
           setNewName(team.name);
         }}
         onToggleFavorite={toggleFavorite}
+        onToggleScheduleSharing={toggleScheduleSharing}
         onOpenMembers={openMembersList}
-        onOpenInvite={() => setShowInvite(true)}
       />
 
       {showInvite && (
@@ -219,12 +268,13 @@ export default function TeamView({
         />
       )}
 
-      <main className="mx-auto max-w-5xl px-0 pb-tabbar lg:px-4 lg:pb-6">
+      <main className="mx-auto max-w-5xl px-0 pb-floating-footer lg:px-4 lg:pb-20">
         <CalendarMonthNavigator
           currentDate={currentDate}
           pending={isChangingMonth}
           previousDisabled={previousDisabled}
           nextDisabled={nextDisabled}
+          sticky={false}
           onPrevious={() => shiftMonth(-1)}
           onNext={() => shiftMonth(1)}
         />
@@ -236,6 +286,22 @@ export default function TeamView({
           onMemberClick={openMemberDetail}
         />
       </main>
+
+      <PageFooter maxWidth="max-w-lg">
+        <div className="flex w-full justify-center">
+          <button
+            type="button"
+            onClick={() => setShowInvite(true)}
+            className="w-[calc((100%-1rem)/2)] rounded-full py-3.5 text-sm font-medium"
+            style={{
+              backgroundColor: "var(--primary)",
+              color: "var(--text-on-primary)",
+            }}
+          >
+            팀원 초대하기
+          </button>
+        </div>
+      </PageFooter>
     </>
   );
 }

@@ -30,7 +30,7 @@ export default async function OnboardingPage() {
   return (
     <>
       <RouteTransitionDone />
-      <main className="mx-auto flex min-h-screen w-full max-w-lg flex-col justify-center px-4 py-10">
+      <main className="mx-auto flex min-h-screen w-full max-w-lg flex-col justify-center px-4 py-6">
         <OnboardingForm
           initialDisplayName={emailLocalPart(user.email) || profile?.display_name || ""}
           initialIcsUrl={profile?.ics_url ?? ""}
