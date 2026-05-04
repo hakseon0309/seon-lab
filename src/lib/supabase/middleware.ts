@@ -32,7 +32,12 @@ export async function updateSession(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // Public routes that don't need auth
-  const publicRoutes = ["/login", "/api/auth/callback", "/api/sync/cron"];
+  const publicRoutes = [
+    "/login",
+    "/api/auth/callback",
+    "/api/sync/cron",
+    "/api/push/vapid-public-key",
+  ];
   const isPublicRoute = publicRoutes.some((route) => path.startsWith(route));
   const isJoinRoute = path.startsWith("/join/");
   const isMetadataAsset = path.endsWith(".webmanifest");
