@@ -13,11 +13,27 @@ function isStandaloneDisplay() {
 }
 
 function urlBase64ToUint8Array(base64String: string) {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = `${base64String}${padding}`
+  const cleanValue = base64String
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .replace(/\s+/g, "")
+    .replace(/=+$/g, "");
+  if (!/^[A-Za-z0-9_-]+$/.test(cleanValue)) {
+    throw new Error("푸시 알림 공개 키 형식이 올바르지 않습니다");
+  }
+
+  const padding = "=".repeat((4 - (cleanValue.length % 4)) % 4);
+  const base64 = `${cleanValue}${padding}`
     .replace(/-/g, "+")
     .replace(/_/g, "/");
-  const rawData = window.atob(base64);
+  let rawData = "";
+
+  try {
+    rawData = window.atob(base64);
+  } catch {
+    throw new Error("푸시 알림 공개 키 형식이 올바르지 않습니다");
+  }
+
   const outputArray = new Uint8Array(rawData.length);
 
   for (let i = 0; i < rawData.length; i += 1) {

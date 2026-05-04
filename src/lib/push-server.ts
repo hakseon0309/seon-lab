@@ -17,11 +17,19 @@ type PushSubscriptionRow = {
 
 let vapidConfigured = false;
 
+function cleanEnvValue(value: string | undefined) {
+  return value?.trim().replace(/^["']|["']$/g, "") || "";
+}
+
+function cleanVapidKey(value: string | undefined) {
+  return cleanEnvValue(value).replace(/\s+/g, "").replace(/=+$/g, "");
+}
+
 function getVapidConfig() {
   const publicKey =
-    process.env.WEB_PUSH_VAPID_PUBLIC_KEY ||
-    process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY;
-  const privateKey = process.env.WEB_PUSH_VAPID_PRIVATE_KEY;
+    cleanVapidKey(process.env.WEB_PUSH_VAPID_PUBLIC_KEY) ||
+    cleanVapidKey(process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY);
+  const privateKey = cleanVapidKey(process.env.WEB_PUSH_VAPID_PRIVATE_KEY);
 
   if (!publicKey || !privateKey) return null;
 
@@ -29,8 +37,8 @@ function getVapidConfig() {
     publicKey,
     privateKey,
     subject:
-      process.env.WEB_PUSH_VAPID_SUBJECT ||
-      process.env.NEXT_PUBLIC_SITE_URL ||
+      cleanEnvValue(process.env.WEB_PUSH_VAPID_SUBJECT) ||
+      cleanEnvValue(process.env.NEXT_PUBLIC_SITE_URL) ||
       "mailto:admin@seonlab.app",
   };
 }
