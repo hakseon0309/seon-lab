@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { Team } from "@/lib/types";
 import Nav from "@/components/nav";
 import PageHeader from "@/components/page-header";
@@ -16,12 +17,17 @@ export default async function TeamsPage() {
   if (!user) redirect("/login");
 
   const [profileRes, membershipsRes, corpRes] = await Promise.all([
-    supabase.from("user_profiles").select("ics_url").eq("id", user.id).single(),
+    supabase
+      .from("user_profiles")
+      .select("ics_url, is_admin")
+      .eq("id", user.id)
+      .single(),
     supabase.from("team_members").select("team_id").eq("user_id", user.id),
     supabase.from("teams").select("*").eq("is_corp_team", true).order("name"),
   ]);
 
   const icsUrl = profileRes.data?.ics_url ?? "";
+  const isAdmin = Boolean(profileRes.data?.is_admin);
   const isCorpUser = icsUrl.includes("sm-cal.apple.com");
 
   const memberTeamIds = new Set(
@@ -29,7 +35,14 @@ export default async function TeamsPage() {
   );
 
   let myTeams: Team[] = [];
-  if (memberTeamIds.size > 0) {
+  if (isAdmin) {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("teams")
+      .select("*")
+      .order("created_at", { ascending: false });
+    myTeams = (data as Team[] | null) ?? [];
+  } else if (memberTeamIds.size > 0) {
     const { data } = await supabase
       .from("teams")
       .select("*")
@@ -42,7 +55,8 @@ export default async function TeamsPage() {
   const corpTeams = ((corpRes.data as Team[] | null) ?? []).filter(
     (t) => !memberTeamIds.has(t.id)
   );
-  const showCorp = isCorpUser && !hasJoinedCorpTeam && corpTeams.length > 0;
+  const showCorp =
+    !isAdmin && isCorpUser && !hasJoinedCorpTeam && corpTeams.length > 0;
 
   return (
     <>

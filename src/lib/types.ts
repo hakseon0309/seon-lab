@@ -132,6 +132,7 @@ export interface SwapPost extends BoardPost {
   completed_at: string | null;
   // swap_date 에 해당하는 작성자의 근무 일정. null 이면 휴무.
   swap_event: SwapEvent | null;
+  swap_match_tone?: "neutral" | "match" | "mismatch";
 }
 
 export interface BoardMessage {

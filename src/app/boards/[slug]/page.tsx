@@ -48,6 +48,7 @@ export default async function BoardPage({ params }: BoardPageProps) {
       supabase,
       boardId: currentBoard.id,
       userId: user.id,
+      isAdmin,
     });
 
     return (
@@ -62,10 +63,9 @@ export default async function BoardPage({ params }: BoardPageProps) {
             >
               {boardDisplayName}
             </h1>
-            <BoardHeaderActionsSlot />
           </div>
         </PageHeader>
-        <main className="mx-auto w-full max-w-lg pb-tabbar lg:pb-8">
+        <main className="mx-auto w-full max-w-lg pb-floating-footer lg:pb-20">
           <SwapBoardView
             board={currentBoard}
             initialPosts={swapPosts}

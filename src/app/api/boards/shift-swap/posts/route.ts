@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { apiError, apiErrors, parseJsonBody } from "@/lib/api-error";
 import { getSeoulDateKey } from "@/lib/time";
@@ -54,6 +55,13 @@ export async function POST(request: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return apiErrors.unauthorized();
+
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("display_name, is_admin")
+    .eq("id", user.id)
+    .maybeSingle();
+  const isAdmin = Boolean(profile?.is_admin);
 
   const parsed = await parseJsonBody<CreateBody>(request);
   if (!parsed.ok) return parsed.response;
@@ -111,15 +119,17 @@ export async function POST(request: Request) {
     }
   }
 
-  // 팀 멤버십 검증
-  const { data: memberships } = await supabase
-    .from("team_members")
-    .select("team_id")
-    .in("team_id", teamIds)
-    .eq("user_id", user.id);
-  const membershipIds = new Set((memberships ?? []).map((row) => row.team_id));
-  if (teamIds.some((id) => !membershipIds.has(id))) {
-    return apiErrors.forbidden("내가 속한 팀에만 올릴 수 있어요");
+  // 팀 멤버십 검증. 어드민은 모든 팀에 근무 교환 글을 올릴 수 있다.
+  if (!isAdmin) {
+    const { data: memberships } = await supabase
+      .from("team_members")
+      .select("team_id")
+      .in("team_id", teamIds)
+      .eq("user_id", user.id);
+    const membershipIds = new Set((memberships ?? []).map((row) => row.team_id));
+    if (teamIds.some((id) => !membershipIds.has(id))) {
+      return apiErrors.forbidden("내가 속한 팀에만 올릴 수 있어요");
+    }
   }
 
   const { data: board } = await supabase
@@ -129,34 +139,20 @@ export async function POST(request: Request) {
     .maybeSingle();
   if (!board) return apiErrors.notFound("게시판을 찾을 수 없습니다");
 
-  const { data, error } = await supabase.rpc("create_shift_swap_post", {
-    p_title: title,
-    p_body: body,
-    p_team_ids: teamIds,
-    p_swap_date: swap_date,
-  });
-  let createdPostId: string | null = typeof data === "string" ? data : null;
+  let createdPostId: string | null = null;
 
-  const rpcMissing =
-    error &&
-    ((typeof error.code === "string" && error.code === "PGRST202") ||
-      error.message.includes("create_shift_swap_post"));
-  const postTargetTableMissing = error
-    ? isMissingBoardPostTeamsError(error)
-    : false;
+  if (isAdmin) {
+    const admin = createAdminClient();
+    const { data: validTeams } = await admin
+      .from("teams")
+      .select("id")
+      .in("id", teamIds);
+    const validTeamIds = new Set((validTeams ?? []).map((team) => team.id));
+    if (teamIds.some((id) => !validTeamIds.has(id))) {
+      return apiErrors.badRequest("존재하지 않는 팀이 포함되어 있어요");
+    }
 
-  if (postTargetTableMissing && teamIds.length > 1) {
-    return apiErrors.badRequest(
-      "현재 DB에서는 여러 팀 동시 등록을 사용할 수 없어요. 팀을 하나만 선택해주세요"
-    );
-  }
-
-  if (error && !rpcMissing && !postTargetTableMissing) {
-    return apiError(500, error.message);
-  }
-
-  if (rpcMissing || postTargetTableMissing) {
-    const { data: legacyPost, error: legacyError } = await supabase
+    const { data: adminPost, error: adminPostError } = await admin
       .from("board_posts")
       .insert({
         board_id: board.id,
@@ -171,41 +167,101 @@ export async function POST(request: Request) {
       .select()
       .single();
 
-    if (legacyError) return apiError(500, legacyError.message);
+    if (adminPostError) return apiError(500, adminPostError.message);
 
-    if (teamIds.length > 1) {
-      const { error: targetError } = await supabase.from("board_post_teams").insert(
-        teamIds.map((id) => ({
-          post_id: legacyPost.id,
-          team_id: id,
-        }))
-      );
+    const { error: targetError } = await admin.from("board_post_teams").insert(
+      teamIds.map((id) => ({
+        post_id: adminPost.id,
+        team_id: id,
+      }))
+    );
 
-      if (targetError) {
-        await supabase.from("board_posts").delete().eq("id", legacyPost.id);
-
-        if (isMissingBoardPostTeamsError(targetError)) {
-          return apiErrors.badRequest(
-            "현재 DB에서는 여러 팀 동시 등록을 사용할 수 없어요. 팀을 하나만 선택해주세요"
-          );
-        }
-
-        return apiError(500, targetError.message);
+    if (targetError) {
+      await admin.from("board_posts").delete().eq("id", adminPost.id);
+      if (isMissingBoardPostTeamsError(targetError)) {
+        return apiErrors.badRequest(
+          "현재 DB에서는 여러 팀 동시 등록을 사용할 수 없어요. 팀을 하나만 선택해주세요"
+        );
       }
+      return apiError(500, targetError.message);
     }
 
-    createdPostId = legacyPost.id;
+    createdPostId = adminPost.id;
+  } else {
+    const { data, error } = await supabase.rpc("create_shift_swap_post", {
+      p_title: title,
+      p_body: body,
+      p_team_ids: teamIds,
+      p_swap_date: swap_date,
+    });
+    createdPostId = typeof data === "string" ? data : null;
+
+    const rpcMissing =
+      error &&
+      ((typeof error.code === "string" && error.code === "PGRST202") ||
+        error.message.includes("create_shift_swap_post"));
+    const postTargetTableMissing = error
+      ? isMissingBoardPostTeamsError(error)
+      : false;
+
+    if (postTargetTableMissing && teamIds.length > 1) {
+      return apiErrors.badRequest(
+        "현재 DB에서는 여러 팀 동시 등록을 사용할 수 없어요. 팀을 하나만 선택해주세요"
+      );
+    }
+
+    if (error && !rpcMissing && !postTargetTableMissing) {
+      return apiError(500, error.message);
+    }
+
+    if (rpcMissing || postTargetTableMissing) {
+      const { data: legacyPost, error: legacyError } = await supabase
+        .from("board_posts")
+        .insert({
+          board_id: board.id,
+          author_id: user.id,
+          is_anonymous: false,
+          title,
+          body,
+          team_id,
+          swap_date,
+          swap_status: "open",
+        })
+        .select()
+        .single();
+
+      if (legacyError) return apiError(500, legacyError.message);
+
+      if (teamIds.length > 1) {
+        const { error: targetError } = await supabase
+          .from("board_post_teams")
+          .insert(
+            teamIds.map((id) => ({
+              post_id: legacyPost.id,
+              team_id: id,
+            }))
+          );
+
+        if (targetError) {
+          await supabase.from("board_posts").delete().eq("id", legacyPost.id);
+
+          if (isMissingBoardPostTeamsError(targetError)) {
+            return apiErrors.badRequest(
+              "현재 DB에서는 여러 팀 동시 등록을 사용할 수 없어요. 팀을 하나만 선택해주세요"
+            );
+          }
+
+          return apiError(500, targetError.message);
+        }
+      }
+
+      createdPostId = legacyPost.id;
+    }
   }
 
   revalidatePath("/boards/shift-swap");
 
   if (createdPostId) {
-    const { data: profile } = await supabase
-      .from("user_profiles")
-      .select("display_name")
-      .eq("id", user.id)
-      .maybeSingle();
-
     try {
       await notifyShiftSwapPostCreated({
         postId: createdPostId,

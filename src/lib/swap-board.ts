@@ -1,6 +1,7 @@
 import { SwapEvent, SwapPost } from "@/lib/types";
 import {
   formatShiftRange,
+  formatShiftStart,
   formatSwapDateShort,
 } from "@/lib/time";
 import { toWorkTerminology } from "@/lib/terminology";
@@ -26,6 +27,7 @@ export const WORK_SHIFT_END_BY_START: Record<string, string> = {
 
 export type ShiftRequestType = "work" | "off";
 export type DatePickerSelectionMode = "all" | "workOnly" | "offOnly";
+export type SwapPostMatchTone = "neutral" | "match" | "mismatch";
 
 export interface SwapSummaryRow {
   label: string;
@@ -176,6 +178,47 @@ export function buildSwapSummaryFromPost(post: SwapPost): SwapSummaryCardData {
   };
 }
 
+export function getSwapPostMatchTone({
+  post,
+  currentUserId,
+  hasCalendarData,
+  myEventsByDate,
+}: {
+  post: Pick<SwapPost, "author_id" | "body" | "title" | "swap_date">;
+  currentUserId: string;
+  hasCalendarData: boolean;
+  myEventsByDate: Map<string, SwapEvent>;
+}): SwapPostMatchTone {
+  if (
+    !hasCalendarData ||
+    !post.swap_date ||
+    !post.author_id ||
+    post.author_id === currentUserId
+  ) {
+    return "neutral";
+  }
+
+  const structured = parseStructuredSwapBody(post.body);
+  const myEventOnTargetDate = myEventsByDate.get(post.swap_date) ?? null;
+
+  if (structured.type === "휴무") {
+    return myEventOnTargetDate ? "mismatch" : "match";
+  }
+
+  const desiredStartTimes = extractDesiredStartTimes(
+    structured.desiredShifts || post.title
+  );
+
+  if (desiredStartTimes.length === 0) {
+    return "neutral";
+  }
+
+  const myStartTime = formatShiftStart(myEventOnTargetDate);
+  if (!myStartTime) return "mismatch";
+
+  return desiredStartTimes.includes(myStartTime) ? "match" : "mismatch";
+}
+
 export function hasAnyDataInWeek(
   date: string,
   eventsByDate: Map<string, SwapEvent>
@@ -243,6 +286,17 @@ function parseStructuredSwapBody(body: string) {
     ]),
     note: toWorkTerminology(noteLines.join(" ").trim()) || undefined,
   };
+}
+
+function extractDesiredStartTimes(value: string | undefined) {
+  if (!value) return [];
+
+  const knownStarts = Object.keys(WORK_SHIFT_END_BY_START).filter((time) =>
+    value.includes(time)
+  );
+  if (knownStarts.length > 0) return knownStarts;
+
+  return [...new Set([...value.matchAll(/(\d{2}:\d{2})/g)].map((match) => match[1]))];
 }
 
 function findStructuredValue(lines: string[], prefixes: string[]) {

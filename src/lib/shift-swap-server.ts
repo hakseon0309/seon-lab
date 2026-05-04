@@ -1,4 +1,5 @@
 import { buildAuthorMap, collectAuthorIds } from "@/lib/board-authors";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { isExpiredShiftSwapPost } from "@/lib/shift-swap-retention";
 import {
@@ -13,6 +14,7 @@ import {
   SwapPost,
   TeamLite,
 } from "@/lib/types";
+import { getSwapPostMatchTone } from "@/lib/swap-board";
 
 type ServerSupabase = Awaited<ReturnType<typeof createClient>>;
 
@@ -54,11 +56,29 @@ interface ShiftSwapBoardData {
   swapPosts: SwapPost[];
 }
 
+interface CurrentUserSwapAvailability {
+  hasCalendarData: boolean;
+  eventsByDate: Map<string, SwapEvent>;
+}
+
 function pickJoinedTeam(team: TeamJoinValue) {
   return Array.isArray(team) ? team[0] ?? null : team;
 }
 
-async function loadMyTeams(supabase: ServerSupabase, userId: string) {
+async function loadMyTeams(
+  supabase: ServerSupabase,
+  userId: string,
+  isAdmin: boolean
+) {
+  if (isAdmin) {
+    const { data: teams } = await supabase
+      .from("teams")
+      .select("id, name")
+      .order("name");
+
+    return ((teams ?? []) as TeamLite[]).filter(Boolean);
+  }
+
   const { data: teamRows } = await supabase
     .from("team_members")
     .select("team_id, teams(id, name)")
@@ -224,15 +244,80 @@ async function loadSwapEventForPost(
   return (events?.[0] as SwapEvent | undefined) ?? null;
 }
 
+async function loadCurrentUserSwapAvailability(
+  supabase: ServerSupabase,
+  userId: string,
+  dates: string[]
+): Promise<CurrentUserSwapAvailability> {
+  const empty = {
+    hasCalendarData: false,
+    eventsByDate: new Map<string, SwapEvent>(),
+  };
+
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("ics_url")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!profile?.ics_url) return empty;
+
+  const { count } = await supabase
+    .from("events")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId);
+
+  if (!count) return empty;
+
+  const uniqueDates = [...new Set(dates.filter(Boolean))];
+  if (uniqueDates.length === 0) {
+    return {
+      hasCalendarData: true,
+      eventsByDate: new Map<string, SwapEvent>(),
+    };
+  }
+
+  const minDate = uniqueDates.reduce(
+    (min, date) => (date < min ? date : min),
+    uniqueDates[0]
+  );
+  const maxDate = uniqueDates.reduce(
+    (max, date) => (date > max ? date : max),
+    uniqueDates[0]
+  );
+  const { startISO, endISO } = getSeoulIsoInclusiveDateRange(minDate, maxDate);
+  const { data: events } = await supabase
+    .from("events")
+    .select("summary, start_at, end_at")
+    .eq("user_id", userId)
+    .gte("start_at", startISO)
+    .lt("start_at", endISO);
+
+  const eventsByDate = new Map<string, SwapEvent>();
+  for (const event of ((events ?? []) as SwapEvent[])) {
+    const date = getSeoulDateKey(event.start_at);
+    if (!eventsByDate.has(date)) {
+      eventsByDate.set(date, event);
+    }
+  }
+
+  return {
+    hasCalendarData: true,
+    eventsByDate,
+  };
+}
+
 export async function loadShiftSwapBoardData(params: {
   supabase: ServerSupabase;
   boardId: string;
   userId: string;
+  isAdmin: boolean;
 }): Promise<ShiftSwapBoardData> {
-  const { supabase, boardId, userId } = params;
+  const { supabase, boardId, userId, isAdmin } = params;
+  const dataClient = isAdmin ? createAdminClient() : supabase;
   const [myTeams, postRes] = await Promise.all([
-    loadMyTeams(supabase, userId),
-    supabase
+    loadMyTeams(dataClient, userId, isAdmin),
+    dataClient
       .from("board_posts")
       .select(
         "id, board_id, author_id, is_anonymous, title, body, is_pinned, status, created_at, updated_at, team_id, swap_date, swap_status, completed_at"
@@ -248,11 +333,20 @@ export async function loadShiftSwapBoardData(params: {
   const authorIds = collectAuthorIds(posts);
   const teamIds = [...new Set(posts.map((post) => post.team_id))];
   const postIds = posts.map((post) => post.id);
+  const swapDates = posts
+    .map((post) => post.swap_date)
+    .filter((date): date is string => Boolean(date));
 
-  const [profileMap, { teamMap, targetsByPost }, eventMap] = await Promise.all([
-    loadAuthorProfileMap(supabase, authorIds),
-    loadTeamTargetsByPost(supabase, postIds, teamIds),
-    loadSwapEventMapForPosts(supabase, posts),
+  const [
+    profileMap,
+    { teamMap, targetsByPost },
+    eventMap,
+    currentUserAvailability,
+  ] = await Promise.all([
+    loadAuthorProfileMap(dataClient, authorIds),
+    loadTeamTargetsByPost(dataClient, postIds, teamIds),
+    loadSwapEventMapForPosts(dataClient, posts),
+    loadCurrentUserSwapAvailability(dataClient, userId, swapDates),
   ]);
 
   const swapPosts: SwapPost[] = posts.map((post) => {
@@ -278,6 +372,12 @@ export async function loadShiftSwapBoardData(params: {
       team_image_urls: teamImageUrls,
       swap_status: post.swap_status || "open",
       swap_event: eventKey ? eventMap.get(eventKey) ?? null : null,
+      swap_match_tone: getSwapPostMatchTone({
+        post,
+        currentUserId: userId,
+        hasCalendarData: currentUserAvailability.hasCalendarData,
+        myEventsByDate: currentUserAvailability.eventsByDate,
+      }),
     };
   });
 
@@ -288,9 +388,11 @@ export async function loadShiftSwapPostDetailData(params: {
   supabase: ServerSupabase;
   boardId: string;
   postId: string;
+  isAdmin?: boolean;
 }): Promise<ShiftSwapPostDetailData | null> {
-  const { supabase, boardId, postId } = params;
-  const { data: postData } = await supabase
+  const { supabase, boardId, postId, isAdmin = false } = params;
+  const dataClient = isAdmin ? createAdminClient() : supabase;
+  const { data: postData } = await dataClient
     .from("board_posts")
     .select(
       "id, board_id, author_id, is_anonymous, title, body, is_pinned, status, created_at, updated_at, team_id, swap_date, swap_status, completed_at"
@@ -308,7 +410,7 @@ export async function loadShiftSwapPostDetailData(params: {
     return null;
   }
 
-  const { data: messageRows } = await supabase
+  const { data: messageRows } = await dataClient
     .from("board_messages")
     .select("id, post_id, author_id, body, created_at")
     .eq("post_id", chatPost.id)
@@ -317,9 +419,9 @@ export async function loadShiftSwapPostDetailData(params: {
   const authorIds = collectAuthorIds([{ author_id: chatPost.author_id }, ...messages]);
 
   const [profileMap, swapEvent, targetData] = await Promise.all([
-    loadAuthorProfileMap(supabase, authorIds),
-    loadSwapEventForPost(supabase, chatPost),
-    loadTeamTargetsByPost(supabase, [chatPost.id], [chatPost.team_id]),
+    loadAuthorProfileMap(dataClient, authorIds),
+    loadSwapEventForPost(dataClient, chatPost),
+    loadTeamTargetsByPost(dataClient, [chatPost.id], [chatPost.team_id]),
   ]);
 
   const postAuthor = chatPost.author_id

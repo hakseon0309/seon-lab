@@ -45,6 +45,7 @@ export default async function PostPage({ params }: PostPageProps) {
       supabase,
       boardId: currentBoard.id,
       postId,
+      isAdmin,
     });
     if (!detail) notFound();
     const {

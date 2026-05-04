@@ -6,6 +6,7 @@ import {
   getCompletedSwapPostExpiryCutoff,
   getExpiredSwapDateCutoff,
 } from "@/lib/shift-swap-retention";
+import { getSeoulDateKey } from "@/lib/time";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
@@ -52,6 +53,7 @@ export async function GET(request: Request) {
     .maybeSingle();
   let deletedCompletedSwapPosts = 0;
   let deletedExpiredSwapPosts = 0;
+  let deletedPastCafeteriaMenuItems = 0;
 
   if (boardError) return apiError(500, boardError.message);
 
@@ -77,11 +79,21 @@ export async function GET(request: Request) {
     deletedCompletedSwapPosts = count ?? 0;
   }
 
+  const today = getSeoulDateKey(new Date());
+  const { count: cafeteriaCount, error: cafeteriaError } = await supabase
+    .from("cafeteria_menu_items")
+    .delete({ count: "exact" })
+    .lt("date", today);
+
+  if (cafeteriaError) return apiError(500, cafeteriaError.message);
+  deletedPastCafeteriaMenuItems = cafeteriaCount ?? 0;
+
   return NextResponse.json({
     synced,
     failed,
     total: profileList.length,
     deletedCompletedSwapPosts,
     deletedExpiredSwapPosts,
+    deletedPastCafeteriaMenuItems,
   });
 }

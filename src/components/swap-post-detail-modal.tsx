@@ -298,7 +298,7 @@ export default function SwapPostDetailModal({
             backgroundColor: "var(--bg-card)",
           }}
         >
-          <SwapPostTitleCard post={post} />
+          <SwapPostTitleCard post={post} variant="detail" />
         </div>
 
         <section className="mt-4">

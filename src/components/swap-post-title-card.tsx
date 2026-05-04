@@ -13,9 +13,11 @@ import { memo } from "react";
 function SwapPostTitleCard({
   post,
   showStatus = true,
+  variant = "compact",
 }: {
   post: SwapPost;
   showStatus?: boolean;
+  variant?: "compact" | "detail";
 }) {
   const summary = buildSwapSummaryFromPost(post);
   const teamLabel = post.team_names?.join(", ") || post.team_name || "알 수 없는 팀";
@@ -47,25 +49,113 @@ function SwapPostTitleCard({
         />
       )}
 
-      <div className="space-y-1.5">
-        <div className="grid min-w-0 grid-cols-[max-content_max-content_minmax(0,1fr)] items-center gap-x-1.5 gap-y-1.5">
-          <CompactSummaryRow row={summary.mine} />
-          <CompactSummaryRow row={summary.target} />
-        </div>
-        {summary.note && (
-          <p
-            className="truncate rounded-md px-2 py-1 text-xs"
-            style={{
-              backgroundColor: "var(--bg-surface)",
-              color: "var(--text-secondary)",
-            }}
-          >
-            &quot;{summary.note}&quot;
-          </p>
+      {variant === "detail" ? (
+        <DetailSummary summary={summary} />
+      ) : (
+        <CompactSummary summary={summary} />
+      )}
+    </div>
+  );
+}
+
+function CompactSummary({ summary }: { summary: ReturnType<typeof buildSwapSummaryFromPost> }) {
+  return (
+    <div className="space-y-1.5">
+      <div className="grid min-w-0 grid-cols-[max-content_max-content_minmax(0,1fr)] items-center gap-x-1.5 gap-y-1.5">
+        <CompactSummaryRow row={summary.mine} />
+        <CompactSummaryRow row={summary.target} />
+      </div>
+      {summary.note && (
+        <p
+          className="truncate rounded-md px-2 py-1 text-xs"
+          style={{
+            backgroundColor: "var(--bg-surface)",
+            color: "var(--text-secondary)",
+          }}
+        >
+          &quot;{summary.note}&quot;
+        </p>
+      )}
+    </div>
+  );
+}
+
+function DetailSummary({
+  summary,
+}: {
+  summary: ReturnType<typeof buildSwapSummaryFromPost>;
+}) {
+  return (
+    <div className="space-y-3">
+      <DetailSummaryRow row={summary.mine} />
+      <DetailSummaryRow row={summary.target} />
+      {summary.note && (
+        <p
+          className="rounded-md px-2 py-1.5 text-xs leading-5"
+          style={{
+            backgroundColor: "var(--bg-surface)",
+            color: "var(--text-secondary)",
+          }}
+        >
+          &quot;{summary.note}&quot;
+        </p>
+      )}
+    </div>
+  );
+}
+
+function DetailSummaryRow({ row }: { row: SwapSummaryRow }) {
+  const values =
+    row.displayMode === "scheduleFlow" ? row.values : row.values.filter((value) => value !== "→");
+  const [firstValue, ...restValues] = values;
+
+  return (
+    <div className="space-y-1.5">
+      <p
+        className="text-xs font-semibold"
+        style={{
+          color: row.tone === "target" ? "var(--secondary)" : "var(--text-muted)",
+        }}
+      >
+        {row.label}
+      </p>
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-1.5">
+        <DetailToken tone="plain">{row.date}</DetailToken>
+        {firstValue && (
+          <DetailToken tone={detailValueTone(firstValue, row)}>
+            {firstValue}
+          </DetailToken>
+        )}
+        {restValues.map((value, index) => (
+          <div key={`${row.label}-${value}-${index}`} className="col-start-2">
+            {value === "→" ? (
+              <span
+                className="block px-2.5 text-xs font-semibold"
+                style={{ color: "var(--text-muted)" }}
+              >
+                {value}
+              </span>
+            ) : (
+              <DetailToken tone={detailValueTone(value, row)}>{value}</DetailToken>
+            )}
+          </div>
+        ))}
+        {row.secondary && (
+          <div className="col-start-2">
+            <DetailToken tone="plain">{row.secondary}</DetailToken>
+          </div>
         )}
       </div>
     </div>
   );
+}
+
+function detailValueTone(
+  value: string,
+  row: SwapSummaryRow
+): "targetSoft" | "plain" | "off" {
+  if (value === "휴무") return "off";
+  return row.tone === "target" ? "targetSoft" : "plain";
 }
 
 function CompactSummaryRow({ row }: { row: SwapSummaryRow }) {
@@ -177,6 +267,41 @@ function CompactToken({
       style={styles}
     >
       <span className="truncate">{children}</span>
+    </span>
+  );
+}
+
+function DetailToken({
+  children,
+  tone,
+}: {
+  children: string;
+  tone: "targetSoft" | "plain" | "off";
+}) {
+  const styles = {
+    targetSoft: {
+      borderColor: "transparent",
+      backgroundColor: "var(--secondary-light)",
+      color: "var(--secondary)",
+    },
+    plain: {
+      borderColor: "var(--border-light)",
+      backgroundColor: "var(--bg-card)",
+      color: "var(--text-primary)",
+    },
+    off: {
+      borderColor: "var(--border-light)",
+      backgroundColor: "var(--bg-muted)",
+      color: "var(--text-secondary)",
+    },
+  }[tone];
+
+  return (
+    <span
+      className="inline-flex min-h-8 w-full items-center rounded-md border px-2.5 py-1 text-xs font-semibold leading-tight"
+      style={styles}
+    >
+      <span className="whitespace-normal break-keep">{children}</span>
     </span>
   );
 }
