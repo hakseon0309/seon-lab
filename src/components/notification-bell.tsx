@@ -130,6 +130,21 @@ export default function NotificationBell() {
   }, [loadNotifications]);
 
   useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+
+    const onMessage = (event: MessageEvent) => {
+      const data = event.data as { type?: unknown };
+      if (data?.type !== "seon-lab:push-notification") return;
+      void loadNotifications({ force: true });
+    };
+
+    navigator.serviceWorker.addEventListener("message", onMessage);
+    return () => {
+      navigator.serviceWorker.removeEventListener("message", onMessage);
+    };
+  }, [loadNotifications]);
+
+  useEffect(() => {
     if (!open) return;
     const onEsc = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);

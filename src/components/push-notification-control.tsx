@@ -16,6 +16,7 @@ function urlBase64ToUint8Array(base64String: string) {
   const cleanValue = base64String
     .trim()
     .replace(/^["']|["']$/g, "")
+    .replace(/\\[rn]/g, "")
     .replace(/\s+/g, "")
     .replace(/=+$/g, "");
   if (!/^[A-Za-z0-9_-]+$/.test(cleanValue)) {

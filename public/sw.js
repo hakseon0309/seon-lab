@@ -1,5 +1,9 @@
-const CACHE_NAME = "seon-lab-static-v2";
-const STATIC_PATHS = ["/manifest.webmanifest", "/favicon.ico"];
+const CACHE_NAME = "seon-lab-static-v3";
+const STATIC_PATHS = [
+  "/manifest.webmanifest",
+  "/favicon.ico",
+  "/apple-touch-icon.png",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -75,7 +79,23 @@ self.addEventListener("push", (event) => {
     },
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  const notifyOpenClients = self.clients
+    .matchAll({ type: "window", includeUncontrolled: true })
+    .then((clientList) => {
+      clientList.forEach((client) => {
+        client.postMessage({
+          type: "seon-lab:push-notification",
+          payload,
+        });
+      });
+    });
+
+  event.waitUntil(
+    Promise.all([
+      notifyOpenClients,
+      self.registration.showNotification(title, options),
+    ])
+  );
 });
 
 self.addEventListener("notificationclick", (event) => {

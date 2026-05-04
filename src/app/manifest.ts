@@ -13,6 +13,12 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: "ko",
     icons: [
       {
+        src: "/apple-touch-icon.png",
+        sizes: "180x180",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
         src: "/favicon.ico",
         sizes: "any",
         type: "image/x-icon",

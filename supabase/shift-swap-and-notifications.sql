@@ -154,6 +154,20 @@ create index if not exists notifications_user_unread_idx
   on public.notifications (user_id, read_at, updated_at desc);
 
 alter table public.notifications enable row level security;
+alter table public.notifications replica identity full;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'notifications'
+  ) then
+    alter publication supabase_realtime add table public.notifications;
+  end if;
+end $$;
 
 drop policy if exists "notifications_own_rw" on public.notifications;
 create policy "notifications_own_rw"

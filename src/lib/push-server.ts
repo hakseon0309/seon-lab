@@ -22,7 +22,10 @@ function cleanEnvValue(value: string | undefined) {
 }
 
 function cleanVapidKey(value: string | undefined) {
-  return cleanEnvValue(value).replace(/\s+/g, "").replace(/=+$/g, "");
+  return cleanEnvValue(value)
+    .replace(/\\[rn]/g, "")
+    .replace(/\s+/g, "")
+    .replace(/=+$/g, "");
 }
 
 function getVapidConfig() {
