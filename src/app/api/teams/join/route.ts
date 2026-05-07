@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { hasAppAccess, loadAccessProfile } from "@/lib/access-gate";
 import { apiError, apiErrors, parseJsonBody } from "@/lib/api-error";
 
 export async function POST(request: Request) {
@@ -10,6 +11,11 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) return apiErrors.unauthorized();
+
+  const accessProfile = await loadAccessProfile(supabase, user.id);
+  if (!hasAppAccess(accessProfile)) {
+    return apiErrors.forbidden("초대 코드 확인이 필요합니다");
+  }
 
   const parsed = await parseJsonBody<{ invite_code?: unknown }>(request);
   if (!parsed.ok) return parsed.response;

@@ -1,6 +1,5 @@
 "use client";
 
-import AppSidebarPanel from "@/components/app-sidebar-panel";
 import {
   clearSidebarDataCache,
   getCachedSidebarData,
@@ -13,8 +12,11 @@ import {
   broadcastOverlayOpen,
   onOtherOverlayOpen,
 } from "@/lib/overlay-bus";
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+
+const AppSidebarPanel = dynamic(() => import("@/components/app-sidebar-panel"));
 
 let savedScrollY = 0;
 let savedHtmlOverflow = "";
@@ -32,18 +34,39 @@ export default function AppSidebar() {
   );
   const [loaded, setLoaded] = useState(hasCachedSidebarData());
 
+  function syncSidebarData() {
+    return loadSidebarData().then((sidebarData) => {
+      setData(sidebarData);
+      setLoaded(true);
+    });
+  }
+
   useEffect(() => {
     let cancelled = false;
+    let idleCallbackId: number | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
     function sync() {
-      loadSidebarData().then((sidebarData) => {
-        if (cancelled) return;
-        setData(sidebarData);
-        setLoaded(true);
-      });
+      loadSidebarData()
+        .then((sidebarData) => {
+          if (cancelled) return;
+          setData(sidebarData);
+          setLoaded(true);
+        })
+        .catch(() => undefined);
     }
 
-    sync();
+    if (!hasCachedSidebarData()) {
+      if ("requestIdleCallback" in window) {
+        idleCallbackId = window.requestIdleCallback(() => {
+          if (!cancelled) sync();
+        }, { timeout: 1800 });
+      } else {
+        timeoutId = setTimeout(() => {
+          if (!cancelled) sync();
+        }, 350);
+      }
+    }
 
     function handleProfileUpdated() {
       clearSidebarDataCache();
@@ -54,6 +77,12 @@ export default function AppSidebar() {
 
     return () => {
       cancelled = true;
+      if (idleCallbackId !== null && "cancelIdleCallback" in window) {
+        window.cancelIdleCallback(idleCallbackId);
+      }
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+      }
       window.removeEventListener(
         "seonlab:profile-updated",
         handleProfileUpdated
@@ -114,6 +143,16 @@ export default function AppSidebar() {
         onClick={() => {
           broadcastOverlayOpen("sidebar");
           setOpen(true);
+          void import("@/components/app-sidebar-panel");
+          if (!loaded) {
+            void syncSidebarData().catch(() => undefined);
+          }
+        }}
+        onFocus={() => {
+          void import("@/components/app-sidebar-panel");
+        }}
+        onPointerEnter={() => {
+          void import("@/components/app-sidebar-panel");
         }}
         className="interactive-press flex h-9 w-9 items-center justify-center rounded-md"
         style={{ color: "var(--text-primary)" }}

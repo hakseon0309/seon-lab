@@ -1,4 +1,4 @@
-const CACHE_NAME = "seon-lab-static-v3";
+const CACHE_NAME = "seon-lab-static-v5";
 const STATIC_PATHS = [
   "/manifest.webmanifest",
   "/favicon.ico",
@@ -35,16 +35,28 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
+  const isNextStaticAsset = url.pathname.startsWith("/_next/static/");
   const isStaticAsset =
-    url.pathname.startsWith("/_next/static/") ||
+    isNextStaticAsset ||
     url.pathname === "/manifest.webmanifest" ||
-    url.pathname === "/favicon.ico";
+    url.pathname === "/favicon.ico" ||
+    url.pathname === "/apple-touch-icon.png";
 
   if (!isStaticAsset) return;
 
   event.respondWith(
     caches.open(CACHE_NAME).then(async (cache) => {
       const cached = await cache.match(request);
+      if (isNextStaticAsset) {
+        if (cached) return cached;
+        return fetch(request)
+          .then((response) => {
+            if (response.ok) cache.put(request, response.clone());
+            return response;
+          })
+          .catch(() => cached);
+      }
+
       const network = fetch(request)
         .then((response) => {
           if (response.ok) cache.put(request, response.clone());

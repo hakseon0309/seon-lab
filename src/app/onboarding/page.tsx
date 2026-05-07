@@ -1,5 +1,6 @@
 import OnboardingForm from "@/components/onboarding-form";
 import RouteTransitionDone from "@/components/route-transition-done";
+import { accessCodePath, hasAppAccess } from "@/lib/access-gate";
 import { CORP_TEAM_NAMES } from "@/lib/corp-teams";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
@@ -19,9 +20,13 @@ export default async function OnboardingPage() {
 
   const { data: profile } = await supabase
     .from("user_profiles")
-    .select("display_name, ics_url, avatar_url, onboarding_completed_at")
+    .select("display_name, ics_url, avatar_url, onboarding_completed_at, access_granted_at")
     .eq("id", user.id)
     .maybeSingle();
+
+  if (!hasAppAccess(profile)) {
+    redirect(accessCodePath("/onboarding"));
+  }
 
   if (profile?.onboarding_completed_at) {
     redirect("/dashboard");

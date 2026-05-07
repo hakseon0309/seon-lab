@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import PageFooter from "@/components/page-footer";
-import JoinTeamModal from "@/components/join-team-modal";
-import CreateTeamModal from "@/components/create-team-modal";
 import { useRouteTransition } from "@/components/route-transition-provider";
+
+const JoinTeamModal = dynamic(() => import("@/components/join-team-modal"));
+const CreateTeamModal = dynamic(() => import("@/components/create-team-modal"));
 
 export default function TeamsFooterActions() {
   const [showJoin, setShowJoin] = useState(false);
@@ -51,6 +53,12 @@ export default function TeamsFooterActions() {
       <PageFooter>
         <button
           onClick={() => setShowCreate(true)}
+          onFocus={() => {
+            void import("@/components/create-team-modal");
+          }}
+          onPointerEnter={() => {
+            void import("@/components/create-team-modal");
+          }}
           disabled={creating}
           className="flex-1 rounded-full py-3.5 text-sm font-medium disabled:opacity-50"
           style={{
@@ -62,6 +70,12 @@ export default function TeamsFooterActions() {
         </button>
         <button
           onClick={() => setShowJoin(true)}
+          onFocus={() => {
+            void import("@/components/join-team-modal");
+          }}
+          onPointerEnter={() => {
+            void import("@/components/join-team-modal");
+          }}
           className="flex-1 rounded-full py-3.5 text-sm font-medium border"
           style={{
             borderColor: "var(--border)",

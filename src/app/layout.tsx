@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { ThemeProvider } from "@/lib/theme";
-import { I18nProvider } from "@/lib/i18n";
 import ButtonGuard from "@/components/button-guard";
 import { RouteTransitionProvider } from "@/components/route-transition-provider";
 import ServiceWorkerRegistration from "@/components/service-worker-registration";
@@ -8,6 +7,13 @@ import SplashScreen from "@/components/splash-screen";
 import { ToastProvider } from "@/components/toast-provider";
 import OfflineBanner from "@/components/offline-banner";
 import "./globals.css";
+
+const themeInitScript = `
+try {
+  var theme = window.localStorage.getItem("seonlab-theme");
+  document.documentElement.classList.toggle("dark", theme === "dark");
+} catch (_) {}
+`;
 
 const appleStartupImages = [
   {
@@ -89,6 +95,10 @@ export default function RootLayout({
       className="h-full antialiased"
     >
       <head>
+        <script
+          dangerouslySetInnerHTML={{ __html: themeInitScript }}
+          suppressHydrationWarning
+        />
         {appleStartupImages.map((image) => (
           <link
             key={image.href}
@@ -101,17 +111,15 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <SplashScreen />
         <ServiceWorkerRegistration />
-        <I18nProvider>
-          <ThemeProvider>
-            <ToastProvider>
-              <OfflineBanner />
-              <RouteTransitionProvider>
-                <ButtonGuard />
-                {children}
-              </RouteTransitionProvider>
-            </ToastProvider>
-          </ThemeProvider>
-        </I18nProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <OfflineBanner />
+            <RouteTransitionProvider>
+              <ButtonGuard />
+              {children}
+            </RouteTransitionProvider>
+          </ToastProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

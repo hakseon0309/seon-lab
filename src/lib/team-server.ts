@@ -30,6 +30,10 @@ interface TeamDetailData {
 
 const EVENT_COLUMNS =
   "id, user_id, uid, summary, start_at, end_at, location, created_at";
+const TEAM_COLUMNS =
+  "id, name, invite_code, invite_expires_at, is_corp_team, image_url, image_path, created_by, created_at";
+const MEMBER_PROFILE_COLUMNS =
+  "id, display_name, ics_url, last_synced, is_admin, avatar_url, avatar_path, onboarding_completed_at, created_at";
 
 export async function loadTeamDetailData({
   supabase,
@@ -50,7 +54,7 @@ export async function loadTeamDetailData({
 
   const [{ data: teamData }, { data: favorite }, { data: memberRows }] =
     await Promise.all([
-      dataClient.from("teams").select("*").eq("id", teamId).maybeSingle(),
+      dataClient.from("teams").select(TEAM_COLUMNS).eq("id", teamId).maybeSingle(),
       dataClient
         .from("team_favorites")
         .select("id")
@@ -103,7 +107,7 @@ export async function loadTeamDetailData({
   }
 
   const [{ data: profiles }, { data: allEvents }] = await Promise.all([
-    dataClient.from("user_profiles").select("*").in("id", userIds),
+    dataClient.from("user_profiles").select(MEMBER_PROFILE_COLUMNS).in("id", userIds),
     visibleEventUserIds.length > 0
       ? dataClient
           .from("events")

@@ -1,6 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+function safeNextPath(value: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return "/dashboard";
+  }
+  return value;
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
@@ -35,6 +42,7 @@ export async function updateSession(request: NextRequest) {
   const publicRoutes = [
     "/login",
     "/api/auth/callback",
+    "/api/access-code",
     "/api/sync/cron",
     "/api/push/vapid-public-key",
   ];
@@ -45,6 +53,10 @@ export async function updateSession(request: NextRequest) {
   if (!user && !isPublicRoute && !isJoinRoute && !isMetadataAsset && path !== "/") {
     const url = request.nextUrl.clone();
     url.pathname = "/";
+    url.searchParams.set(
+      "next",
+      `${request.nextUrl.pathname}${request.nextUrl.search}`
+    );
     const hadAuthCookie = request.cookies
       .getAll()
       .some((c) => c.name.startsWith("sb-") && c.name.endsWith("-auth-token"));
@@ -56,7 +68,8 @@ export async function updateSession(request: NextRequest) {
 
   if (user && (path === "/" || path === "/login")) {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    url.pathname = safeNextPath(request.nextUrl.searchParams.get("next"));
+    url.search = "";
     return NextResponse.redirect(url);
   }
 

@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
+import { hasAppAccess, loadAccessProfile } from "@/lib/access-gate";
 import { apiError, apiErrors, parseJsonBody } from "@/lib/api-error";
 import { CORP_TEAM_NAMES, isCorpTeamName } from "@/lib/corp-teams";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -23,6 +24,11 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) return apiErrors.unauthorized();
+
+  const accessProfile = await loadAccessProfile(supabase, user.id);
+  if (!hasAppAccess(accessProfile)) {
+    return apiErrors.forbidden("초대 코드 확인이 필요합니다");
+  }
 
   const parsed = await parseJsonBody<OnboardingBody>(request);
   if (!parsed.ok) return parsed.response;

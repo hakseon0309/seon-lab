@@ -18,7 +18,7 @@ export async function GET() {
 
   const { data: requests } = await supabase
     .from("couple_requests")
-    .select("*")
+    .select("id, requester_id, partner_id, status, created_at")
     .or(`requester_id.eq.${user.id},partner_id.eq.${user.id}`)
     .limit(1);
 

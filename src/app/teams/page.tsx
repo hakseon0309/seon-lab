@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Team } from "@/lib/types";
+import { accessCodePath, hasAppAccess } from "@/lib/access-gate";
+import type { Team } from "@/lib/types";
 import Nav from "@/components/nav";
 import PageHeader from "@/components/page-header";
 import RouteTransitionDone from "@/components/route-transition-done";
@@ -8,6 +9,9 @@ import TeamsFooterActions from "@/components/teams-footer-actions";
 import CorpTeamSection from "@/components/corp-team-section";
 import TeamList from "@/components/team-list";
 import { redirect } from "next/navigation";
+
+const TEAM_LIST_COLUMNS = "id, name, image_url, is_corp_team";
+const CORP_TEAM_COLUMNS = "id, name, invite_code";
 
 export default async function TeamsPage() {
   const supabase = await createClient();
@@ -19,12 +23,20 @@ export default async function TeamsPage() {
   const [profileRes, membershipsRes, corpRes] = await Promise.all([
     supabase
       .from("user_profiles")
-      .select("ics_url, is_admin")
+      .select("ics_url, is_admin, access_granted_at")
       .eq("id", user.id)
       .single(),
     supabase.from("team_members").select("team_id").eq("user_id", user.id),
-    supabase.from("teams").select("*").eq("is_corp_team", true).order("name"),
+    supabase
+      .from("teams")
+      .select(CORP_TEAM_COLUMNS)
+      .eq("is_corp_team", true)
+      .order("name"),
   ]);
+
+  if (!hasAppAccess(profileRes.data)) {
+    redirect(accessCodePath("/teams"));
+  }
 
   const icsUrl = profileRes.data?.ics_url ?? "";
   const isAdmin = Boolean(profileRes.data?.is_admin);
@@ -34,25 +46,29 @@ export default async function TeamsPage() {
     (membershipsRes.data ?? []).map((m: { team_id: string }) => m.team_id)
   );
 
-  let myTeams: Team[] = [];
+  let myTeams: Pick<Team, "id" | "name" | "image_url" | "is_corp_team">[] = [];
   if (isAdmin) {
     const admin = createAdminClient();
     const { data } = await admin
       .from("teams")
-      .select("*")
+      .select(TEAM_LIST_COLUMNS)
       .order("created_at", { ascending: false });
-    myTeams = (data as Team[] | null) ?? [];
+    myTeams =
+      (data as Pick<Team, "id" | "name" | "image_url" | "is_corp_team">[] | null) ??
+      [];
   } else if (memberTeamIds.size > 0) {
     const { data } = await supabase
       .from("teams")
-      .select("*")
+      .select(TEAM_LIST_COLUMNS)
       .in("id", [...memberTeamIds])
       .order("created_at", { ascending: false });
-    myTeams = (data as Team[] | null) ?? [];
+    myTeams =
+      (data as Pick<Team, "id" | "name" | "image_url" | "is_corp_team">[] | null) ??
+      [];
   }
 
   const hasJoinedCorpTeam = myTeams.some((t) => t.is_corp_team);
-  const corpTeams = ((corpRes.data as Team[] | null) ?? []).filter(
+  const corpTeams = ((corpRes.data as Pick<Team, "id" | "name" | "invite_code">[] | null) ?? []).filter(
     (t) => !memberTeamIds.has(t.id)
   );
   const showCorp =

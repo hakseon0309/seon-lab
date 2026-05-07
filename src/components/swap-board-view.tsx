@@ -1,13 +1,28 @@
 "use client";
 
+import Modal from "@/components/modal";
 import PageFooter from "@/components/page-footer";
-import SwapPostDetailModal from "@/components/swap-post-detail-modal";
 import SwapPostTitleCard from "@/components/swap-post-title-card";
-import SwapWriteModal from "@/components/swap-write-modal";
 import { useToast } from "@/components/toast-provider";
+import { usePortalTarget } from "@/lib/client-dom";
 import { Board, SwapPost, TeamLite } from "@/lib/types";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
+
+const SwapWriteModal = dynamic(() => import("@/components/swap-write-modal"));
+const SwapPostDetailModal = dynamic(
+  () => import("@/components/swap-post-detail-modal")
+);
+
+function prewarmSwapWriteModal() {
+  void import("@/components/swap-write-modal");
+}
+
+function prewarmSwapPostDetailModal() {
+  void import("@/components/swap-post-detail-modal");
+}
 
 interface Props {
   board: Board;
@@ -17,31 +32,15 @@ interface Props {
   isAdmin: boolean;
 }
 
-function getSwapPostCardStyle(post: SwapPost, completed: boolean) {
-  const baseStyle = {
+function getSwapPostCardStyle(completed: boolean) {
+  return {
     borderColor: "var(--border-light)",
     backgroundColor: "var(--bg-card)",
     opacity: completed ? 0.72 : 1,
   };
-
-  if (post.swap_match_tone === "match") {
-    return {
-      ...baseStyle,
-      borderColor: "var(--success)",
-      backgroundColor: "var(--success-bg)",
-    };
-  }
-
-  if (post.swap_match_tone === "mismatch") {
-    return {
-      ...baseStyle,
-      borderColor: "var(--error)",
-      backgroundColor: "var(--error-bg)",
-    };
-  }
-
-  return baseStyle;
 }
+
+type SwapPostFilter = "all" | "available";
 
 export default function SwapBoardView({
   board,
@@ -51,19 +50,47 @@ export default function SwapBoardView({
   isAdmin,
 }: Props) {
   const [writing, setWriting] = useState(false);
+  const [filtering, setFiltering] = useState(false);
+  const [filter, setFilter] = useState<SwapPostFilter>("all");
   const [posts, setPosts] = useState(initialPosts);
   const [selectedPost, setSelectedPost] = useState<SwapPost | null>(null);
   const router = useRouter();
   const toast = useToast();
+  const headerSlot = usePortalTarget("board-header-actions");
 
   useEffect(() => {
     setPosts(initialPosts);
   }, [initialPosts]);
 
+  const visiblePosts =
+    filter === "available"
+      ? posts.filter((post) => post.swap_match_tone === "match")
+      : posts;
+
+  const filterButton = (
+    <button
+      type="button"
+      onClick={() => setFiltering(true)}
+      className="interactive-press h-8 min-w-12 shrink-0 rounded-md px-2.5 text-xs font-semibold"
+      style={{
+        backgroundColor:
+          filter === "available" ? "var(--primary)" : "var(--button-surface)",
+        color:
+          filter === "available"
+            ? "var(--text-on-primary)"
+            : "var(--text-primary)",
+      }}
+    >
+      필터
+    </button>
+  );
+
   return (
     <>
       <div className="px-4 lg:px-0">
-        {posts.length === 0 ? (
+        {headerSlot ? createPortal(filterButton, headerSlot) : null}
+
+        {visiblePosts.length === 0 ? (
           <div
             className="rounded-lg border px-4 py-10 text-center"
             style={{
@@ -75,23 +102,32 @@ export default function SwapBoardView({
               className="text-sm font-medium"
               style={{ color: "var(--text-primary)" }}
             >
-              아직 등록된 글이 없어요
+              {posts.length === 0
+                ? "아직 등록된 글이 없어요"
+                : "조건에 맞는 글이 없어요"}
             </p>
             <p className="mt-2 text-xs" style={{ color: "var(--text-muted)" }}>
-              근무를 바꾸고 싶은 날짜를 골라 첫 글을 남겨보세요.
+              {posts.length === 0
+                ? "근무를 바꾸고 싶은 날짜를 골라 첫 글을 남겨보세요."
+                : "다른 보기 조건을 선택해보세요."}
             </p>
           </div>
         ) : (
           <ul className="space-y-3">
-            {posts.map((post) => {
+            {visiblePosts.map((post) => {
               const completed = post.swap_status === "done";
               return (
                 <li key={post.id}>
                   <button
                     type="button"
-                    onClick={() => setSelectedPost(post)}
+                    onClick={() => {
+                      prewarmSwapPostDetailModal();
+                      setSelectedPost(post);
+                    }}
+                    onFocus={prewarmSwapPostDetailModal}
+                    onPointerEnter={prewarmSwapPostDetailModal}
                     className="interactive-press block w-full rounded-lg border px-3 py-3 text-left"
-                    style={getSwapPostCardStyle(post, completed)}
+                    style={getSwapPostCardStyle(completed)}
                   >
                     <SwapPostTitleCard post={post} />
                   </button>
@@ -140,11 +176,45 @@ export default function SwapBoardView({
         />
       )}
 
+      {filtering && (
+        <Modal
+          title="글 보기"
+          onClose={() => setFiltering(false)}
+          maxWidth="max-w-sm"
+        >
+          <div className="space-y-2">
+            <FilterOptionButton
+              active={filter === "all"}
+              onClick={() => {
+                setFilter("all");
+                setFiltering(false);
+              }}
+            >
+              모든 글 보기
+            </FilterOptionButton>
+            <FilterOptionButton
+              active={filter === "available"}
+              onClick={() => {
+                setFilter("available");
+                setFiltering(false);
+              }}
+            >
+              내가 교환해줄 수 있는 글만 보기
+            </FilterOptionButton>
+          </div>
+        </Modal>
+      )}
+
       <PageFooter maxWidth="max-w-lg">
         <div className="flex w-full justify-center">
           <button
             type="button"
-            onClick={() => setWriting(true)}
+            onClick={() => {
+              prewarmSwapWriteModal();
+              setWriting(true);
+            }}
+            onFocus={prewarmSwapWriteModal}
+            onPointerEnter={prewarmSwapWriteModal}
             className="interactive-press w-[calc((100%-1rem)/2)] rounded-full py-3.5 text-sm font-medium"
             style={{
               backgroundColor: "var(--primary)",
@@ -156,5 +226,35 @@ export default function SwapBoardView({
         </div>
       </PageFooter>
     </>
+  );
+}
+
+function FilterOptionButton({
+  active,
+  children,
+  onClick,
+}: {
+  active: boolean;
+  children: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="interactive-press flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left text-sm font-semibold"
+      style={{
+        borderColor: active ? "var(--primary)" : "var(--border-light)",
+        backgroundColor: active ? "var(--primary-light)" : "var(--bg-card)",
+        color: "var(--text-primary)",
+      }}
+    >
+      <span>{children}</span>
+      {active && (
+        <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+          선택됨
+        </span>
+      )}
+    </button>
   );
 }

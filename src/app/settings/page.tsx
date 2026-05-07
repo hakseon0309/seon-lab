@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { accessCodePath, hasAppAccess } from "@/lib/access-gate";
 import Nav from "@/components/nav";
 import PageHeader from "@/components/page-header";
 import RouteTransitionDone from "@/components/route-transition-done";
@@ -15,7 +16,7 @@ export default async function SettingsPage() {
   const [profileRes, ownedTeamsRes] = await Promise.all([
     supabase
       .from("user_profiles")
-      .select("display_name, ics_url, is_admin, avatar_url")
+      .select("display_name, ics_url, is_admin, avatar_url, access_granted_at")
       .eq("id", user.id)
       .single(),
     supabase
@@ -25,6 +26,10 @@ export default async function SettingsPage() {
   ]);
 
   const profile = profileRes.data;
+  if (!hasAppAccess(profile)) {
+    redirect(accessCodePath("/settings"));
+  }
+
   const ownedTeams = (ownedTeamsRes.data ?? []) as { id: string; name: string }[];
 
   return (

@@ -29,6 +29,21 @@ export async function DELETE() {
   }
 
   const admin = createAdminClient();
+  const email = user.email?.trim().toLowerCase() ?? "";
+  if (email) {
+    const { error: allowDeleteError } = await admin
+      .from("allowed_users")
+      .delete()
+      .eq("email", email);
+
+    if (allowDeleteError) {
+      return apiErrors.server(
+        "탈퇴 처리에 실패했습니다",
+        allowDeleteError.message
+      );
+    }
+  }
+
   const { error } = await admin.auth.admin.deleteUser(user.id);
 
   if (error) {

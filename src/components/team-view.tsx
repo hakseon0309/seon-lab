@@ -6,8 +6,7 @@ import {
   isWindowStartMonth,
   parseMonthKey,
 } from "@/lib/calendar-window";
-import InviteModal from "@/components/invite-modal";
-import MembersListModal from "@/components/members-list-modal";
+import dynamic from "next/dynamic";
 import PageFooter from "@/components/page-footer";
 import TeamCalendar from "@/components/team-calendar";
 import CalendarMonthNavigator from "@/components/calendar-month-navigator";
@@ -26,6 +25,17 @@ import type { KoreanHoliday } from "@/lib/korean-holidays";
 import { Team } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState, useTransition } from "react";
+
+const InviteModal = dynamic(() => import("@/components/invite-modal"));
+const MembersListModal = dynamic(() => import("@/components/members-list-modal"));
+
+function prewarmInviteModal() {
+  void import("@/components/invite-modal");
+}
+
+function prewarmMembersModal() {
+  void import("@/components/members-list-modal");
+}
 
 interface Props {
   team: Team;
@@ -185,12 +195,14 @@ export default function TeamView({
   }
 
   const openMembersList = useCallback(() => {
+    prewarmMembersModal();
     setPreselectedMemberId(null);
     setReturnToListOnDetailClose(true);
     setShowMembers(true);
   }, []);
 
   const openMemberDetail = useCallback((userId: string) => {
+    prewarmMembersModal();
     setPreselectedMemberId(userId);
     setReturnToListOnDetailClose(false);
     setShowMembers(true);
@@ -291,7 +303,12 @@ export default function TeamView({
         <div className="flex w-full justify-center">
           <button
             type="button"
-            onClick={() => setShowInvite(true)}
+            onClick={() => {
+              prewarmInviteModal();
+              setShowInvite(true);
+            }}
+            onFocus={prewarmInviteModal}
+            onPointerEnter={prewarmInviteModal}
             className="w-[calc((100%-1rem)/2)] rounded-full py-3.5 text-sm font-medium"
             style={{
               backgroundColor: "var(--primary)",

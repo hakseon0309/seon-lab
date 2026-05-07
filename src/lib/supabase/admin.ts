@@ -1,4 +1,5 @@
 import { createClient as createSbClient } from "@supabase/supabase-js";
+import { hasAppAccess } from "@/lib/access-gate";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 
 export function createAdminClient() {
@@ -22,9 +23,13 @@ export async function requireAdmin(): Promise<AdminGuardResult> {
 
   const { data: profile } = await supabase
     .from("user_profiles")
-    .select("is_admin")
+    .select("is_admin, access_granted_at")
     .eq("id", user.id)
     .single();
+
+  if (!hasAppAccess(profile)) {
+    return { error: "초대 코드 확인이 필요합니다", status: 403 };
+  }
 
   if (!profile?.is_admin) return { error: "관리자 권한이 필요합니다", status: 403 };
   return { user };

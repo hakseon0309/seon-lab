@@ -1,4 +1,5 @@
 import Nav from "@/components/nav";
+import PageHeader from "@/components/page-header";
 import RouteTransitionDone from "@/components/route-transition-done";
 import AdminPanel from "@/components/admin-panel";
 import { loadAdminPanelData } from "@/lib/admin-server";
@@ -18,13 +19,13 @@ export default async function AdminPage() {
     <>
       <RouteTransitionDone />
       <Nav />
+      <PageHeader maxWidth="max-w-3xl">
+        <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
+          관리자
+        </h1>
+      </PageHeader>
       <main className="mx-auto w-full max-w-3xl pb-tabbar lg:pb-8">
         <div className="px-4 lg:px-0">
-          <div className="page-title-block">
-            <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
-              관리자
-            </h1>
-          </div>
           <AdminPanel initialUsers={users} initialTeams={teams} />
         </div>
       </main>

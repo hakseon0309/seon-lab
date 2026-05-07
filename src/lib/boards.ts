@@ -8,5 +8,7 @@ export function isShiftSwapBoard(
 }
 
 export function getBoardDisplayName(name: string) {
-  return toWorkTerminology(name).replaceAll("패치 노트", "패치노트");
+  return toWorkTerminology(name)
+    .replaceAll("근무 교환", "근무 일정 교환")
+    .replaceAll("패치 노트", "패치노트");
 }

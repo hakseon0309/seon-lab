@@ -7,6 +7,7 @@ export interface UserProfile {
   avatar_url?: string | null;
   avatar_path?: string | null;
   onboarding_completed_at?: string | null;
+  access_granted_at?: string | null;
   created_at: string;
 }
 

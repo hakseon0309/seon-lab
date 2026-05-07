@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { accessCodePath, hasAppAccess, loadAccessProfile } from "@/lib/access-gate";
 import Nav from "@/components/nav";
 import RouteTransitionDone from "@/components/route-transition-done";
 import TeamView from "@/components/team-view";
@@ -16,6 +17,11 @@ export default async function TeamDetailPage({
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  const profile = await loadAccessProfile(supabase, user.id);
+  if (!hasAppAccess(profile)) {
+    redirect(accessCodePath(`/teams/${id}`));
+  }
 
   const { team, isFavorite, members, calendarWindow, holidays } =
     await loadTeamDetailData({

@@ -12,9 +12,9 @@ import {
 } from "react";
 
 const ROUTE_OVERLAY_TIMEOUT_MS = 10000;
-// 네비게이션 클릭 즉시 어둡게 + 스피너가 보이도록 delay 0. 서버 응답이 매우 빠른
-// 경우에도 플래시가 생기더라도 "즉시 반응" 이 더 중요하다.
-const ROUTE_OVERLAY_DELAY_MS = 0;
+// 빠른 이동에서는 버튼 press feedback만 보이고, 실제 지연이 느껴질 때만
+// 오버레이를 띄워 스피너 플래시를 줄인다.
+const ROUTE_OVERLAY_DELAY_MS = 140;
 
 type RouteTransitionContextValue = {
   startNavigation: () => void;
@@ -127,7 +127,7 @@ export function RouteTransitionProvider({ children }: { children: ReactNode }) {
       {children}
       {isNavigating && (
         <div
-          className="fixed inset-0 flex items-center justify-center bg-black/30 px-4 backdrop-blur-[1px]"
+          className="fixed inset-0 flex items-center justify-center bg-black/30 px-4"
           style={{ zIndex: 1500 }}
           aria-live="polite"
           aria-busy="true"

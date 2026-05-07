@@ -1,7 +1,7 @@
 "use client";
 
-import BoardPostEditorModal from "@/components/board-post-editor-modal";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import AvatarImage from "@/components/avatar-image";
 import PostStatusBadge from "@/components/post-status-badge";
 import { createBoardPost } from "@/lib/board-api-client";
@@ -14,6 +14,10 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useToast } from "@/components/toast-provider";
 import { createPortal } from "react-dom";
+
+const BoardPostEditorModal = dynamic(
+  () => import("@/components/board-post-editor-modal")
+);
 
 interface BoardViewProps {
   board: Board;
@@ -34,7 +38,16 @@ export default function BoardView({ board, initialPosts, canWrite }: BoardViewPr
   const writeButton = (
     <button
       type="button"
-      onClick={() => setWriting(true)}
+      onClick={() => {
+        void import("@/components/board-post-editor-modal");
+        setWriting(true);
+      }}
+      onFocus={() => {
+        void import("@/components/board-post-editor-modal");
+      }}
+      onPointerEnter={() => {
+        void import("@/components/board-post-editor-modal");
+      }}
       className="interactive-press shrink-0 rounded-lg px-3 py-2 text-sm font-medium"
       style={{
         backgroundColor: "var(--primary)",

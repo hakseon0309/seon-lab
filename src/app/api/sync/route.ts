@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { hasAppAccess } from "@/lib/access-gate";
 import { syncEventsSnapshot } from "@/lib/event-sync";
 import { fetchAndParseICS, IcsError, icsErrorToKorean } from "@/lib/ics-parser";
 import { NextResponse } from "next/server";
@@ -18,9 +19,16 @@ export async function POST() {
 
   const { data: profile } = await supabase
     .from("user_profiles")
-    .select("ics_url, last_synced")
+    .select("ics_url, last_synced, access_granted_at")
     .eq("id", user.id)
     .single();
+
+  if (!hasAppAccess(profile)) {
+    return NextResponse.json(
+      { error: "초대 코드 확인이 필요합니다", code: "forbidden" },
+      { status: 403 }
+    );
+  }
 
   if (!profile?.ics_url) {
     return NextResponse.json(

@@ -19,6 +19,11 @@ function HomeContent() {
   const urlError = searchParams.get("error");
   const error = authError || (urlError ? decodeURIComponent(urlError) : "");
   const errorCode = searchParams.get("code") ?? "";
+  const nextParam = searchParams.get("next");
+  const nextPath =
+    nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//")
+      ? nextParam
+      : "/dashboard";
 
   useEffect(() => {
     if (handledReasonRef.current) return;
@@ -50,7 +55,9 @@ function HomeContent() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/api/auth/callback`,
+        redirectTo: `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(
+          nextPath
+        )}`,
         queryParams: {
           prompt: "select_account",
         },

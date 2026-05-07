@@ -1,5 +1,6 @@
 import OnboardingInstallGuide from "@/components/onboarding-install-guide";
 import RouteTransitionDone from "@/components/route-transition-done";
+import { accessCodePath, hasAppAccess } from "@/lib/access-gate";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
@@ -13,9 +14,13 @@ export default async function OnboardingInstallGuidePage() {
 
   const { data: profile } = await supabase
     .from("user_profiles")
-    .select("onboarding_completed_at")
+    .select("onboarding_completed_at, access_granted_at")
     .eq("id", user.id)
     .maybeSingle();
+
+  if (!hasAppAccess(profile)) {
+    redirect(accessCodePath("/onboarding/install-guide"));
+  }
 
   if (!profile?.onboarding_completed_at) {
     redirect("/onboarding");

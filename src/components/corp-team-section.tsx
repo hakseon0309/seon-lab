@@ -2,16 +2,18 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Team } from "@/lib/types";
+import type { Team } from "@/lib/types";
 import { useRouteTransition } from "@/components/route-transition-provider";
 
-export default function CorpTeamSection({ teams }: { teams: Team[] }) {
+type CorpTeam = Pick<Team, "id" | "name" | "invite_code">;
+
+export default function CorpTeamSection({ teams }: { teams: CorpTeam[] }) {
   const [joiningId, setJoiningId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const router = useRouter();
   const { startNavigation } = useRouteTransition();
 
-  async function handleJoin(team: Team) {
+  async function handleJoin(team: CorpTeam) {
     setJoiningId(team.id);
     setError("");
     try {

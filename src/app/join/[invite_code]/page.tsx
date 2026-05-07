@@ -32,6 +32,20 @@ export default function JoinPage({
         return;
       }
 
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("access_granted_at")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!profile?.access_granted_at) {
+        startNavigation();
+        router.push(
+          `/access-code?next=${encodeURIComponent(`/join/${invite_code}`)}`
+        );
+        return;
+      }
+
       setStatus("joining");
 
       const res = await fetch("/api/teams/join", {

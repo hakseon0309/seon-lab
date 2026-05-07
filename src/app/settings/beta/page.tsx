@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { accessCodePath, hasAppAccess } from "@/lib/access-gate";
 import { CoupleStatus } from "@/lib/types";
 import Nav from "@/components/nav";
 import PageHeader from "@/components/page-header";
@@ -13,9 +14,21 @@ export default async function BetaSettingsPage() {
   if (!user) redirect("/login");
 
   const [{ data: profile }, { data: requests }] = await Promise.all([
-    supabase.from("user_profiles").select("couple_code").eq("id", user.id).single(),
-    supabase.from("couple_requests").select("*").or(`requester_id.eq.${user.id},partner_id.eq.${user.id}`).limit(1),
+    supabase
+      .from("user_profiles")
+      .select("couple_code, access_granted_at")
+      .eq("id", user.id)
+      .single(),
+    supabase
+      .from("couple_requests")
+      .select("id, requester_id, partner_id, status, created_at")
+      .or(`requester_id.eq.${user.id},partner_id.eq.${user.id}`)
+      .limit(1),
   ]);
+
+  if (!hasAppAccess(profile)) {
+    redirect(accessCodePath("/settings/beta"));
+  }
 
   const request = requests?.[0];
   let coupleStatus: CoupleStatus;

@@ -1,6 +1,5 @@
 "use client";
 
-import AvatarImage from "@/components/avatar-image";
 import Modal from "@/components/modal";
 import SwapPostTitleCard from "@/components/swap-post-title-card";
 import { useToast } from "@/components/toast-provider";
@@ -71,7 +70,6 @@ export default function SwapPostDetailModal({
 }: Props) {
   const [post, setPost] = useState(initialPost);
   const [messages, setMessages] = useState<BoardMessage[]>([]);
-  const [input, setInput] = useState("");
   const [loadingMessages, setLoadingMessages] = useState(true);
   const [sending, setSending] = useState(false);
   const [togglingStatus, setTogglingStatus] = useState(false);
@@ -184,12 +182,6 @@ export default function SwapPostDetailModal({
       avatar_url: message.author_avatar_url ?? null,
     });
     setMessages((prev) => [...prev, message]);
-    setInput("");
-  }
-
-  async function send(event: React.FormEvent) {
-    event.preventDefault();
-    await sendBody(input.trim());
   }
 
   async function toggleComplete(next: "open" | "done") {
@@ -309,7 +301,7 @@ export default function SwapPostDetailModal({
             대화
           </h4>
           <div
-            className="relative h-[14.5rem] overflow-y-auto rounded-lg border px-3 py-3"
+            className="relative h-[14.5rem] overflow-y-auto rounded-xl border px-3 py-3"
             style={{
               borderColor: "var(--border-light)",
               backgroundColor: "var(--bg-surface)",
@@ -357,40 +349,6 @@ export default function SwapPostDetailModal({
           </button>
         )}
 
-        <form onSubmit={send} className="mt-3 flex gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            disabled={post.swap_status === "done"}
-            placeholder={post.swap_status === "done" ? "완료된 글입니다" : "메시지 입력"}
-            maxLength={4000}
-            className="min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 disabled:opacity-50"
-            style={
-              {
-                backgroundColor: "var(--input-bg)",
-                borderColor: "var(--input-border)",
-                color: "var(--input-text)",
-                "--tw-ring-color": "var(--primary)",
-              } as React.CSSProperties
-            }
-          />
-          <button
-            type="submit"
-            disabled={
-              sending ||
-              input.trim().length === 0 ||
-              post.swap_status === "done"
-            }
-            className="interactive-press shrink-0 rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
-            style={{
-              backgroundColor: "var(--primary)",
-              color: "var(--text-on-primary)",
-            }}
-          >
-            전송
-          </button>
-        </form>
       </div>
     </Modal>
   );
@@ -404,60 +362,59 @@ function MessageList({
   currentUserId: string;
 }) {
   return (
-    <ul className="space-y-3 pr-3">
+    <ul className="flex min-h-full flex-col justify-end gap-1.5 pr-1">
       {messages.map((message, index) => {
         const mine = message.author_id === currentUserId;
         const prev = messages[index - 1];
         const next = messages[index + 1];
         const groupedWithPrev = shouldGroupMessages(message, prev);
         const groupedWithNext = shouldGroupMessages(message, next);
-        const showMeta = !groupedWithNext;
+        const showAuthor = !mine && !groupedWithPrev;
+        const showTime = !groupedWithNext;
 
         return (
           <li
             key={message.id}
-            className={`flex w-full gap-2 ${groupedWithPrev ? "mt-1" : ""} ${
-              mine ? "flex-row-reverse" : ""
-            }`}
+            className={`flex w-full ${
+              groupedWithPrev ? "mt-0.5" : "mt-3"
+            } ${mine ? "justify-end" : "justify-start"}`}
           >
-            {showMeta ? (
-              <AvatarImage
-                src={message.author_avatar_url ?? null}
-                name={message.author_name || "이름 없음"}
-                sizeClass="h-7 w-7"
-              />
-            ) : (
-              <div className="h-7 w-7 shrink-0" aria-hidden="true" />
-            )}
             <div
-              className={`max-w-[78%] ${
+              className={`flex max-w-[78%] min-w-0 flex-col ${
                 mine ? "items-end" : "items-start"
-              } flex min-w-0 flex-col`}
+              }`}
             >
-              {showMeta && (
+              {showAuthor && (
                 <span
-                  className="mb-0.5 truncate text-[11px]"
+                  className="mb-1 max-w-full truncate px-1 text-[11px]"
                   style={{ color: "var(--text-muted)" }}
                 >
                   {message.author_name || "이름 없음"}
                 </span>
               )}
               <div
-                className="rounded-2xl px-3 py-2 text-sm leading-6"
+                className={`px-3 py-2 text-sm leading-6 ${
+                  mine
+                    ? groupedWithNext
+                      ? "rounded-2xl rounded-br-md"
+                      : "rounded-2xl"
+                    : groupedWithNext
+                      ? "rounded-2xl rounded-bl-md"
+                      : "rounded-2xl"
+                }`}
                 style={{
-                  backgroundColor: mine
-                    ? "var(--event-bg)"
-                    : "var(--bg-card)",
+                  backgroundColor: mine ? "var(--event-bg)" : "var(--bg-card)",
+                  border: mine ? "none" : "1px solid var(--border-light)",
                   color: mine ? "var(--event-text)" : "var(--text-primary)",
                 }}
               >
-                <p className="whitespace-pre-wrap">
+                <p className="whitespace-pre-wrap break-words">
                   {toWorkTerminology(message.body)}
                 </p>
               </div>
-              {showMeta && (
+              {showTime && (
                 <span
-                  className="mt-0.5 text-[10px]"
+                  className="mt-1 px-1 text-[10px]"
                   style={{ color: "var(--text-muted)" }}
                 >
                   {formatPostedAt(message.created_at)}

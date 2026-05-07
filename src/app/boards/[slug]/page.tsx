@@ -7,6 +7,7 @@ import SwapBoardView from "@/components/swap-board-view";
 import { getBoardDisplayName, isShiftSwapBoard } from "@/lib/boards";
 import { loadBoardPostsData } from "@/lib/board-server";
 import { loadShiftSwapBoardData } from "@/lib/shift-swap-server";
+import { accessCodePath, hasAppAccess } from "@/lib/access-gate";
 import { createClient } from "@/lib/supabase/server";
 import { Board } from "@/lib/types";
 import { notFound, redirect } from "next/navigation";
@@ -14,6 +15,9 @@ import { notFound, redirect } from "next/navigation";
 type BoardPageProps = {
   params: Promise<{ slug: string }>;
 };
+
+const BOARD_COLUMNS =
+  "id, slug, name, description, write_role, allow_comments, allow_anonymous, has_status, kind, team_scoped, sort_order, created_at";
 
 export default async function BoardPage({ params }: BoardPageProps) {
   const { slug } = await params;
@@ -25,13 +29,17 @@ export default async function BoardPage({ params }: BoardPageProps) {
   if (!user) redirect("/login");
 
   const [{ data: board }, { data: myProfile }] = await Promise.all([
-    supabase.from("boards").select("*").eq("slug", slug).maybeSingle(),
+    supabase.from("boards").select(BOARD_COLUMNS).eq("slug", slug).maybeSingle(),
     supabase
       .from("user_profiles")
-      .select("is_admin")
+      .select("is_admin, access_granted_at")
       .eq("id", user.id)
       .maybeSingle(),
   ]);
+
+  if (!hasAppAccess(myProfile)) {
+    redirect(accessCodePath(`/boards/${slug}`));
+  }
 
   if (!board) notFound();
 
@@ -63,6 +71,7 @@ export default async function BoardPage({ params }: BoardPageProps) {
             >
               {boardDisplayName}
             </h1>
+            <BoardHeaderActionsSlot />
           </div>
         </PageHeader>
         <main className="mx-auto w-full max-w-lg pb-floating-footer lg:pb-20">

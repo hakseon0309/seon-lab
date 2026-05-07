@@ -16,21 +16,20 @@ export default function Nav() {
 
   return (
     <>
-      {/* ── 데스크탑: 상단 nav ── */}
       <nav
-        className="hidden lg:block border-b"
+        className="fixed left-0 right-0 top-0 z-40 border-b lg:static"
         style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-light)" }}
       >
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
           <div className="flex items-center gap-4">
             <Link
               href="/dashboard"
-              className="interactive-press text-[17px] font-bold tracking-[0.02em]"
+              className="interactive-press text-[21px] font-bold tracking-[0.02em] lg:text-[17px]"
               style={{ color: "var(--text-primary)" }}
             >
               SEON LAB
             </Link>
-            <div className="flex gap-1">
+            <div className="hidden gap-1 lg:flex">
               {links.map((link) => (
                 <Link
                   key={link.href}
@@ -52,27 +51,8 @@ export default function Nav() {
           </div>
         </div>
       </nav>
-
-      {/* ── 모바일: 상단 타이틀바 ── */}
-      <header
-        className="lg:hidden fixed top-0 left-0 right-0 z-40 flex h-14 items-center justify-between px-4 border-b"
-        style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-light)" }}
-      >
-        <Link
-          href="/dashboard"
-          className="interactive-press text-[21px] font-bold tracking-[0.02em]"
-          style={{ color: "var(--text-primary)" }}
-        >
-          SEON LAB
-        </Link>
-        <div className="flex items-center gap-1">
-          <NotificationBell />
-          <AppSidebar />
-        </div>
-      </header>
       <div className="h-14 lg:hidden" />
 
-      {/* ── 모바일: 하단 탭바 ── */}
       <nav
         className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t"
         style={{

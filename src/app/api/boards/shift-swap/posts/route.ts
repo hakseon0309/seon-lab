@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { hasAppAccess } from "@/lib/access-gate";
 import { apiError, apiErrors, parseJsonBody } from "@/lib/api-error";
 import { getSeoulDateKey } from "@/lib/time";
 import { notifyShiftSwapPostCreated } from "@/lib/push-server";
@@ -58,9 +59,13 @@ export async function POST(request: Request) {
 
   const { data: profile } = await supabase
     .from("user_profiles")
-    .select("display_name, is_admin")
+    .select("display_name, is_admin, access_granted_at")
     .eq("id", user.id)
     .maybeSingle();
+  if (!hasAppAccess(profile)) {
+    return apiErrors.forbidden("초대 코드 확인이 필요합니다");
+  }
+
   const isAdmin = Boolean(profile?.is_admin);
 
   const parsed = await parseJsonBody<CreateBody>(request);

@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import QRCode from "qrcode";
 import Modal from "@/components/modal";
 
 interface Props {
@@ -14,7 +13,19 @@ export default function InviteModal({ inviteCode, onClose }: Props) {
   const [qrUrl, setQrUrl] = useState("");
 
   useEffect(() => {
-    QRCode.toDataURL(inviteCode, { width: 200, margin: 2 }).then(setQrUrl);
+    let cancelled = false;
+
+    async function createQrCode() {
+      const QRCode = (await import("qrcode")).default;
+      const url = await QRCode.toDataURL(inviteCode, { width: 200, margin: 2 });
+      if (!cancelled) setQrUrl(url);
+    }
+
+    void createQrCode();
+
+    return () => {
+      cancelled = true;
+    };
   }, [inviteCode]);
 
   return (

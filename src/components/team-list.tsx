@@ -1,11 +1,9 @@
-"use client";
-
-import TeamAvatarControl from "@/components/team-avatar-control";
+import TeamAvatar from "@/components/team-avatar";
 import type { Team } from "@/lib/types";
 import Link from "next/link";
 
 interface TeamListProps {
-  initialTeams: Team[];
+  initialTeams: Pick<Team, "id" | "name" | "image_url">[];
 }
 
 export default function TeamList({ initialTeams }: TeamListProps) {
@@ -22,7 +20,7 @@ export default function TeamList({ initialTeams }: TeamListProps) {
           }}
         >
           <span className="flex min-w-0 items-center gap-3">
-            <TeamAvatarControl team={team} />
+            <TeamAvatar team={team} />
             <span
               className="truncate text-sm font-medium"
               style={{ color: "var(--text-primary)" }}

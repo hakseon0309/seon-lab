@@ -1,8 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import Modal from "@/components/modal";
-import QrScanner from "./qr-scanner";
+
+const QrScanner = dynamic(() => import("@/components/qr-scanner"), {
+  ssr: false,
+});
 
 interface JoinTeamModalProps {
   onClose: () => void;
@@ -91,6 +95,12 @@ export default function JoinTeamModal({ onClose, onJoin }: JoinTeamModalProps) {
 
             <button
               onClick={() => setMode("qr")}
+              onFocus={() => {
+                void import("@/components/qr-scanner");
+              }}
+              onPointerEnter={() => {
+                void import("@/components/qr-scanner");
+              }}
               disabled={loading}
               className="flex w-full items-center gap-3 rounded-lg border px-4 py-3.5 text-left disabled:opacity-50"
               style={{ borderColor: "var(--border-light)" }}

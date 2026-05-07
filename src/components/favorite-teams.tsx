@@ -1,9 +1,9 @@
 import Link from "next/link";
-import TeamAvatarControl from "@/components/team-avatar-control";
-import { Team } from "@/lib/types";
+import TeamAvatar from "@/components/team-avatar";
+import type { Team } from "@/lib/types";
 
 interface FavoriteTeamsProps {
-  teams: Team[];
+  teams: Pick<Team, "id" | "name" | "image_url">[];
 }
 
 export default function FavoriteTeams({ teams }: FavoriteTeamsProps) {
@@ -38,7 +38,7 @@ export default function FavoriteTeams({ teams }: FavoriteTeamsProps) {
                 backgroundColor: "var(--bg-card)",
               }}
             >
-              <TeamAvatarControl team={team} sizeClass="h-9 w-9" />
+              <TeamAvatar team={team} sizeClass="h-9 w-9" />
               <span
                 className="min-w-0 truncate text-sm font-medium"
                 style={{ color: "var(--text-primary)" }}
